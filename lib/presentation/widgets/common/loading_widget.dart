@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:smart_storage_analyzer/core/constants/app_colors.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 
 class LoadingWidget extends StatelessWidget {
@@ -7,25 +6,30 @@ class LoadingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.all(AppSize.paddingLarge),
       child: Column(
         children: [
           Container(
             height: 250,
             decoration: BoxDecoration(
-              color: AppColors.cardBackground,
+              color: colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(AppSize.radiusLarge),
             ),
             child: Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+              child: CircularProgressIndicator(
+                color: colorScheme.primary,
+              ),
             ),
           ),
           SizedBox(height: AppSize.paddingLarge),
           Container(
             height: 56,
             decoration: BoxDecoration(
-              color: AppColors.cardBackground,
+              color: colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(AppSize.radiusLarge),
             ),
           ),
@@ -43,8 +47,8 @@ class LoadingWidget extends StatelessWidget {
             itemBuilder: (context, index) {
               return Container(
                 decoration: BoxDecoration(
-                  color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(AppSize.radiusMedium)
+                  color: colorScheme.surfaceContainer,
+                  borderRadius: BorderRadius.circular(AppSize.radiusMedium),
                 ),
               );
             },

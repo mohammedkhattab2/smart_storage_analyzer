@@ -22,13 +22,25 @@ class dashboardLoaded extends DashboardState {
   @override
   List<Object> get props => [storageInfo, categories];
 }
-/// analyaing state
+
+/// analyzing state with optional progress
 class DashboardAnalyzing extends DashboardState {
   final String message;
-  const DashboardAnalyzing({this.message = "Analyzing your storage..."});
+  final StorageInfo? storageInfo;
+  final List<Category>? categories;
+  final double? progress;
+  
+  const DashboardAnalyzing({
+    this.message = "Analyzing your storage...",
+    this.storageInfo,
+    this.categories,
+    this.progress,
+  });
+  
   @override
-  List <Object> get props => [message];
+  List<Object?> get props => [message, storageInfo, categories, progress];
 }
+
 /// error state
 class DashboardError extends DashboardState {
   final String message;

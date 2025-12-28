@@ -53,13 +53,16 @@ class AppStrings {
   static const String settings  = 'Settings';
   static const String notifications   = 'Notifications';
   static const String darkMode   = 'Dark Mode';
-  static const String security   = 'Security';
+  static const String privacyPolicy   = 'Privacy Policy';
+  static const String termsOfService   = 'Terms of Service';
+  static const String about   = 'About';
   static const String signOut   = 'Sign Out';
   static const String goPremium   = 'Go Premium';
   static const String premiumDesc   = 'Unlock cloud sync & themes';
   static const String preferences = 'Preferences & Account';
   static const String general = 'GENERAL';
   static const String privacy = 'PRIVACY';
+  static const String legal = 'LEGAL & INFO';
   static const String unlockPremium = 'Unlock cloud sync & themes';
   
   // === Common ===

@@ -10,29 +10,60 @@ class AnalyzeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Container(
       width: double.infinity,
-      height: 56,
-      child: ElevatedButton.icon(
-        onPressed: onPressed, 
-        icon: Icon(AppIcons.analyze,
-        size:20
-         ),
-         label: Text(AppStrings.analyzeClean,
-         style: TextStyle(
-          fontSize: AppSize.fontMedium,
-          fontWeight: FontWeight.w600,
-         ),
-         ),
-         style: ElevatedButton.styleFrom(
+      height: 60,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppSize.radiusLarge),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSize.paddingXLarge,
+            vertical: AppSize.paddingMedium,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSize.radiusLarge),
           ),
           elevation: 0,
-         ),
         ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                AppIcons.analyze,
+                size: AppSize.iconSmall + 4,
+              ),
+            ),
+            const SizedBox(width: AppSize.paddingSmall + 4),
+            Text(
+              AppStrings.analyzeClean.toUpperCase(),
+              style: const TextStyle(
+                fontSize: AppSize.fontLarge,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:smart_storage_analyzer/core/constants/app_colors.dart';
 import 'package:smart_storage_analyzer/core/constants/app_icons.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/bottom_navigation/bottom_nav_item.dart';
 import 'package:smart_storage_analyzer/routes/app_routes.dart';
@@ -38,29 +37,35 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
+    
     return Container(
       padding: const EdgeInsets.all(12),
       child: Container(
         height: 70,
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: brightness == Brightness.dark
+                  ? Colors.black.withOpacity(0.3)
+                  : colorScheme.shadow.withOpacity(0.08),
               blurRadius: 20,
               offset: const Offset(0, 4),
               spreadRadius: 0,
             ),
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.05),
-              blurRadius: 30,
-              offset: const Offset(0, 0),
-              spreadRadius: 0,
-            ),
+            if (brightness == Brightness.light)
+              BoxShadow(
+                color: colorScheme.primary.withOpacity(0.05),
+                blurRadius: 30,
+                offset: const Offset(0, 0),
+                spreadRadius: 0,
+              ),
           ],
           border: Border.all(
-            color: Colors.white.withOpacity(0.08),
+            color: colorScheme.outline.withOpacity(0.1),
             width: 1,
           ),
         ),
@@ -76,10 +81,10 @@ class _BottomNavBarState extends State<BottomNavBar> {
               child: Container(
                 width: _getIndicatorWidth(),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
+                  color: colorScheme.secondaryContainer,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppColors.primary.withOpacity(0.3),
+                    color: colorScheme.secondaryContainer,
                     width: 1,
                   ),
                 ),

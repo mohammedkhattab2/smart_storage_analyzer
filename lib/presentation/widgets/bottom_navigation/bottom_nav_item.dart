@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:smart_storage_analyzer/core/constants/app_colors.dart';
 
 class BottomNavItem extends StatefulWidget {
   final IconData icon;
@@ -98,8 +97,8 @@ class _BottomNavItemState extends State<BottomNavItem>
                               widget.isSelected ? widget.activeIcon : widget.icon,
                               key: ValueKey(widget.isSelected),
                               color: widget.isSelected
-                                  ? AppColors.primary
-                                  : AppColors.textSecondary,
+                                  ? Theme.of(context).colorScheme.onSecondaryContainer
+                                  : Theme.of(context).colorScheme.onSurfaceVariant,
                               size: 24, // Consistent size
                             ),
                           ),
@@ -116,8 +115,8 @@ class _BottomNavItemState extends State<BottomNavItem>
                           style: TextStyle(
                             fontSize: 10,
                             color: widget.isSelected
-                                ? AppColors.primary
-                                : AppColors.textSecondary,
+                                ? Theme.of(context).colorScheme.onSecondaryContainer
+                                : Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: widget.isSelected
                                 ? FontWeight.w700
                                 : FontWeight.w500,

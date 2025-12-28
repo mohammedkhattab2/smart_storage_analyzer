@@ -16,32 +16,46 @@ class DashboardContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.all(AppSize.paddingMedium),
+      padding: const EdgeInsets.fromLTRB(
+        AppSize.paddingMedium,
+        0,
+        AppSize.paddingMedium,
+        AppSize.paddingMedium,
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const SizedBox(height: AppSize.paddingSmall),
           StorageCircleWidget(storageInfo: state.storageInfo),
-          SizedBox(height: AppSize.paddingLarge),
+          const SizedBox(height: AppSize.paddingXLarge),
           AnalyzeButton(
             onPressed: () {
               context.read<DashboardCubit>().analyzeAndClean();
             },
           ),
-          SizedBox(height: AppSize.paddingLarge),
-          DetailsSection(),
-          SizedBox(height: AppSize.paddingSmall),
+          const SizedBox(height: AppSize.paddingXLarge),
+          const DetailsSection(),
+          const SizedBox(height: AppSize.paddingLarge),
           CategoryGridWidget(
             categories: state.categories,
             onCategoryTap: (category) {
-              //TODO: Navigate to category details
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("${category.name} files: ${category.fileCount}"),
-                  backgroundColor: category.color,
-                  duration: const Duration(seconds: 2),
-                  )
-              );
+              // TODO: Navigate to category details
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text("${category.name} files: ${category.fileCount}"),
+                    backgroundColor: category.color,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSize.radiusSmall),
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
             },
           ),
+          const SizedBox(height: AppSize.paddingMedium),
         ],
       ),
     );

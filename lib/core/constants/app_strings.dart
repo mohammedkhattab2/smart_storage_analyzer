@@ -73,4 +73,6 @@ static const String kb = 'KB';
 static const String dashboard = 'Dashboard';
 static const String deviceStorageOverview = 'Device Storage Overview';
 static const String details = 'Details';
+
+
 }

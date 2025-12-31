@@ -29,9 +29,9 @@ class StorageHistorySection extends StatelessWidget {
           ),
         ),
         PeriodDropdownWidget(
-          currentPeriod: currentPeriod, 
-          availablePeriods: availablePeriods, 
-          onPeriodCahnged: onPeriodChanged
+          currentPeriod: currentPeriod,
+          availablePeriods: availablePeriods,
+          onPeriodChanged: onPeriodChanged
           )
       ],
     );

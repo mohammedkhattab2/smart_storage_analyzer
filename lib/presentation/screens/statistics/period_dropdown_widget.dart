@@ -5,12 +5,12 @@ import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 class PeriodDropdownWidget extends StatelessWidget {
   final String currentPeriod;
   final List<String> availablePeriods;
-  final Function(String?) onPeriodCahnged;
+  final Function(String?) onPeriodChanged;
   const PeriodDropdownWidget({
     super.key,
     required this.currentPeriod,
     required this.availablePeriods,
-    required this.onPeriodCahnged,
+    required this.onPeriodChanged,
   });
 
   @override
@@ -30,7 +30,7 @@ class PeriodDropdownWidget extends StatelessWidget {
       ),
       child: DropdownButton<String>(
         value: currentPeriod,
-        onChanged: onPeriodCahnged,
+        onChanged: onPeriodChanged,
         items: availablePeriods.map((period) {
           return DropdownMenuItem(
             value: period,

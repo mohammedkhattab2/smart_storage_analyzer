@@ -33,7 +33,7 @@ class QuickStatsSection extends StatelessWidget {
             Expanded(
               child: _buildStatCard(
                 title: AppStrings.freeSpace,
-                value: SizeFormatter.formatBytes(freeSpace.toInt()),
+                value: SizeFormatter.formateBytes(freeSpace.toInt()),
                 color: AppColors.success,
               ),
             ),
@@ -41,7 +41,7 @@ class QuickStatsSection extends StatelessWidget {
             Expanded(
               child: _buildStatCard(
                 title: AppStrings.totalSpace,
-                value: SizeFormatter.formatBytes(totalSpace.toInt()),
+                value: SizeFormatter.formateBytes(totalSpace.toInt()),
                 color: AppColors.primary,
               ),
             ),
@@ -61,10 +61,10 @@ class QuickStatsSection extends StatelessWidget {
     final unit = parts.length > 1 ? parts[1] : '';
 
     return Container(
-      padding: EdgeInsets.all(AppSizes.paddingLarge),
+      padding: EdgeInsets.all(AppSize.paddingLarge),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(AppSizes.radiusMedium),
+        borderRadius: BorderRadius.circular(AppSize.radiusMedium),
         border: Border.all(
           color: Colors.white.withOpacity(0.05),
           width: 1,
@@ -76,19 +76,19 @@ class QuickStatsSection extends StatelessWidget {
           Text(
             title.toUpperCase(),
             style: TextStyle(
-              fontSize: AppSizes.fontSmall,
+              fontSize: AppSize.fontSmall,
               color: AppColors.textSecondary,
               letterSpacing: 1.2,
             ),
           ),
-          SizedBox(height: AppSizes.paddingSmall),
+          SizedBox(height: AppSize.paddingSmall),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 number,
                 style: TextStyle(
-                  fontSize: AppSizes.fontXXLarge,
+                  fontSize: AppSize.fontXXLarge,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,
                 ),
@@ -99,7 +99,7 @@ class QuickStatsSection extends StatelessWidget {
                 child: Text(
                   unit,
                   style: TextStyle(
-                    fontSize: AppSizes.fontMedium,
+                    fontSize: AppSize.fontMedium,
                     color: AppColors.textSecondary,
                   ),
                 ),

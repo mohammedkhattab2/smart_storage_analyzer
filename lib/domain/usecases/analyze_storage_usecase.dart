@@ -5,7 +5,7 @@ class AnalyzeStorageUsecase {
 
   AnalyzeStorageUsecase(this.repository);
 
-  Future <void> excute() async {
-     await repository.analyzeStorage();
+  Future<void> excute() async {
+    await repository.analyzeStorage();
   }
 }

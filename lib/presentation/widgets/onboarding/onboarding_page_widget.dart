@@ -1,11 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'dart:ui';
 
-class OnboardingPageWidget extends StatefulWidget {
+class OnboardingPageWidget extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final String title;
   final String description;
-  
+
   const OnboardingPageWidget({
     super.key,
     required this.icon,
@@ -15,90 +16,52 @@ class OnboardingPageWidget extends StatefulWidget {
   });
 
   @override
-  State<OnboardingPageWidget> createState() => _OnboardingPageWidgetState();
-}
-
-class _OnboardingPageWidgetState extends State<OnboardingPageWidget>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-
-    _scaleAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.elasticOut,
-    );
-
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.0, 0.8, curve: Curves.easeIn),
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-    ));
-
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 380;
-    
+
     return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isSmallScreen ? 24 : 40,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 24 : 40),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Animated Icon Container with Gradient and Shadow
-          SlideTransition(
-            position: _slideAnimation,
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
+          // Icon Container with iOS-style glassmorphism
+          Container(
+            width: isSmallScreen ? 120 : 160,
+            height: isSmallScreen ? 120 : 160,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: iconColor.withValues(alpha: .2),
+                  blurRadius: 40,
+                  spreadRadius: 10,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Container(
-                  width: isSmallScreen ? 100 : 140,
-                  height: isSmallScreen ? 100 : 140,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        widget.iconColor.withOpacity(0.2),
-                        widget.iconColor.withOpacity(0.1),
+                        iconColor.withValues(alpha: isDark ? .15 : .25),
+                        iconColor.withValues(alpha: isDark ? .05 : .15),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(isSmallScreen ? 25 : 35),
-                    boxShadow: [
-                      BoxShadow(
-                        color: widget.iconColor.withOpacity(0.3),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: iconColor.withValues(alpha: .2),
+                      width: 1.5,
+                    ),
                   ),
                   child: Stack(
                     alignment: Alignment.center,
@@ -111,26 +74,17 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget>
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
                             colors: [
-                              widget.iconColor.withOpacity(0.3),
+                              iconColor.withValues(alpha: .3),
                               Colors.transparent,
                             ],
                           ),
                         ),
                       ),
-                      // Icon with subtle animation
-                      TweenAnimationBuilder<double>(
-                        duration: const Duration(seconds: 4),
-                        tween: Tween(begin: 0, end: 1),
-                        builder: (context, value, child) {
-                          return Transform.scale(
-                            scale: 1 + (0.1 * value),
-                            child: Icon(
-                              widget.icon,
-                              size: isSmallScreen ? 50 : 70,
-                              color: widget.iconColor,
-                            ),
-                          );
-                        },
+                      // Icon
+                      Icon(
+                        icon,
+                        size: isSmallScreen ? 60 : 80,
+                        color: iconColor,
                       ),
                     ],
                   ),
@@ -138,66 +92,42 @@ class _OnboardingPageWidgetState extends State<OnboardingPageWidget>
               ),
             ),
           ),
-          
+
           SizedBox(height: isSmallScreen ? 40 : 60),
-          
-          // Animated Title with Gradient
-          SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.5),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: _animationController,
-              curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic),
-            )),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
-                  colors: [
-                    Colors.white,
-                    Colors.white.withOpacity(0.9),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ).createShader(bounds),
-                child: Text(
-                  widget.title,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 24 : 32,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                    height: 1.2,
-                  ),
-                ),
+
+          // Title with Gradient
+          ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              colors: [
+                colorScheme.onSurface,
+                colorScheme.onSurface.withValues(alpha: .9),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ).createShader(bounds),
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: textTheme.headlineMedium?.copyWith(
+                fontSize: isSmallScreen ? 26 : 34,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                height: 1.2,
               ),
             ),
           ),
-          
+
           SizedBox(height: isSmallScreen ? 16 : 24),
-          
-          // Animated Description
-          SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.8),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: _animationController,
-              curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
-            )),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Text(
-                widget.description,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 14 : 17,
-                  color: Colors.grey[400],
-                  height: 1.6,
-                  letterSpacing: 0.2,
-                ),
-              ),
+
+          // Description
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: textTheme.bodyLarge?.copyWith(
+              fontSize: isSmallScreen ? 15 : 18,
+              color: colorScheme.onSurfaceVariant,
+              height: 1.6,
+              letterSpacing: 0.3,
             ),
           ),
         ],

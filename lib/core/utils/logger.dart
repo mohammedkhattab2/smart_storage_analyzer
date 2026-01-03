@@ -7,7 +7,7 @@ class Logger {
   static const String _yellow = '\x1B[33m';
   static const String _blue = '\x1B[34m';
   static const String _magenta = '\x1B[35m';
-  
+
   /// Log info
   static void info(String message, [dynamic data]) {
     if (kDebugMode) {
@@ -15,7 +15,7 @@ class Logger {
       if (data != null) print(data);
     }
   }
-  
+
   /// Log success
   static void success(String message, [dynamic data]) {
     if (kDebugMode) {
@@ -23,7 +23,7 @@ class Logger {
       if (data != null) print(data);
     }
   }
-  
+
   /// Log warning
   static void warning(String message, [dynamic data]) {
     if (kDebugMode) {
@@ -31,7 +31,7 @@ class Logger {
       if (data != null) print(data);
     }
   }
-  
+
   /// Log error
   static void error(String message, [dynamic error, StackTrace? stackTrace]) {
     if (kDebugMode) {
@@ -40,7 +40,7 @@ class Logger {
       if (stackTrace != null) print(stackTrace);
     }
   }
-  
+
   /// Log network (للمستقبل)
   static void network(String message, [dynamic data]) {
     if (kDebugMode) {

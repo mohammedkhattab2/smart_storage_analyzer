@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smart_storage_analyzer/core/constants/app_colors.dart';
 
 class FileDetailsScreen extends StatelessWidget {
+  const FileDetailsScreen({super.key});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -15,10 +16,7 @@ class FileDetailsScreen extends StatelessWidget {
         child: Text(
           'File Details Screen\n(Coming Soon)',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 16,
-          ),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
         ),
       ),
     );

@@ -11,10 +11,7 @@ class StatisticsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => sl<StatisticsCubit>()..loadStatistics(),
-      child: 
-         const StatisticsView(),
-         
-      
-      );
+      child: const StatisticsView(),
+    );
   }
 }

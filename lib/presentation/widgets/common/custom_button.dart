@@ -1,6 +1,6 @@
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:smart_storage_analyzer/core/constants/app_colors.dart';
 
 class CustomButton extends StatefulWidget {
   final String text;
@@ -11,7 +11,7 @@ class CustomButton extends StatefulWidget {
   final bool isPrimary;
   final double? width;
   final EdgeInsetsGeometry? padding;
-  
+
   const CustomButton({
     super.key,
     required this.text,
@@ -28,169 +28,159 @@ class CustomButton extends StatefulWidget {
   State<CustomButton> createState() => _CustomButtonState();
 }
 
-class _CustomButtonState extends State<CustomButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _pressAnimation;
+class _CustomButtonState extends State<CustomButton> {
+  bool _isHovered = false;
+  bool _isPressed = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 150),
-      vsync: this,
-    );
-    
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    
-    _pressAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  void _handleTapDown(TapDownDetails details) {
+  void _onTapDown(TapDownDetails _) {
     if (!widget.isLoading) {
-      _animationController.forward();
-      HapticFeedback.lightImpact();
+      setState(() => _isPressed = true);
+      HapticFeedback.mediumImpact();
     }
   }
 
-  void _handleTapUp(TapUpDetails details) {
-    _animationController.reverse();
+  void _onTapUp(TapUpDetails _) {
+    setState(() => _isPressed = false);
   }
 
-  void _handleTapCancel() {
-    _animationController.reverse();
+  void _onTapCancel() {
+    setState(() => _isPressed = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animationController,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _scaleAnimation.value,
-          child: Container(
-            width: widget.width ?? double.infinity,
-            height: 56,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: widget.isPrimary && !widget.isLoading
-                  ? [
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+
+    final buttonColor =
+        widget.backgroundColor ??
+        (widget.isPrimary ? colorScheme.primary : colorScheme.surfaceContainerHighest);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: widget.isLoading ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
+      child: Transform.scale(
+        scale: _isPressed ? 0.94 : 1.0,
+        child: Container(
+          width: widget.width,
+          height: 56,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: widget.isPrimary && !widget.isLoading
+                ? [
+                    BoxShadow(
+                      color: buttonColor.withValues(alpha: .3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                      spreadRadius: -2,
+                    ),
+                    if (_isHovered)
                       BoxShadow(
-                        color: (widget.backgroundColor ?? AppColors.primary)
-                            .withOpacity(0.4 * (1 - _pressAnimation.value)),
-                        blurRadius: 16,
-                        offset: Offset(0, 8 * (1 - _pressAnimation.value)),
-                        spreadRadius: 0,
+                        color: buttonColor.withValues(alpha: .15),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                        spreadRadius: -8,
                       ),
-                    ]
-                  : null,
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: Ink(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: widget.isPrimary
-                      ? LinearGradient(
-                          colors: [
-                            widget.backgroundColor ?? AppColors.primary,
-                            (widget.backgroundColor ?? AppColors.primaryDark)
-                                .withOpacity(0.9),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : null,
-                  color: !widget.isPrimary
-                      ? (widget.backgroundColor ?? Colors.grey[800])
-                      : null,
-                ),
+                  ]
+                : null,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: widget.isPrimary ? 10 : 0,
+                sigmaY: widget.isPrimary ? 10 : 0,
+              ),
+              child: Material(
+                color: Colors.transparent,
                 child: InkWell(
-                  onTapDown: _handleTapDown,
-                  onTapUp: _handleTapUp,
-                  onTapCancel: _handleTapCancel,
+                  onTapDown: _onTapDown,
+                  onTapUp: _onTapUp,
+                  onTapCancel: _onTapCancel,
                   onTap: widget.isLoading ? null : widget.onPressed,
-                  borderRadius: BorderRadius.circular(16),
-                  splashColor: Colors.white.withOpacity(0.2),
-                  highlightColor: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  splashColor: (widget.isPrimary ? colorScheme.onPrimary : colorScheme.primary)
+                      .withValues(alpha: .15),
+                  highlightColor: (widget.isPrimary ? colorScheme.onPrimary : colorScheme.primary)
+                      .withValues(alpha: .08),
                   child: Container(
-                    padding: widget.padding ??
-                        const EdgeInsets.symmetric(horizontal: 24),
+                    padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 24),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: widget.isPrimary
-                          ? Border.all(
-                              color: Colors.white.withOpacity(0.1),
-                              width: 1,
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: widget.isPrimary
+                          ? LinearGradient(
+                              colors: [
+                                buttonColor,
+                                buttonColor.withValues(
+                                  red: buttonColor.r * 0.85,
+                                  green: buttonColor.g * 0.85,
+                                  blue: buttonColor.b * 0.85,
+                                ),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             )
                           : null,
+                      color: widget.isPrimary ? null : buttonColor,
+                      border: Border.all(
+                        color: widget.isPrimary
+                            ? colorScheme.onPrimary.withValues(alpha: .1)
+                            : colorScheme.outline.withValues(alpha: .2),
+                        width: 1,
+                      ),
                     ),
-                    child: widget.isLoading
-                        ? _buildLoadingIndicator()
-                        : _buildButtonContent(),
+                    child: Center(
+                      child: widget.isLoading
+                          ? SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: widget.isPrimary ? colorScheme.onPrimary : colorScheme.primary,
+                                strokeWidth: 2.5,
+                                strokeCap: StrokeCap.round,
+                              ),
+                            )
+                          : _buildContent(context, colorScheme),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildLoadingIndicator() {
-    return Center(
-      child: SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(
-          color: Colors.white,
-          strokeWidth: 2.5,
-          strokeCap: StrokeCap.round,
         ),
       ),
     );
   }
 
-  Widget _buildButtonContent() {
+  Widget _buildContent(BuildContext context, ColorScheme colorScheme) {
+    final textColor = widget.isPrimary ? colorScheme.onPrimary : colorScheme.onSurfaceVariant;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           widget.text,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-            letterSpacing: 0.5,
-          ),
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontSize: _isHovered ? 17 : 16,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+                letterSpacing: _isHovered ? 0.8 : 0.5,
+              ) ??
+              TextStyle(
+                fontSize: _isHovered ? 17 : 16,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
         ),
         if (widget.icon != null) ...[
           const SizedBox(width: 8),
           Icon(
             widget.icon,
-            color: Colors.white,
-            size: 20,
+            color: textColor,
+            size: _isHovered ? 22 : 20,
           ),
         ],
       ],
@@ -198,14 +188,14 @@ class _CustomButtonState extends State<CustomButton>
   }
 }
 
-// Alternative Outlined Button Style
+// Alternative Outlined Button Style without animations
 class CustomOutlinedButton extends StatefulWidget {
   final String text;
   final IconData? icon;
   final VoidCallback onPressed;
   final Color? borderColor;
   final bool isLoading;
-  
+
   const CustomOutlinedButton({
     super.key,
     required this.text,
@@ -219,91 +209,115 @@ class CustomOutlinedButton extends StatefulWidget {
   State<CustomOutlinedButton> createState() => _CustomOutlinedButtonState();
 }
 
-class _CustomOutlinedButtonState extends State<CustomOutlinedButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+class _CustomOutlinedButtonState extends State<CustomOutlinedButton> {
   bool _isHovered = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
+  bool _isPressed = false;
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = widget.borderColor ?? AppColors.primary;
-    
-    return GestureDetector(
-      onTapDown: (_) {
-        setState(() => _isHovered = true);
-        _animationController.forward();
-      },
-      onTapUp: (_) {
-        setState(() => _isHovered = false);
-        _animationController.reverse();
-      },
-      onTapCancel: () {
-        setState(() => _isHovered = false);
-        _animationController.reverse();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
-        height: 56,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _isHovered ? borderColor : borderColor.withOpacity(0.5),
-            width: 2,
-          ),
-          color: _isHovered ? borderColor.withOpacity(0.1) : Colors.transparent,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.isLoading ? null : widget.onPressed,
-            borderRadius: BorderRadius.circular(16),
-            child: Center(
-              child: widget.isLoading
-                  ? SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: borderColor,
-                        strokeWidth: 2,
+    final colorScheme = Theme.of(context).colorScheme;
+    final borderColor = widget.borderColor ?? colorScheme.primary;
+    final isDark = colorScheme.brightness == Brightness.dark;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTapDown: (_) {
+          setState(() => _isPressed = true);
+          HapticFeedback.lightImpact();
+        },
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: widget.isLoading ? null : widget.onPressed,
+        child: Transform.scale(
+          scale: _isPressed ? 0.96 : 1.0,
+          child: Container(
+            width: double.infinity,
+            height: 56,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: _isHovered
+                  ? [
+                      BoxShadow(
+                        color: borderColor.withValues(alpha: .15),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                        spreadRadius: -4,
                       ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          widget.text,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: borderColor,
-                          ),
-                        ),
-                        if (widget.icon != null) ...[
-                          const SizedBox(width: 8),
-                          Icon(
-                            widget.icon,
-                            color: borderColor,
-                            size: 20,
-                          ),
-                        ],
-                      ],
+                    ]
+                  : null,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: _isHovered ? 5 : 0,
+                  sigmaY: _isHovered ? 5 : 0,
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: _isHovered
+                        ? LinearGradient(
+                            colors: [
+                              borderColor.withValues(alpha: .08),
+                              borderColor.withValues(alpha: .05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    color: !_isHovered
+                        ? colorScheme.surface.withValues(alpha: isDark ? .6 : .8)
+                        : null,
+                    border: Border.all(
+                      color: borderColor.withValues(alpha: .5),
+                      width: 2,
                     ),
+                  ),
+                  child: Center(
+                    child: widget.isLoading
+                        ? SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: borderColor,
+                              strokeWidth: 2,
+                              strokeCap: StrokeCap.round,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                widget.text,
+                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                      fontSize: _isHovered ? 17 : 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: borderColor,
+                                      letterSpacing: _isHovered ? 0.8 : 0.5,
+                                    ) ??
+                                    TextStyle(
+                                      fontSize: _isHovered ? 17 : 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: borderColor,
+                                    ),
+                              ),
+                              if (widget.icon != null) ...[
+                                const SizedBox(width: 8),
+                                Icon(
+                                  widget.icon,
+                                  color: borderColor,
+                                  size: _isHovered ? 22 : 20,
+                                ),
+                              ],
+                            ],
+                          ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),

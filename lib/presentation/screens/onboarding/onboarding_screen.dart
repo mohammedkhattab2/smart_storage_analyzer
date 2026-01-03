@@ -1,9 +1,10 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../routes/app_routes.dart';
 import '../../cubits/onboarding/onboarding_cubit.dart';
 import '../../cubits/onboarding/onboarding_state.dart';
@@ -12,8 +13,9 @@ import '../../widgets/onboarding/page_indicator_widget.dart';
 import '../../widgets/onboarding/parallax_page_view.dart';
 import '../../widgets/common/custom_button.dart';
 
-/// Onboarding Screen - مسؤول عن الـ BlocProvider فقط
+/// Onboarding Screen - Ù…Ø³Ø¤ÙˆÙ„ Ø¹Ù† Ø§Ù„Ù€ BlocProvider ÙÙ‚Ø·
 class OnboardingScreen extends StatelessWidget {
+  const OnboardingScreen({super.key});
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -23,78 +25,67 @@ class OnboardingScreen extends StatelessWidget {
   }
 }
 
-/// Onboarding View - مسؤول عن الـ UI
+/// Onboarding View - Ù…Ø³Ø¤ÙˆÙ„ Ø¹Ù† Ø§Ù„Ù€ UI
 class OnboardingView extends StatefulWidget {
+  const OnboardingView({super.key});
   @override
   _OnboardingViewState createState() => _OnboardingViewState();
 }
 
-class _OnboardingViewState extends State<OnboardingView>
-    with TickerProviderStateMixin {
+class _OnboardingViewState extends State<OnboardingView> {
   final PageController _pageController = PageController();
-  late AnimationController _backgroundAnimationController;
-  late Animation<double> _backgroundAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _backgroundAnimationController = AnimationController(
-      duration: const Duration(seconds: 20),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _backgroundAnimation = CurvedAnimation(
-      parent: _backgroundAnimationController,
-      curve: Curves.easeInOut,
-    );
-  }
 
   @override
   void dispose() {
     _pageController.dispose();
-    _backgroundAnimationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colorScheme.surface,
+      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // Animated Background Pattern
+          // Gradient Background
           Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _backgroundAnimation,
-              builder: (context, child) {
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment(
-                        -1 + 2 * _backgroundAnimation.value,
-                        -1 + 2 * _backgroundAnimation.value,
-                      ),
-                      end: Alignment(
-                        1 - 2 * _backgroundAnimation.value,
-                        1 - 2 * _backgroundAnimation.value,
-                      ),
-                      colors: [
-                        AppColors.background,
-                        AppColors.cardBackground.withOpacity(0.5),
-                        AppColors.background,
-                      ],
-                      stops: const [0.0, 0.5, 1.0],
-                    ),
-                  ),
-                );
-              },
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 1.5,
+                  colors: [
+                    colorScheme.primaryContainer.withValues(alpha: isDark ? .1 : .2),
+                    colorScheme.surface,
+                    colorScheme.secondaryContainer.withValues(alpha: isDark ? .05 : .1),
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+              ),
             ),
           ),
 
-          // Geometric Patterns
+          // Geometric Patterns with Theme Colors
           CustomPaint(
             size: Size.infinite,
-            painter: BackgroundPatternPainter(),
+            painter: BackgroundPatternPainter(
+              color: colorScheme.outline.withValues(alpha: .05),
+            ),
+          ),
+
+          // iOS-style Blur Layer
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 0.5, sigmaY: 0.5),
+              child: Container(
+                color: colorScheme.surface.withValues(alpha: .01),
+              ),
+            ),
           ),
 
           // Main Content
@@ -102,6 +93,7 @@ class _OnboardingViewState extends State<OnboardingView>
             child: BlocConsumer<OnboardingCubit, OnboardingState>(
               listener: (context, state) {
                 if (state is OnboardingCompleted) {
+                  HapticFeedback.lightImpact();
                   context.go(AppRoutes.dashboard);
                 }
               },
@@ -109,7 +101,7 @@ class _OnboardingViewState extends State<OnboardingView>
                 if (state is OnboardingLoading) {
                   return Center(
                     child: CircularProgressIndicator(
-                      color: AppColors.primary,
+                      color: colorScheme.primary,
                       strokeWidth: 3,
                     ),
                   );
@@ -118,62 +110,86 @@ class _OnboardingViewState extends State<OnboardingView>
                 if (state is OnboardingPageState) {
                   return Column(
                     children: [
-                      // Skip Button
+                      // Skip Button with iOS-style glassmorphism
                       Align(
                         alignment: Alignment.topRight,
                         child: Padding(
                           padding: const EdgeInsets.all(20),
-                          child: TextButton(
-                            onPressed: () {
-                              context.read<OnboardingCubit>().completeOnboarding();
-                            },
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 10,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(
+                                sigmaX: 10,
+                                sigmaY: 10,
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              backgroundColor: Colors.white.withOpacity(0.1),
-                            ),
-                            child: Text(
-                              'Skip',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    context
+                                        .read<OnboardingCubit>()
+                                        .completeOnboarding();
+                                  },
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.surfaceContainer
+                                          .withValues(alpha: isDark ? .3 : .5),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: colorScheme.outline
+                                            .withValues(alpha: .1),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Skip',
+                                      style: TextStyle(
+                                        color: colorScheme.onSurfaceVariant,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
 
-                      // PageView للصفحات with Parallax Effect
+                      // PageView Ù„Ù„ØµÙØ­Ø§Øª with Parallax Effect
                       Expanded(
                         child: ParallaxPageView(
                           controller: _pageController,
                           onPageChanged: (index) {
+                            HapticFeedback.selectionClick();
                             context.read<OnboardingCubit>().changePage(index);
                           },
                           children: [
                             OnboardingPageWidget(
-                              icon: Icons.flash_on,
-                              iconColor: Color(0xFF4CAF50),
+                              icon: Icons.flash_on_rounded,
+                              iconColor: colorScheme.primary,
                               title: 'One-Tap Optimize',
                               description:
                                   'Clean up duplicates, large files, and\nsystem cache with a single tap.',
                             ),
                             OnboardingPageWidget(
-                              icon: Icons.pie_chart_outline,
-                              iconColor: Color(0xFF9C27B0),
+                              icon: Icons.pie_chart_rounded,
+                              iconColor: colorScheme.secondary,
                               title: 'Smart Categories',
                               description:
                                   'Visualize your storage usage with\nbeautiful, interactive charts and\nbreakdowns.',
                             ),
                             OnboardingPageWidget(
-                              icon: Icons.phone_android,
-                              iconColor: Color(0xFF2196F3),
+                              icon: Icons.phone_android_rounded,
+                              iconColor: colorScheme.tertiary,
                               title: 'Deep Analysis',
                               description:
                                   'Scan your device to find hidden clutter\nand reclaim valuable space instantly.',
@@ -182,7 +198,7 @@ class _OnboardingViewState extends State<OnboardingView>
                         ),
                       ),
 
-                      // Bottom Section
+                      // Bottom Section with gradient fade
                       Container(
                         padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
                         decoration: BoxDecoration(
@@ -190,8 +206,8 @@ class _OnboardingViewState extends State<OnboardingView>
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              AppColors.background.withOpacity(0.0),
-                              AppColors.background,
+                              colorScheme.surface.withValues(alpha: 0),
+                              colorScheme.surface,
                             ],
                           ),
                         ),
@@ -205,38 +221,28 @@ class _OnboardingViewState extends State<OnboardingView>
 
                             const SizedBox(height: 40),
 
-                            // Button with Animation
-                            TweenAnimationBuilder<double>(
-                              duration: const Duration(milliseconds: 600),
-                              tween: Tween(begin: 0.0, end: 1.0),
-                              builder: (context, value, child) {
-                                return Transform.translate(
-                                  offset: Offset(0, 20 * (1 - value)),
-                                  child: Opacity(
-                                    opacity: value,
-                                    child: CustomButton(
-                                      text: state.currentPage == 2
-                                          ? 'Get Started'
-                                          : 'Next',
-                                      icon: state.currentPage == 2
-                                          ? Icons.rocket_launch
-                                          : Icons.arrow_forward,
-                                      onPressed: () {
-                                        if (state.currentPage == 2) {
-                                          context
-                                              .read<OnboardingCubit>()
-                                              .completeOnboarding();
-                                        } else {
-                                          _pageController.nextPage(
-                                            duration:
-                                                const Duration(milliseconds: 500),
-                                            curve: Curves.easeInOutCubic,
-                                          );
-                                        }
-                                      },
+                            // Button
+                            CustomButton(
+                              text: state.currentPage == 2
+                                  ? 'Get Started'
+                                  : 'Next',
+                              icon: state.currentPage == 2
+                                  ? Icons.rocket_launch_rounded
+                                  : Icons.arrow_forward_rounded,
+                              onPressed: () {
+                                HapticFeedback.lightImpact();
+                                if (state.currentPage == 2) {
+                                  context
+                                      .read<OnboardingCubit>()
+                                      .completeOnboarding();
+                                } else {
+                                  _pageController.nextPage(
+                                    duration: const Duration(
+                                      milliseconds: 500,
                                     ),
-                                  ),
-                                );
+                                    curve: Curves.easeInOutCubic,
+                                  );
+                                }
                               },
                             ),
                           ],
@@ -251,13 +257,6 @@ class _OnboardingViewState extends State<OnboardingView>
             ),
           ),
 
-          // Floating Particles Effect
-          ...List.generate(5, (index) {
-            return FloatingParticle(
-              delay: Duration(seconds: index),
-              duration: Duration(seconds: 15 + index * 2),
-            );
-          }),
         ],
       ),
     );
@@ -266,10 +265,14 @@ class _OnboardingViewState extends State<OnboardingView>
 
 // Background Pattern Painter
 class BackgroundPatternPainter extends CustomPainter {
+  final Color color;
+
+  BackgroundPatternPainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.03)
+      ..color = color
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
 
@@ -301,99 +304,7 @@ class BackgroundPatternPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(BackgroundPatternPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
-// Floating Particle Widget
-class FloatingParticle extends StatefulWidget {
-  final Duration delay;
-  final Duration duration;
-
-  const FloatingParticle({
-    Key? key,
-    required this.delay,
-    required this.duration,
-  }) : super(key: key);
-
-  @override
-  State<FloatingParticle> createState() => _FloatingParticleState();
-}
-
-class _FloatingParticleState extends State<FloatingParticle>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-  late double _startX;
-  late double _startY;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: widget.duration,
-      vsync: this,
-    );
-
-    _animation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.linear,
-    );
-
-    // Random starting position
-    final random = math.Random(widget.delay.inMilliseconds);
-    _startX = random.nextDouble();
-    _startY = random.nextDouble();
-
-    // Start animation after delay
-    Future.delayed(widget.delay, () {
-      if (mounted) {
-        _controller.repeat();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        final progress = _animation.value;
-        final x = _startX * size.width;
-        final y = (_startY - progress * 2) * size.height;
-
-        if (y < -100) {
-          // Reset position when particle goes off screen
-          _startY = 1.0 + progress * 2;
-        }
-
-        return Positioned(
-          left: x,
-          top: y,
-          child: Container(
-            width: 4,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.3),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.2),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}

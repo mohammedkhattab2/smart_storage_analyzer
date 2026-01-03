@@ -10,7 +10,7 @@ class SettingsModel extends Settings {
          darkModeEnabled: darkModeEnabled,
          isPremiumUser: isPremiumUser,
        );
-  
+
   factory SettingsModel.fromJson(Map<String, dynamic> json) {
     return SettingsModel(
       notificationsEnabled: json['notificationsEnabled'] ?? true,

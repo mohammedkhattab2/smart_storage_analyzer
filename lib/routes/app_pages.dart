@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:smart_storage_analyzer/presentation/screens/category_details/category_details_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/file_details/file_details_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/file_manager/file_manager_screen.dart';
@@ -21,38 +20,36 @@ class AppPages {
   }
 
   static final GoRouter router = GoRouter(
-    initialLocation: AppRoutes.dashboard, // Default, will be overridden by redirect
+    initialLocation:
+        AppRoutes.dashboard, // Default, will be overridden by redirect
     redirect: (context, state) async {
       final pref = await SharedPreferences.getInstance();
       final hasSeenOnboarding = pref.getBool("hasSeenOnboarding") ?? false;
-      
+
       // Initial navigation check
       if (state.matchedLocation == '/') {
         return hasSeenOnboarding ? AppRoutes.dashboard : AppRoutes.onboarding;
       }
-      
+
       // If user is trying to access onboarding but has already seen it, redirect to dashboard
       if (hasSeenOnboarding && state.matchedLocation == AppRoutes.onboarding) {
         return AppRoutes.dashboard;
       }
-      
+
       // If user hasn't seen onboarding and is trying to access other pages, redirect to onboarding
       if (!hasSeenOnboarding && state.matchedLocation != AppRoutes.onboarding) {
         return AppRoutes.onboarding;
       }
-      
+
       return null;
     },
     routes: <RouteBase>[
       GoRoute(
         path: AppRoutes.onboarding,
         name: "onboarding",
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
+        pageBuilder: (context, state) => NoTransitionPage<void>(
           key: state.pageKey,
           child: OnboardingScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
         ),
       ),
       ShellRoute(
@@ -68,14 +65,8 @@ class AppPages {
               child: DashboardScreen(),
             ),
             routes: <RouteBase>[
-              GoRoute(
-                path: "category/:name",
-                name: "categoryDetails",
-                builder: (context, state) {
-                  final categoryName = state.pathParameters["name"]!;
-                  return CategoryDetailsScreen(category: categoryName);
-                },
-              ),
+              // Category details route is now handled directly from dashboard
+              // using Navigator.push with Category object
             ],
           ),
           GoRoute(
@@ -150,7 +141,8 @@ extension NavigationHelper on BuildContext {
       go(AppRoutes.dashboard);
     }
   }
-  // navigate with parameters 
+
+  // navigate with parameters
   void navigateToCategory(String categoryName) {
     go('${AppRoutes.dashboard}/category/$categoryName');
   }

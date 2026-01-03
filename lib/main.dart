@@ -17,9 +17,7 @@ void main() async {
 Future<void> _setupSystemUi() async {
   // Initial system UI setup - will be updated based on theme
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-    ),
+    const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
   );
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -29,7 +27,7 @@ Future<void> _setupSystemUi() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -38,7 +36,7 @@ class MyApp extends StatelessWidget {
         builder: (context, state) {
           // Update system UI based on theme
           _updateSystemUiOverlay(context, state);
-          
+
           return MaterialApp.router(
             title: "Smart Storage Analyzer",
             debugShowCheckedModeBanner: false,
@@ -48,9 +46,9 @@ class MyApp extends StatelessWidget {
             routerConfig: AppPages.router,
             builder: (context, child) {
               return MediaQuery(
-                data: MediaQuery.of(context).copyWith(
-                  textScaler: const TextScaler.linear(1.0),
-                ),
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(1.0)),
                 child: child!,
               );
             },
@@ -59,20 +57,22 @@ class MyApp extends StatelessWidget {
       ),
     );
   }
-  
+
   void _updateSystemUiOverlay(BuildContext context, ThemeState state) {
     // Get the actual brightness to set system overlay appropriately
     final isDark = context.read<ThemeCubit>().isDarkMode(context);
-    
+
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
         statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-        systemNavigationBarColor: isDark 
-            ? const Color(0xFF0F1419)  // Dark theme surface color
+        systemNavigationBarColor: isDark
+            ? const Color(0xFF0F1419) // Dark theme surface color
             : const Color(0xFFF5F7FA), // Light theme surface color
-        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarIconBrightness: isDark
+            ? Brightness.light
+            : Brightness.dark,
       ),
     );
   }

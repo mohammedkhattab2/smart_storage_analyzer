@@ -17,19 +17,16 @@ class Settings extends Equatable {
     bool? isPremiumUser,
   }) {
     return Settings(
-      notificationsEnabled:
-          notificationsEnabled ?? this.notificationsEnabled,
-      darkModeEnabled:
-          darkModeEnabled ?? this.darkModeEnabled,
-      isPremiumUser:
-          isPremiumUser ?? this.isPremiumUser,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      darkModeEnabled: darkModeEnabled ?? this.darkModeEnabled,
+      isPremiumUser: isPremiumUser ?? this.isPremiumUser,
     );
   }
 
   @override
   List<Object> get props => [
-        notificationsEnabled,
-        darkModeEnabled,
-        isPremiumUser,
-      ];
+    notificationsEnabled,
+    darkModeEnabled,
+    isPremiumUser,
+  ];
 }

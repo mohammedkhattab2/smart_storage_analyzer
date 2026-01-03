@@ -14,7 +14,7 @@ class StatisticsContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.all(AppSize.paddingMedium),
+      padding: const EdgeInsets.all(AppSize.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -25,17 +25,16 @@ class StatisticsContent extends StatelessWidget {
               context.read<StatisticsCubit>().changePeriod(period!);
             },
           ),
-          SizedBox(height: AppSize.paddingMedium,),
+          const SizedBox(height: AppSize.paddingMedium),
           StorageChartWidget(
-            dataPoints: state.statistics.dataPoint, 
-            period: state.statistics.period
-            ),
-            SizedBox(height: AppSize.paddingLarge,),
-            QuickStatsSection(
-              freeSpace: state.statistics.currentFreeSpace, 
-              totalSpace: state.statistics.totalSpace)
-            
-
+            dataPoints: state.statistics.dataPoint,
+            period: state.statistics.period,
+          ),
+          const SizedBox(height: AppSize.paddingLarge),
+          QuickStatsSection(
+            freeSpace: state.statistics.currentFreeSpace,
+            totalSpace: state.statistics.totalSpace,
+          ),
         ],
       ),
     );

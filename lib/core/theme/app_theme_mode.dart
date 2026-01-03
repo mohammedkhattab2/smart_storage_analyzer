@@ -8,9 +8,9 @@ enum AppThemeMode {
 
   final String label;
   final IconData icon;
-  
+
   const AppThemeMode(this.label, this.icon);
-  
+
   /// Convert to Flutter's ThemeMode
   ThemeMode get themeMode {
     switch (this) {
@@ -22,7 +22,7 @@ enum AppThemeMode {
         return ThemeMode.dark;
     }
   }
-  
+
   /// Get from string value
   static AppThemeMode fromString(String? value) {
     switch (value) {
@@ -35,7 +35,7 @@ enum AppThemeMode {
         return AppThemeMode.system;
     }
   }
-  
+
   /// Convert to string for storage
   String toStorageString() {
     switch (this) {

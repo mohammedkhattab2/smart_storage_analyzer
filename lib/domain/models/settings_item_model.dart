@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum SettingsItemType {
-  toggle,
-  navigation,
-  action,
-}
+enum SettingsItemType { toggle, navigation, action }
 
 class SettingsItemModel {
   final String id;
@@ -32,8 +28,5 @@ class SettingsSectionModel {
   final String title;
   final List<SettingsItemModel> items;
 
-  const SettingsSectionModel({
-    required this.title,
-    required this.items,
-  });
+  const SettingsSectionModel({required this.title, required this.items});
 }

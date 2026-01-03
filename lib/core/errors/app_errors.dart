@@ -4,28 +4,32 @@ import 'package:flutter/material.dart';
 abstract class AppError implements Exception {
   final String message;
   final String? code;
-  
+
   const AppError(this.message, [this.code]);
 }
 
 /// Permission Error
 class PermissionError extends AppError {
-  const PermissionError([String message = 'Permission denied']) : super(message, 'PERMISSION_ERROR');
+  const PermissionError([String message = 'Permission denied'])
+    : super(message, 'PERMISSION_ERROR');
 }
 
 /// Storage Error
 class StorageError extends AppError {
-  const StorageError([String message = 'Storage error occurred']) : super(message, 'STORAGE_ERROR');
+  const StorageError([String message = 'Storage error occurred'])
+    : super(message, 'STORAGE_ERROR');
 }
 
 /// File System Error
 class FileSystemError extends AppError {
-  const FileSystemError([String message = 'File system error']) : super(message, 'FILE_ERROR');
+  const FileSystemError([String message = 'File system error'])
+    : super(message, 'FILE_ERROR');
 }
 
 /// Network Error (للمستقبل)
 class NetworkError extends AppError {
-  const NetworkError([String message = 'Network error']) : super(message, 'NETWORK_ERROR');
+  const NetworkError([String message = 'Network error'])
+    : super(message, 'NETWORK_ERROR');
 }
 
 /// Error Handler
@@ -38,7 +42,7 @@ class ErrorHandler {
     }
     return error.toString();
   }
-  
+
   /// Show Error Dialog
   static void showErrorDialog(BuildContext context, dynamic error) {
     showDialog(
@@ -55,7 +59,7 @@ class ErrorHandler {
       ),
     );
   }
-  
+
   /// Show Error Snackbar
   static void showErrorSnackbar(BuildContext context, dynamic error) {
     ScaffoldMessenger.of(context).showSnackBar(

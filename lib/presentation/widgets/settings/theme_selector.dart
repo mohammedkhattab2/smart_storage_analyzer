@@ -1,33 +1,57 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/theme/app_theme_mode.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/theme/theme_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/theme/theme_state.dart';
 
 /// Theme selector widget for settings
-class ThemeSelector extends StatelessWidget {
+class ThemeSelector extends StatefulWidget {
   const ThemeSelector({super.key});
 
   @override
+  State<ThemeSelector> createState() => _ThemeSelectorState();
+}
+
+class _ThemeSelectorState extends State<ThemeSelector> {
+  bool _isOpen = false;
+
+  void _handleMenuOpen() {
+    setState(() => _isOpen = true);
+  }
+
+  void _handleMenuClose() {
+    setState(() => _isOpen = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     return BlocBuilder<ThemeCubit, ThemeState>(
       builder: (context, state) {
         return PopupMenuButton<AppThemeMode>(
           initialValue: state.themeMode,
           onSelected: (mode) {
+            HapticFeedback.lightImpact();
             context.read<ThemeCubit>().setThemeMode(mode);
           },
+          onOpened: _handleMenuOpen,
+          onCanceled: _handleMenuClose,
           offset: const Offset(0, 8),
+          elevation: 8,
+          shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSize.radiusMedium),
+            borderRadius: BorderRadius.circular(16),
           ),
+          color: colorScheme.surfaceContainer,
           itemBuilder: (context) {
-            final colorScheme = Theme.of(context).colorScheme;
-            
             return AppThemeMode.values.map((mode) {
               return PopupMenuItem<AppThemeMode>(
                 value: mode,
+                height: 48,
                 child: _ThemeModeOption(
                   mode: mode,
                   isSelected: mode == state.themeMode,
@@ -36,36 +60,65 @@ class ThemeSelector extends StatelessWidget {
             }).toList();
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 6,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.secondaryContainer,
-              borderRadius: BorderRadius.circular(AppSize.radiusSmall),
+              gradient: LinearGradient(
+                colors: _isOpen
+                    ? [
+                        colorScheme.primaryContainer,
+                        colorScheme.primaryContainer.withValues(alpha: 0.8),
+                      ]
+                    : [
+                        colorScheme.secondaryContainer.withValues(alpha: 0.8),
+                        colorScheme.secondaryContainer.withValues(alpha: 0.6),
+                      ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isOpen
+                    ? colorScheme.primary.withValues(alpha: 0.2)
+                    : colorScheme.outline.withValues(alpha: 0.1),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: (_isOpen ? colorScheme.primary : colorScheme.shadow)
+                      .withValues(alpha: 0.1),
+                  blurRadius: _isOpen ? 8 : 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   state.themeMode.icon,
-                  size: 18,
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  key: ValueKey(state.themeMode),
+                  size: 20,
+                  color: _isOpen
+                      ? colorScheme.onPrimaryContainer
+                      : colorScheme.onSecondaryContainer,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 Text(
                   state.themeMode.label,
-                  style: TextStyle(
-                    fontSize: 13,
+                  style: textTheme.labelLarge!.copyWith(
+                    color: _isOpen
+                        ? colorScheme.onPrimaryContainer
+                        : colorScheme.onSecondaryContainer,
                     fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSecondaryContainer,
                   ),
                 ),
                 const SizedBox(width: 4),
                 Icon(
-                  Icons.arrow_drop_down,
-                  size: 18,
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  Icons.arrow_drop_down_rounded,
+                  size: 22,
+                  color: _isOpen
+                      ? colorScheme.onPrimaryContainer
+                      : colorScheme.onSecondaryContainer,
                 ),
               ],
             ),
@@ -81,44 +134,66 @@ class _ThemeModeOption extends StatelessWidget {
   final AppThemeMode mode;
   final bool isSelected;
 
-  const _ThemeModeOption({
-    required this.mode,
-    required this.isSelected,
-  });
+  const _ThemeModeOption({required this.mode, required this.isSelected});
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? colorScheme.primaryContainer.withValues(alpha: 0.2)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Row(
         children: [
-          Icon(
-            mode.icon,
-            size: 20,
-            color: isSelected 
-                ? colorScheme.primary 
-                : colorScheme.onSurfaceVariant,
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? colorScheme.primaryContainer.withValues(alpha: 0.5)
+                  : colorScheme.surfaceContainerHighest,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              mode.icon,
+              size: 18,
+              color: isSelected
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               mode.label,
-              style: TextStyle(
-                color: isSelected 
-                    ? colorScheme.primary 
-                    : colorScheme.onSurface,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              style: textTheme.bodyMedium!.copyWith(
+                color: isSelected ? colorScheme.primary : colorScheme.onSurface,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ),
           if (isSelected)
-            Icon(
-              Icons.check,
-              size: 20,
-              color: colorScheme.primary,
-            ),
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: colorScheme.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_rounded,
+                size: 14,
+                color: colorScheme.onPrimary,
+              ),
+            )
+          else
+            const SizedBox.shrink(),
+          const SizedBox(width: 4),
         ],
       ),
     );

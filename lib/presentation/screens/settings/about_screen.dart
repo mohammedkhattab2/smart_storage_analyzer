@@ -1,5 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:smart_storage_analyzer/core/constants/app_colors.dart';
+import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/constants/app_strings.dart';
 
@@ -8,115 +9,294 @@ class AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: colorScheme.surface,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        ),
+        title: Text(
           'About',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
+          style: textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
+        centerTitle: true,
+        leading: Container(
+          margin: const EdgeInsets.all(8),
+          child: ClipOval(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .6,
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: colorScheme.outline.withValues(alpha: .1),
+                    width: 1,
+                  ),
+                ),
+                child: IconButton(
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pop(context);
+                  },
+                  icon: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 18,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(AppSize.paddingLarge),
           child: Column(
             children: [
               const SizedBox(height: AppSize.paddingXLarge),
-              // App Icon
+              // App Icon with glassmorphism
               Container(
-                width: 120,
-                height: 120,
+                width: 140,
+                height: 140,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppSize.radiusXLarge),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: colorScheme.primary.withValues(alpha: .2,
+                      ),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10),
+                      spreadRadius: -5,
+                    ),
+                  ],
                 ),
-                child: const Icon(
-                  Icons.storage,
-                  size: 60,
-                  color: AppColors.primary,
+                child: ClipOval(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          colorScheme.primaryContainer
+                              .withValues(alpha: isDark ? .3 : .5,
+                              ),
+                          colorScheme.secondaryContainer
+                              .withValues(alpha: isDark ? .2 : .4,
+                              ),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: colorScheme.outline.withValues(alpha: .2,
+                        ),
+                        width: 1,
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(
+                              sigmaX: 10,
+                              sigmaY: 10,
+                            ),
+                            child: Container(
+                              color: Colors.transparent,
+                            ),
+                          ),
+                        ),
+                        Center(
+                          child: Icon(
+                            Icons.storage_rounded,
+                            size: 64,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: AppSize.paddingLarge),
               // App Name
-              const Text(
+              Text(
                 AppStrings.appName,
-                style: TextStyle(
-                  fontSize: AppSize.fontXXLarge,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                style: textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.8,
+                  foreground: Paint()
+                    ..shader = LinearGradient(
+                      colors: [
+                        colorScheme.primary,
+                        colorScheme.secondary,
+                      ],
+                    ).createShader(const Rect.fromLTWH(0, 0, 200, 70)),
                 ),
               ),
               const SizedBox(height: AppSize.paddingSmall),
               // Version
-              Text(
-                'Version 1.0.0',
-                style: TextStyle(
-                  fontSize: AppSize.fontLarge,
-                  color: AppColors.textSecondary,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer.withValues(alpha: .2,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: colorScheme.primary.withValues(alpha: .3,
+                    ),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  'Version 1.0.0',
+                  style: textTheme.labelLarge?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSize.paddingXLarge),
-              // Description
+              // Description card with glassmorphism
               Container(
                 padding: const EdgeInsets.all(AppSize.paddingLarge),
                 decoration: BoxDecoration(
-                  color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(AppSize.radiusLarge),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      'Smart Storage Analyzer helps you understand and manage your device storage efficiently.',
-                      style: TextStyle(
-                        fontSize: AppSize.fontLarge,
-                        color: AppColors.textSecondary,
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colorScheme.primary.withValues(alpha: .08),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                      spreadRadius: -4,
                     ),
-                    const SizedBox(height: AppSize.paddingLarge),
-                    _buildFeature(Icons.offline_bolt, 'Works 100% Offline'),
-                    const SizedBox(height: AppSize.paddingMedium),
-                    _buildFeature(Icons.privacy_tip, 'Privacy-First Design'),
-                    const SizedBox(height: AppSize.paddingMedium),
-                    _buildFeature(Icons.block, 'No Ads, No Tracking'),
-                    const SizedBox(height: AppSize.paddingMedium),
-                    _buildFeature(Icons.speed, 'Fast & Lightweight'),
                   ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(
+                        AppSize.paddingLarge,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .8,
+                            ),
+                            colorScheme.surface.withValues(alpha: isDark ? .2 : .6,
+                            ),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: colorScheme.outline.withValues(alpha: .1,
+                          ),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Smart Storage Analyzer helps you understand and manage your device storage efficiently.',
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              height: 1.6,
+                              letterSpacing: 0.3,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: AppSize.paddingLarge),
+                          ...List.generate(4, (index) {
+                            final features = [
+                              (
+                                Icons.offline_bolt_rounded,
+                                'Works 100% Offline',
+                              ),
+                              (
+                                Icons.privacy_tip_rounded,
+                                'Privacy-First Design',
+                              ),
+                              (
+                                Icons.block_rounded,
+                                'No Ads, No Tracking',
+                              ),
+                              (
+                                Icons.speed_rounded,
+                                'Fast & Lightweight',
+                              ),
+                            ];
+                            return _buildFeature(
+                              context,
+                              features[index].$1,
+                              features[index].$2,
+                              index,
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: AppSize.paddingXLarge),
               // Developer Info
-              _buildInfoSection('Developer', 'Smart Storage Team'),
-              const SizedBox(height: AppSize.paddingMedium),
-              _buildInfoSection('Contact', 'support@smartstorageanalyzer.com'),
-              const SizedBox(height: AppSize.paddingMedium),
-              _buildInfoSection('Website', 'www.smartstorageanalyzer.com'),
-              const SizedBox(height: AppSize.paddingXLarge * 2),
-              // Copyright
-              Text(
-                '© 2025 Smart Storage Analyzer',
-                style: TextStyle(
-                  fontSize: AppSize.fontSmall,
-                  color: AppColors.textSecondary.withOpacity(0.7),
-                ),
+              _buildInfoSection(
+                context,
+                'Developer',
+                'Khattab',
+                Icons.code_rounded,
               ),
-              const SizedBox(height: AppSize.paddingSmall),
-              Text(
-                'All rights reserved',
-                style: TextStyle(
-                  fontSize: AppSize.fontSmall,
-                  color: AppColors.textSecondary.withOpacity(0.7),
-                ),
+              const SizedBox(height: AppSize.paddingMedium),
+              _buildInfoSection(
+                context,
+                'Contact',
+                'dimakhattab2017@gmail.com',
+                Icons.email_rounded,
+              ),
+              const SizedBox(height: AppSize.paddingMedium),
+              // Copyright
+              Column(
+                children: [
+                  Text(
+                    '© 2026 Smart Storage Analyzer',
+                    style: textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant
+                          .withValues(alpha: .6),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: AppSize.paddingSmall),
+                  Text(
+                    'All rights reserved',
+                    style: textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant
+                          .withValues(alpha: .6),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSize.paddingXLarge),
             ],
@@ -126,52 +306,94 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFeature(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: AppSize.iconSmall,
-          color: AppColors.primary,
-        ),
-        const SizedBox(width: AppSize.paddingSmall),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: AppSize.fontMedium,
-              color: AppColors.textPrimary,
+  Widget _buildFeature(BuildContext context, IconData icon, String text, int index) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: index < 3 ? AppSize.paddingMedium : 0,
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withValues(alpha: .1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 20, color: colorScheme.primary),
+          ),
+          const SizedBox(width: AppSize.paddingMedium),
+          Expanded(
+            child: Text(
+              text,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.3,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildInfoSection(String label, String value) {
+  Widget _buildInfoSection(BuildContext context, String label, String value, IconData icon) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final isDark = colorScheme.brightness == Brightness.dark;
+
     return Container(
-      padding: const EdgeInsets.all(AppSize.paddingMedium),
+      padding: const EdgeInsets.all(AppSize.paddingLarge),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(AppSize.radiusMedium),
+        color: colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .8,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: colorScheme.outline.withValues(alpha: .1),
+          width: 1,
+        ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: AppSize.fontMedium,
-              color: AppColors.textSecondary,
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer.withValues(alpha: .3),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 20, color: colorScheme.primary),
+          ),
+          const SizedBox(width: AppSize.paddingMedium),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: AppSize.fontMedium,
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w500,
-            ),
+          Icon(
+            Icons.arrow_forward_ios_rounded,
+            size: 16,
+            color: colorScheme.onSurfaceVariant.withValues(alpha: .5),
           ),
         ],
       ),

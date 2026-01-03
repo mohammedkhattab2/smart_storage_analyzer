@@ -1,11 +1,14 @@
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 
-class SettingsTile extends StatelessWidget {
+class SettingsTile extends StatefulWidget {
   final IconData icon;
   final String title;
   final Widget? trailing;
   final VoidCallback? onTap;
+
   const SettingsTile({
     super.key,
     required this.icon,
@@ -15,53 +18,167 @@ class SettingsTile extends StatelessWidget {
   });
 
   @override
+  State<SettingsTile> createState() => _SettingsTileState();
+}
+
+class _SettingsTileState extends State<SettingsTile> {
+  bool _isPressed = false;
+  bool _isHovered = false;
+
+  void _handleTapDown(TapDownDetails details) {
+    setState(() => _isPressed = true);
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    setState(() => _isPressed = false);
+  }
+
+  void _handleTapCancel() {
+    setState(() => _isPressed = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSize.paddingXSmall),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppSize.radiusMedium),
-          child: Ink(
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(AppSize.radiusMedium),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSize.paddingMedium,
-                vertical: AppSize.paddingMedium + 4,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return MouseRegion(
+      onEnter: (_) {
+        if (widget.onTap != null) {
+          setState(() => _isHovered = true);
+        }
+      },
+      onExit: (_) {
+        setState(() => _isHovered = false);
+      },
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      child: Container(
+        margin: const EdgeInsets.symmetric(
+          horizontal: AppSize.paddingMedium,
+          vertical: AppSize.paddingSmall / 2,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.primary.withValues(alpha: 
+                _isHovered ? 0.08 : 0,
               ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(AppSize.radiusSmall),
+              blurRadius: _isHovered ? 8 : 0,
+              offset: Offset(0, _isHovered ? 4 : 0),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: _isHovered ? 5 : 0,
+              sigmaY: _isHovered ? 5 : 0,
+            ),
+            child: Material(
+              color: _isHovered
+                  ? colorScheme.surfaceContainer.withValues(alpha: 0.8)
+                  : colorScheme.surface.withValues(alpha: 
+                      isDark ? 0.6 : 0.9,
                     ),
-                    child: Icon(
-                      icon,
-                      color: colorScheme.onPrimaryContainer,
-                      size: AppSize.iconSmall + 4,
-                    ),
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                onTap: widget.onTap != null
+                    ? () {
+                        HapticFeedback.lightImpact();
+                        widget.onTap!();
+                      }
+                    : null,
+                onTapDown: widget.onTap != null ? _handleTapDown : null,
+                onTapUp: widget.onTap != null ? _handleTapUp : null,
+                onTapCancel: widget.onTap != null
+                    ? _handleTapCancel
+                    : null,
+                borderRadius: BorderRadius.circular(16),
+                splashColor: colorScheme.primary.withValues(alpha: 0.08),
+                highlightColor: colorScheme.primary.withValues(alpha: 0.04),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSize.paddingLarge,
+                    vertical: AppSize.paddingLarge,
                   ),
-                  const SizedBox(width: AppSize.paddingMedium),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: AppSize.fontLarge,
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w500,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: _isHovered
+                          ? colorScheme.outline.withValues(alpha: 0.15)
+                          : colorScheme.outline.withValues(alpha: 0.08),
+                      width: 1,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: _isHovered ? 44 : 40,
+                        height: _isHovered ? 44 : 40,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _isHovered
+                                  ? colorScheme.primary.withValues(alpha: 0.15)
+                                  : colorScheme.surfaceContainerHighest,
+                              _isHovered
+                                  ? colorScheme.primary.withValues(alpha: 0.08)
+                                  : Color.fromARGB(
+                                      colorScheme.surfaceContainerHighest.alpha,
+                                      (colorScheme.surfaceContainerHighest.red * 0.95).round(),
+                                      (colorScheme.surfaceContainerHighest.green * 0.95).round(),
+                                      (colorScheme.surfaceContainerHighest.blue * 0.95).round(),
+                                    ),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _isHovered
+                                ? colorScheme.primary.withValues(alpha: 0.2)
+                                : colorScheme.outline.withValues(alpha: 0.05),
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(
+                          widget.icon,
+                          color: _isHovered
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
+                          size: _isHovered ? 22 : 20,
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: AppSize.paddingMedium + 4),
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          style: textTheme.bodyLarge!.copyWith(
+                            color: _isHovered
+                                ? colorScheme.onSurface
+                                : colorScheme.onSurface.withValues(alpha: 0.9),
+                            fontWeight: _isHovered
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            letterSpacing: _isHovered ? 0.3 : 0.1,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                      if (widget.trailing != null)
+                        Transform.translate(
+                          offset: Offset(_isHovered ? 10 : 0, 0),
+                          child: widget.trailing!,
+                        ),
+                    ],
                   ),
-                  if (trailing != null) trailing!,
-                ],
+                ),
               ),
             ),
           ),

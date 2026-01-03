@@ -61,15 +61,15 @@ class FileExtensions {
   static String getFileCategory(String filePath) {
     final extension = filePath.toLowerCase();
 
-    if (imageExtensions.any((ext)=> extension.endsWith(ext))){
+    if (imageExtensions.any((ext) => extension.endsWith(ext))) {
       return 'Image';
-    } else if (videoExtensions.any((ext)=> extension.endsWith(ext))){
+    } else if (videoExtensions.any((ext) => extension.endsWith(ext))) {
       return 'Video';
-    } else if (audioExtensions.any((ext)=> extension.endsWith(ext))){
+    } else if (audioExtensions.any((ext) => extension.endsWith(ext))) {
       return 'Audio';
-    } else if (documentExtensions.any((ext)=> extension.endsWith(ext))){
+    } else if (documentExtensions.any((ext) => extension.endsWith(ext))) {
       return 'Document';
-    } else if (appExtensions.any((ext)=> extension.endsWith(ext))){
+    } else if (appExtensions.any((ext) => extension.endsWith(ext))) {
       return 'App';
     } else {
       return 'Unknown';

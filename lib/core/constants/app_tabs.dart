@@ -1,6 +1,6 @@
 class AppTabs {
   AppTabs._();
-  
+
   // File Manager Tabs
   static const List<String> fileManagerTabs = [
     'All Files',
@@ -8,11 +8,11 @@ class AppTabs {
     'Duplicates',
     'Old',
   ];
-  
+
   // Statistics Time Periods
   static const List<String> statisticsPeriods = [
     'This Week',
-    'This Month', 
+    'This Month',
     'This Year',
   ];
 }

@@ -33,36 +33,44 @@ class DashboardCubit extends Cubit<DashboardState> {
           getStorageInfoUsecase.excute(),
           getCategoriesUsecase.excute(),
         ]);
-        
+
         final storageInfo = results[0] as dynamic;
         final categories = results[1] as List<dynamic>;
 
         emit(
-          dashboardLoaded(
+          DashboardLoaded(
             storageInfo: storageInfo,
             categories: categories.cast(),
           ),
         );
-        
+
         Logger.success("Dashboard data loaded successfully");
-        
+
         // Start background refresh to keep data current
         _startBackgroundRefresh();
       } else {
-        emit(const DashboardError(
-          message: "Storage permission is required to analyze your device storage",
-        ));
+        emit(
+          const DashboardError(
+            message:
+                "Storage permission is required to analyze your device storage",
+          ),
+        );
       }
     } catch (e) {
       Logger.error('Failed to load dashboard data', e);
       if (e is PermissionError) {
-        emit(const DashboardError(
-          message: "Storage permission is required to analyze your device storage",
-        ));
+        emit(
+          const DashboardError(
+            message:
+                "Storage permission is required to analyze your device storage",
+          ),
+        );
       } else {
-        emit(DashboardError(
-          message: "Failed to load storage data: ${e.toString()}",
-        ));
+        emit(
+          DashboardError(
+            message: "Failed to load storage data: ${e.toString()}",
+          ),
+        );
       }
     }
   }
@@ -70,34 +78,36 @@ class DashboardCubit extends Cubit<DashboardState> {
   Future<void> analyzeAndClean() async {
     try {
       final currentState = state;
-      if (currentState is dashboardLoaded) {
+      if (currentState is DashboardLoaded) {
         // Show analyzing state with current data
-        emit(DashboardAnalyzing(
-          message: "Scanning device storage...",
-          storageInfo: currentState.storageInfo,
-          categories: currentState.categories,
-        ));
-        
+        emit(
+          DashboardAnalyzing(
+            message: "Scanning device storage...",
+            storageInfo: currentState.storageInfo,
+            categories: currentState.categories,
+          ),
+        );
+
         // Perform actual analysis
         await analyzeStorageUsecase.excute();
-        
+
         // Update with progress
-        emit(DashboardAnalyzing(
-          message: "Analyzing file categories...",
-          storageInfo: currentState.storageInfo,
-          categories: currentState.categories,
-          progress: 0.5,
-        ));
-        
+        emit(
+          DashboardAnalyzing(
+            message: "Analyzing file categories...",
+            storageInfo: currentState.storageInfo,
+            categories: currentState.categories,
+            progress: 0.5,
+          ),
+        );
+
         // Reload data after analysis
         await loadDashboardData();
       }
     } catch (e) {
       Logger.error('Failed to analyze storage', e);
-      emit(const DashboardError(
-        message: 'Analysis failed. Please try again.',
-      ));
-      
+      emit(const DashboardError(message: 'Analysis failed. Please try again.'));
+
       // Try to reload previous state after error
       Future.delayed(const Duration(seconds: 2), () {
         loadDashboardData();
@@ -112,12 +122,12 @@ class DashboardCubit extends Cubit<DashboardState> {
         getStorageInfoUsecase.excute(),
         getCategoriesUsecase.excute(),
       ]);
-      
+
       final storageInfo = results[0] as dynamic;
       final categories = results[1] as List<dynamic>;
 
       emit(
-        dashboardLoaded(
+        DashboardLoaded(
           storageInfo: storageInfo,
           categories: categories.cast(),
         ),
@@ -136,7 +146,7 @@ class DashboardCubit extends Cubit<DashboardState> {
         Logger.info('Debug mode: Skipping permission check');
         return true;
       }
-      
+
       // Check if we're on Android
       if (Platform.isAndroid) {
         final status = await Permission.storage.status;
@@ -158,7 +168,7 @@ class DashboardCubit extends Cubit<DashboardState> {
   void _startBackgroundRefresh() {
     // Refresh data every 30 seconds if the dashboard is loaded
     Future.delayed(const Duration(seconds: 30), () {
-      if (state is dashboardLoaded && !isClosed) {
+      if (state is DashboardLoaded && !isClosed) {
         refresh().then((_) => _startBackgroundRefresh());
       }
     });

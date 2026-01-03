@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/utils/responsive.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
@@ -15,22 +15,42 @@ class CategoryGridWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: responsiveSize.gridColumns(context),
-        crossAxisSpacing: AppSize.paddingMedium,
-        mainAxisSpacing: AppSize.paddingMedium,
-        childAspectRatio: 1.1,
-      ),
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        return CategoryCardWidget(
-          category: categories[index],
-          onTap: () => onCategoryTap?.call(categories[index]),
+    final columns = ResponsiveSize.gridColumns(context);
+    final isDark = Theme.of(context).colorScheme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.only(top: AppSize.paddingSmall),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final itemWidth =
+              (constraints.maxWidth - AppSize.paddingMedium * (columns - 1)) /
+              columns;
+          final aspectRatio =
+              itemWidth / (itemWidth * 0.92); // Slightly taller cards
+
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            clipBehavior: Clip.none,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              crossAxisSpacing: AppSize.paddingMedium,
+              mainAxisSpacing: AppSize.paddingMedium,
+              childAspectRatio: aspectRatio,
+            ),
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              return CategoryCardWidget(
+                category: categories[index],
+                onTap: () => onCategoryTap?.call(
+                  categories[index],
+                ),
+                index: index,
+              );
+            },
           );
-      },
+        },
+      ),
     );
   }
 }

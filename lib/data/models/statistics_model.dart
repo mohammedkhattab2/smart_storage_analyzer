@@ -5,11 +5,7 @@ class StorageDataPointModel extends StorageDataPoint {
     required DateTime date,
     required double usedSpace,
     required double freeSpace,
-  }) : super(
-          date: date,
-          usedSpace: usedSpace,
-          freeSpace: freeSpace,
-        );
+  }) : super(date: date, usedSpace: usedSpace, freeSpace: freeSpace);
 
   factory StorageDataPointModel.fromJson(Map<String, dynamic> json) {
     return StorageDataPointModel(
@@ -35,11 +31,11 @@ class StorageStatisticsModel extends StorageStatistics {
     required double totalSpace,
     required String period,
   }) : super(
-          dataPoint: dataPoints,
-          currentFreeSpace: currentFreeSpace,
-          totalSpace: totalSpace,
-          period: period,
-        );
+         dataPoint: dataPoints,
+         currentFreeSpace: currentFreeSpace,
+         totalSpace: totalSpace,
+         period: period,
+       );
 
   factory StorageStatisticsModel.fromJson(Map<String, dynamic> json) {
     return StorageStatisticsModel(
@@ -54,15 +50,18 @@ class StorageStatisticsModel extends StorageStatistics {
 
   Map<String, dynamic> toJson() {
     return {
-      'dataPoints': dataPoint.map((e) => {
-        'date': e.date.toIso8601String(),
-        'usedSpace': e.usedSpace,
-        'freeSpace': e.freeSpace,
-      }).toList(),
+      'dataPoints': dataPoint
+          .map(
+            (e) => {
+              'date': e.date.toIso8601String(),
+              'usedSpace': e.usedSpace,
+              'freeSpace': e.freeSpace,
+            },
+          )
+          .toList(),
       'currentFreeSpace': currentFreeSpace,
       'totalSpace': totalSpace,
       'period': period,
     };
   }
 }
-

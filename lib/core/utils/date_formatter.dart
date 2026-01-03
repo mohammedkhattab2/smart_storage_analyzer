@@ -29,6 +29,6 @@ class DateFormatter {
   }
 
   static String formatChartDate(DateTime date) {
-    return DateFormat( 'MMM dd').format(date);
+    return DateFormat('MMM dd').format(date);
   }
 }

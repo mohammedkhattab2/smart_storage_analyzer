@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppPremium {
   AppPremium._();
-  
+
   // Premium Features
   static const List<String> features = [
     'Cloud Sync',
@@ -11,7 +11,7 @@ class AppPremium {
     'No Ads',
     'Priority Support',
   ];
-  
+
   // Premium Badge Colors
   static const premiumGradient = [
     Color(0xFFFFD700), // Gold

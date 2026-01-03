@@ -12,7 +12,7 @@ class StorageInfoModel extends StorageInfo {
          freeSpace: freeSpace,
          lastUpdated: lastUpdated,
        );
-  factory StorageInfoModel.fromJson(Map<String , dynamic>json){
+  factory StorageInfoModel.fromJson(Map<String, dynamic> json) {
     return StorageInfoModel(
       totalSpace: (json['totalSpace'] as num).toDouble(),
       usedSpace: (json['usedSpace'] as num).toDouble(),

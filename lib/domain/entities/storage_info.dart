@@ -16,5 +16,5 @@ class StorageInfo extends Equatable {
   double get usagePercentage => (usedSpace / totalSpace) * 100;
 
   @override
-  List <Object?> get props => [totalSpace, usedSpace, freeSpace, lastUpdated];
+  List<Object?> get props => [totalSpace, usedSpace, freeSpace, lastUpdated];
 }

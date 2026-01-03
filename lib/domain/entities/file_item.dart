@@ -1,14 +1,14 @@
 import 'package:equatable/equatable.dart';
-import 'package:smart_storage_analyzer/domain/entities/category.dart';
+import '../value_objects/file_category.dart';
 
-abstract class FileItem extends Equatable {
+class FileItem extends Equatable {
   final String id;
   final String name;
   final String path;
   final int sizeInBytes;
   final DateTime lastModified;
   final String extension;
-  final Category category;
+  final FileCategory category;
   final bool isSelected;
 
   const FileItem({
@@ -33,15 +33,16 @@ abstract class FileItem extends Equatable {
       isSelected: isSelected ?? this.isSelected,
     );
   }
+
   @override
   List<Object?> get props => [
-        id,
-        name,
-        path,
-        sizeInBytes,
-        lastModified,
-        extension,
-        category,
-        isSelected,
-      ];
+    id,
+    name,
+    path,
+    sizeInBytes,
+    lastModified,
+    extension,
+    category,
+    isSelected,
+  ];
 }

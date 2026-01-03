@@ -15,10 +15,10 @@ class DashboardInitial extends DashboardState {}
 class DashboardLoading extends DashboardState {}
 
 /// loaded state
-class dashboardLoaded extends DashboardState {
+class DashboardLoaded extends DashboardState {
   final StorageInfo storageInfo;
   final List<Category> categories;
-  const dashboardLoaded({required this.storageInfo, required this.categories});
+  const DashboardLoaded({required this.storageInfo, required this.categories});
   @override
   List<Object> get props => [storageInfo, categories];
 }
@@ -29,14 +29,14 @@ class DashboardAnalyzing extends DashboardState {
   final StorageInfo? storageInfo;
   final List<Category>? categories;
   final double? progress;
-  
+
   const DashboardAnalyzing({
     this.message = "Analyzing your storage...",
     this.storageInfo,
     this.categories,
     this.progress,
   });
-  
+
   @override
   List<Object?> get props => [message, storageInfo, categories, progress];
 }

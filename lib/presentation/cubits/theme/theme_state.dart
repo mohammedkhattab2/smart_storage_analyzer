@@ -11,10 +11,7 @@ class ThemeState extends Equatable {
     this.isLoading = true,
   });
 
-  ThemeState copyWith({
-    AppThemeMode? themeMode,
-    bool? isLoading,
-  }) {
+  ThemeState copyWith({AppThemeMode? themeMode, bool? isLoading}) {
     return ThemeState(
       themeMode: themeMode ?? this.themeMode,
       isLoading: isLoading ?? this.isLoading,

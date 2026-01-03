@@ -10,5 +10,4 @@ class UpdateSettingsUsecase {
   Future<void> updateDarkMode(bool enabled) async {
     await repository.updateDarkMode(enabled);
   }
-  
 }

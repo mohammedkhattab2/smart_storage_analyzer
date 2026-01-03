@@ -4,9 +4,7 @@ import 'package:smart_storage_analyzer/presentation/widgets/bottom_navigation/bo
 
 class MainScreen extends StatelessWidget {
   final Widget child;
-  const MainScreen({
-    super.key ,
-    required this.child});
+  const MainScreen({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +14,7 @@ class MainScreen extends StatelessWidget {
       body: child,
       bottomNavigationBar: BottomNavBar(
         currentLocation: GoRouterState.of(context).matchedLocation,
-        onItemTapped: (route)=> context.go(route),
+        onItemTapped: (route) => context.go(route),
       ),
     );
   }

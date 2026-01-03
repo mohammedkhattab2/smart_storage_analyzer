@@ -32,7 +32,7 @@ class Responsive extends StatelessWidget {
   }
 }
 
-class responsiveSize {
+class ResponsiveSize {
   static double width(BuildContext context, double percentage) {
     return MediaQuery.of(context).size.width * (percentage / 100);
   }
@@ -62,9 +62,9 @@ class responsiveSize {
   static int gridColumns(BuildContext context) {
     if (Responsive.isMobile(context)) {
       return 2;
-    }else if (Responsive.isTablet(context)){
+    } else if (Responsive.isTablet(context)) {
       return 3;
-    }else {
+    } else {
       return 4;
     }
   }

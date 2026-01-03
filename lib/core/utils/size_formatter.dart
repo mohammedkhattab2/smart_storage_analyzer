@@ -9,6 +9,5 @@ class SizeFormatter {
     final i = (bytes == 0) ? 0 : (math.log(bytes) / math.log(k)).floor();
     final size = bytes / math.pow(k, i);
     return '${size.toStringAsFixed(decimals)} ${sizes[i]}';
-
   }
 }

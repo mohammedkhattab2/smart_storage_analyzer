@@ -1,3 +1,4 @@
+import 'package:smart_storage_analyzer/core/utils/logger.dart';
 import 'package:smart_storage_analyzer/domain/entities/file_item.dart';
 import 'package:smart_storage_analyzer/domain/usecases/delete_files_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/get_files_usecase.dart';
@@ -21,7 +22,7 @@ class FileManagerViewmodel {
       _allFiles = await getFilesUsecase.excute(category);
       return _allFiles;
     } catch (e) {
-      print('Error in ViewModel getting files: $e');
+      Logger.error('Error in ViewModel getting files', e);
       rethrow;
     }
   }
@@ -55,7 +56,7 @@ class FileManagerViewmodel {
       _allFiles.removeWhere((file) => _selectedFileIds.contains(file.id));
       _selectedFileIds.clear();
     } catch (e) {
-      print('Error deleting files: $e');
+      Logger.error('Error deleting files', e);
       rethrow;
     }
   }

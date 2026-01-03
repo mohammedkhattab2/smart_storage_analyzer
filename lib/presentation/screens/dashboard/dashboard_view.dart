@@ -62,35 +62,134 @@ class _DashboardViewState extends State<DashboardView>
     _isCheckingPermission = false;
   }
 
+  Future<void> _handlePermissionRequest() async {
+    // First try to request permission again
+    final status = await Permission.storage.request();
+
+    if (status.isPermanentlyDenied) {
+      // Open app settings if permission is permanently denied
+      await openAppSettings();
+      // Note: The app will auto-reload when user returns
+    } else if (status.isGranted && mounted) {
+      // Reload dashboard if permission granted
+      context.read<DashboardCubit>().loadDashboardData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        child: BlocBuilder<DashboardCubit, DashboardState>(
-          builder: (context, state) {
-            return RefreshIndicator(
-              onRefresh: () => context.read<DashboardCubit>().refresh(),
-              color: colorScheme.primary,
-              backgroundColor: colorScheme.surfaceContainer,
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: AppSize.paddingSmall),
-                    const DashboardHeader(),
-                    _buildContent(context, state),
-                  ],
-                ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              colorScheme.surface,
+              colorScheme.primary.withValues(alpha: 0.02),
+              colorScheme.secondary.withValues(alpha: 0.03),
+              colorScheme.surface,
+            ],
+            stops: const [0.0, 0.3, 0.7, 1.0],
+          ),
+        ),
+        child: Stack(
+          children: [
+            // Magical background orbs
+            _buildMagicalBackground(context),
+            
+            SafeArea(
+              child: BlocBuilder<DashboardCubit, DashboardState>(
+                builder: (context, state) {
+                  return RefreshIndicator(
+                    onRefresh: () => context.read<DashboardCubit>().refresh(),
+                    color: colorScheme.primary,
+                    backgroundColor: colorScheme.surfaceContainer,
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: AppSize.paddingSmall),
+                          const DashboardHeader(),
+                          _buildContent(context, state),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
-            );
-          },
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMagicalBackground(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Stack(
+      children: [
+        // Top left orb
+        Positioned(
+          top: -100,
+          left: -100,
+          child: Container(
+            width: 300,
+            height: 300,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  colorScheme.primary.withValues(alpha: 0.08),
+                  colorScheme.primary.withValues(alpha: 0.0),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // Bottom right orb
+        Positioned(
+          bottom: -150,
+          right: -150,
+          child: Container(
+            width: 400,
+            height: 400,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  colorScheme.secondary.withValues(alpha: 0.06),
+                  colorScheme.secondary.withValues(alpha: 0.0),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // Center glow
+        Positioned(
+          top: MediaQuery.of(context).size.height * 0.3,
+          left: MediaQuery.of(context).size.width * 0.5 - 100,
+          child: Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  colorScheme.tertiary.withValues(alpha: 0.05),
+                  colorScheme.tertiary.withValues(alpha: 0.0),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -99,7 +198,7 @@ class _DashboardViewState extends State<DashboardView>
       return Padding(
         key: const ValueKey('loading'),
         padding: const EdgeInsets.only(top: AppSize.paddingXLarge * 2),
-        child: const LoadingWidget(),
+        child: _buildMagicalLoadingWidget(),
       );
     }
     if (state is DashboardLoaded) {
@@ -116,23 +215,23 @@ class _DashboardViewState extends State<DashboardView>
                 categories: state.categories!,
               ),
             ),
-            _buildAnalyzingOverlay(state),
+            _buildMagicalAnalyzingOverlay(state),
           ],
         );
       } else {
         // Show analyzing without previous content
-        return _buildAnalyzingWidget(state);
+        return _buildMagicalAnalyzingWidget(state);
       }
     }
     if (state is DashboardError) {
       // Check if error is due to permission
       if (state.message.toLowerCase().contains('permission')) {
-        return _buildPermissionError(context);
+        return _buildMagicalPermissionError(context);
       }
       return Padding(
         key: const ValueKey('error'),
         padding: const EdgeInsets.all(AppSize.paddingLarge),
-        child: ErrorT(
+        child: _buildMagicalErrorWidget(
           message: state.message,
           onRetry: () => context.read<DashboardCubit>().loadDashboardData(),
         ),
@@ -141,32 +240,133 @@ class _DashboardViewState extends State<DashboardView>
     return const SizedBox.shrink();
   }
 
-  Widget _buildAnalyzingOverlay(DashboardAnalyzing state) {
+  Widget _buildMagicalLoadingWidget() {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Column(
+      children: [
+        // Magical loading indicator
+        Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                colorScheme.primary.withValues(alpha: 0.1),
+                colorScheme.primary.withValues(alpha: 0.05),
+                Colors.transparent,
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.primary.withValues(alpha: 0.3),
+                blurRadius: 30,
+                spreadRadius: 10,
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  colorScheme.primary,
+                ),
+              ),
+              Icon(
+                Icons.dashboard_rounded,
+                size: 32,
+                color: colorScheme.primary,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSize.paddingXLarge),
+        Text(
+          'Loading Dashboard',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: AppSize.paddingSmall),
+        Text(
+          'Preparing your storage insights...',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMagicalAnalyzingOverlay(DashboardAnalyzing state) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      color: colorScheme.surface.withValues(alpha: .9),
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment.center,
+          colors: [
+            colorScheme.surface.withValues(alpha: 0.95),
+            colorScheme.surface.withValues(alpha: 0.9),
+          ],
+        ),
+      ),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.all(AppSize.paddingXLarge),
+          padding: const EdgeInsets.all(AppSize.paddingXLarge * 1.5),
           margin: const EdgeInsets.all(AppSize.paddingLarge),
           decoration: BoxDecoration(
-            color: colorScheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colorScheme.surfaceContainer,
+                colorScheme.primary.withValues(alpha: 0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: colorScheme.primary.withValues(alpha: 0.2),
+              width: 1,
+            ),
             boxShadow: [
               BoxShadow(
-                color: colorScheme.shadow.withValues(alpha: .1),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
+                color: colorScheme.primary.withValues(alpha: 0.1),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+              BoxShadow(
+                color: colorScheme.shadow.withValues(alpha: 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  colorScheme.primary,
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      colorScheme.primary.withValues(alpha: 0.2),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    colorScheme.primary,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSize.paddingLarge),
@@ -174,22 +374,59 @@ class _DashboardViewState extends State<DashboardView>
                 state.message,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
                 ),
                 textAlign: TextAlign.center,
               ),
               if (state.progress != null) ...[
                 const SizedBox(height: AppSize.paddingLarge),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    height: 8,
-                    child: LinearProgressIndicator(
-                      value: state.progress,
-                      backgroundColor: colorScheme.surfaceContainerHighest,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        colorScheme.primary,
+                Container(
+                  width: 200,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
                       ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Stack(
+                      children: [
+                        LinearProgressIndicator(
+                          value: state.progress,
+                          backgroundColor: Colors.transparent,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            colorScheme.primary,
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withValues(alpha: 0.0),
+                                Colors.white.withValues(alpha: 0.2),
+                                Colors.white.withValues(alpha: 0.0),
+                              ],
+                              stops: const [0.0, 0.5, 1.0],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                ),
+                const SizedBox(height: AppSize.paddingSmall),
+                Text(
+                  '${(state.progress! * 100).toInt()}%',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
@@ -200,7 +437,7 @@ class _DashboardViewState extends State<DashboardView>
     );
   }
 
-  Widget _buildAnalyzingWidget(DashboardAnalyzing state) {
+  Widget _buildMagicalAnalyzingWidget(DashboardAnalyzing state) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
@@ -208,44 +445,119 @@ class _DashboardViewState extends State<DashboardView>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
-            strokeWidth: 3,
+          Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  colorScheme.primary.withValues(alpha: 0.1),
+                  colorScheme.primary.withValues(alpha: 0.05),
+                  Colors.transparent,
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.primary.withValues(alpha: 0.3),
+                  blurRadius: 40,
+                  spreadRadius: 15,
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  strokeWidth: 4,
+                  valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                ),
+                Icon(
+                  Icons.analytics_rounded,
+                  size: 48,
+                  color: colorScheme.primary,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: AppSize.paddingXLarge),
           Text(
             state.message,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: colorScheme.onSurface),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           if (state.progress != null) ...[
             const SizedBox(height: AppSize.paddingLarge),
-            Container(
-              width: 200,
-              height: 8,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                color: colorScheme.surfaceContainerHighest,
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: state.progress,
-                  backgroundColor: Colors.transparent,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    colorScheme.primary,
-                  ),
-                ),
-              ),
-            ),
+            _buildMagicalProgressBar(state.progress!),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildPermissionError(BuildContext context) {
+  Widget _buildMagicalProgressBar(double progress) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      width: 250,
+      height: 12,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        border: Border.all(
+          color: colorScheme.primary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(5),
+        child: Stack(
+          children: [
+            FractionallySizedBox(
+              widthFactor: progress,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      colorScheme.primary,
+                      colorScheme.secondary,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (progress > 0)
+              FractionallySizedBox(
+                widthFactor: progress,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withValues(alpha: 0.0),
+                        Colors.white.withValues(alpha: 0.3),
+                        Colors.white.withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMagicalPermissionError(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
@@ -255,62 +567,242 @@ class _DashboardViewState extends State<DashboardView>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(AppSize.paddingXLarge),
+              width: 180,
+              height: 180,
               decoration: BoxDecoration(
-                color: colorScheme.errorContainer,
                 shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    colorScheme.errorContainer.withValues(alpha: 0.8),
+                    colorScheme.errorContainer.withValues(alpha: 0.3),
+                    colorScheme.errorContainer.withValues(alpha: 0.0),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.error.withValues(alpha: 0.2),
+                    blurRadius: 40,
+                    spreadRadius: 20,
+                  ),
+                ],
               ),
-              child: Icon(
-                Icons.folder_off_outlined,
-                size: 64,
-                color: colorScheme.onErrorContainer,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colorScheme.errorContainer,
+                      border: Border.all(
+                        color: colorScheme.error.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.folder_off_outlined,
+                      size: 64,
+                      color: colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ],
               ),
+            ),
+            const SizedBox(height: AppSize.paddingXLarge),
+            ShaderMask(
+              shaderCallback: (bounds) => LinearGradient(
+                colors: [
+                  colorScheme.error,
+                  colorScheme.error.withValues(alpha: 0.8),
+                ],
+              ).createShader(bounds),
+              child: Text(
+                'Storage Permission Required',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSize.paddingMedium),
+            Container(
+              padding: const EdgeInsets.all(AppSize.paddingLarge),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Text(
+                'To analyze your device storage and show file categories,\nwe need access to your storage.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: AppSize.paddingXLarge * 1.5),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colorScheme.primary,
+                    colorScheme.secondary,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _handlePermissionRequest,
+                  borderRadius: BorderRadius.circular(28),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSize.paddingXLarge,
+                      vertical: AppSize.paddingMedium,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.settings,
+                          color: colorScheme.onPrimary,
+                        ),
+                        const SizedBox(width: AppSize.paddingSmall),
+                        Text(
+                          'Grant Permission',
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: colorScheme.onPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSize.paddingMedium),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSize.paddingLarge,
+                vertical: AppSize.paddingSmall,
+              ),
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: AppSize.paddingSmall),
+                  Text(
+                    'Auto-reload after granting permission',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMagicalErrorWidget({
+    required String message,
+    required VoidCallback onRetry,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(AppSize.paddingLarge),
+        padding: const EdgeInsets.all(AppSize.paddingXLarge),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              colorScheme.errorContainer.withValues(alpha: 0.3),
+              colorScheme.errorContainer.withValues(alpha: 0.1),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: colorScheme.error.withValues(alpha: 0.3),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.error.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: colorScheme.error,
             ),
             const SizedBox(height: AppSize.paddingLarge),
             Text(
-              'Storage Permission Required',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              'Oops! Something went wrong',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: colorScheme.error,
                 fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: AppSize.paddingMedium),
             Text(
-              'To analyze your device storage and show file categories,\nwe need access to your storage.',
+              message,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
+                color: colorScheme.onErrorContainer,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppSize.paddingXLarge * 1.5),
-            FilledButton.icon(
-              onPressed: () async {
-                // First try to request permission again
-                final status = await Permission.storage.request();
-
-                if (status.isPermanentlyDenied) {
-                  // Open app settings if permission is permanently denied
-                  await openAppSettings();
-                  // Note: The app will auto-reload when user returns
-                } else if (status.isGranted) {
-                  // Reload dashboard if permission granted
-                  if (mounted) {
-                    context.read<DashboardCubit>().loadDashboardData();
-                  }
-                }
-              },
-              icon: const Icon(Icons.settings),
-              label: const Text('Grant Permission'),
-            ),
-            const SizedBox(height: AppSize.paddingMedium),
-            Text(
-              'The app will reload automatically after granting permission',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha:  .7),
-                fontStyle: FontStyle.italic,
+            const SizedBox(height: AppSize.paddingXLarge),
+            TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try Again'),
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.error,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSize.paddingLarge,
+                  vertical: AppSize.paddingMedium,
+                ),
+                backgroundColor: colorScheme.error.withValues(alpha: 0.1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: colorScheme.error.withValues(alpha: 0.3),
+                  ),
+                ),
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),

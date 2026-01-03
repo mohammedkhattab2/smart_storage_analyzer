@@ -51,7 +51,6 @@ class _CustomButtonState extends State<CustomButton> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDark = colorScheme.brightness == Brightness.dark;
 
     final buttonColor =
         widget.backgroundColor ??

@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:smart_storage_analyzer/core/utils/logger.dart';
 
 class NativeService {
   static const platform = MethodChannel('com.smartstorage/native');
@@ -9,7 +10,7 @@ class NativeService {
       final bool result = await platform.invokeMethod('checkUsagePermission');
       return result;
     } catch (e) {
-      print('Error checking usage permission: $e');
+      Logger.error('Error checking usage permission', e);
       return false;
     }
   }
@@ -19,7 +20,7 @@ class NativeService {
     try {
       await platform.invokeMethod('requestUsagePermission');
     } catch (e) {
-      print('Error requesting usage permission: $e');
+      Logger.error('Error requesting usage permission', e);
     }
   }
 
@@ -31,7 +32,7 @@ class NativeService {
       );
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error getting storage info: $e');
+      Logger.error('Error getting storage info', e);
       return {};
     }
   }
@@ -42,7 +43,7 @@ class NativeService {
       final List<dynamic> result = await platform.invokeMethod('getAllFiles');
       return result.map((item) => Map<String, dynamic>.from(item)).toList();
     } catch (e) {
-      print('Error getting files: $e');
+      Logger.error('Error getting files', e);
       return [];
     }
   }

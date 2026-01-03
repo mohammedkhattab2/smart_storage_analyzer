@@ -24,7 +24,19 @@ import 'package:smart_storage_analyzer/presentation/cubits/theme/theme_cubit.dar
 import 'package:smart_storage_analyzer/presentation/viewmodels/file_manager_viewmodel.dart';
 import 'package:smart_storage_analyzer/presentation/viewmodels/statistics_viewmodel.dart';
 import 'package:smart_storage_analyzer/presentation/viewmodels/all_categories_viewmodel.dart';
+import 'package:smart_storage_analyzer/presentation/viewmodels/dashboard_viewmodel.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/category_details/category_details_cubit.dart';
+import 'package:smart_storage_analyzer/core/services/pro_access_service.dart';
+import 'package:smart_storage_analyzer/core/services/feature_gate.dart';
+import 'package:smart_storage_analyzer/data/repositories/pro_access_repository_impl.dart';
+import 'package:smart_storage_analyzer/domain/repositories/pro_access_repository.dart';
+import 'package:smart_storage_analyzer/domain/usecases/check_pro_feature_usecase.dart';
+import 'package:smart_storage_analyzer/presentation/viewmodels/pro_access_viewmodel.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/pro_access/pro_access_cubit.dart';
+import 'package:smart_storage_analyzer/presentation/viewmodels/storage_analysis_viewmodel.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/storage_analysis/storage_analysis_cubit.dart';
+import 'package:smart_storage_analyzer/presentation/viewmodels/cleanup_results_viewmodel.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/cleanup_results/cleanup_results_cubit.dart';
 
 final GetIt sl = GetIt.instance;
 Future<void> setupServiceLocator() async {
@@ -32,13 +44,16 @@ Future<void> setupServiceLocator() async {
   sl.registerLazySingleton(() => GetCategoriesUsecase(sl()));
   sl.registerLazySingleton(() => GetStorageInfoUsecase(sl()));
   sl.registerLazySingleton(() => AnalyzeStorageUsecase(sl()));
-  sl.registerFactory(
-    () => DashboardCubit(
-      getStorageInfoUsecase: sl(),
-      getCategoriesUsecase: sl(),
-      analyzeStorageUsecase: sl(),
-    ),
-  );
+  
+  // Dashboard ViewModel
+  sl.registerLazySingleton(() => DashboardViewModel(
+    getStorageInfoUsecase: sl(),
+    getCategoriesUsecase: sl(),
+    analyzeStorageUsecase: sl(),
+  ));
+  
+  // Dashboard Cubit
+  sl.registerFactory(() => DashboardCubit(viewModel: sl()));
   sl.registerLazySingleton<SettingsRepository>(() => SettingsRepositoryImpl());
   sl.registerLazySingleton(() => GetSettingsUsecase(sl()));
   sl.registerLazySingleton(() => UpdateSettingsUsecase(sl()));
@@ -88,4 +103,35 @@ Future<void> setupServiceLocator() async {
 
   // Category Details
   sl.registerFactory(() => CategoryDetailsCubit(getFilesUsecase: sl()));
+
+  // Pro Access Feature
+  sl.registerLazySingleton<ProAccessRepository>(() => ProAccessRepositoryImpl());
+  
+  // Services
+  sl.registerLazySingleton(() => ProAccessService(repository: sl()));
+  sl.registerLazySingleton(() => FeatureGate(proAccessService: sl()));
+  
+  // Use cases
+  sl.registerLazySingleton(() => GetProAccessUsecase(repository: sl()));
+  sl.registerLazySingleton(() => CheckProFeatureUsecase(repository: sl()));
+  sl.registerLazySingleton(() => ValidateProAccessUsecase(repository: sl()));
+  
+  // ViewModel
+  sl.registerLazySingleton(() => ProAccessViewModel(
+    proAccessService: sl(),
+    featureGate: sl(),
+    getProAccessUsecase: sl(),
+    checkProFeatureUsecase: sl(),
+  ));
+  
+  // Cubit
+  sl.registerFactory(() => ProAccessCubit(viewModel: sl()));
+  
+  // Storage Analysis
+  sl.registerLazySingleton(() => StorageAnalysisViewModel());
+  sl.registerFactory(() => StorageAnalysisCubit(viewModel: sl()));
+  
+  // Cleanup Results
+  sl.registerLazySingleton(() => CleanupResultsViewModel());
+  sl.registerFactory(() => CleanupResultsCubit(viewModel: sl()));
 }

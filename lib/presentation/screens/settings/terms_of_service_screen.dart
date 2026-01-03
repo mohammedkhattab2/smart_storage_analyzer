@@ -16,29 +16,29 @@ class TermsOfServiceScreen extends StatelessWidget {
     (
       '2. Description of Service',
       'Smart Storage Analyzer is a utility application that:\n\n'
-          'â€¢ Analyzes device storage usage\n'
-          'â€¢ Categorizes files by type\n'
-          'â€¢ Provides storage statistics\n'
-          'â€¢ Operates entirely offline\n\n'
+          '• Analyzes device storage usage\n'
+          '• Categorizes files by type\n'
+          '• Provides storage statistics\n'
+          '• Operates entirely offline\n\n'
           'All features work locally on your device without internet connection.',
       true,
     ),
     (
       '3. User Responsibilities',
       'You agree to:\n\n'
-          'â€¢ Use the App only for lawful purposes\n'
-          'â€¢ Not reverse engineer or modify the App\n'
-          'â€¢ Not use the App to harm your device or data\n'
-          'â€¢ Grant necessary permissions for app functionality',
+          '• Use the App only for lawful purposes\n'
+          '• Not reverse engineer or modify the App\n'
+          '• Not use the App to harm your device or data\n'
+          '• Grant necessary permissions for app functionality',
       true,
     ),
     (
       '4. Privacy & Data',
       'The App:\n\n'
-          'â€¢ Does NOT collect personal data\n'
-          'â€¢ Does NOT transmit data to external servers\n'
-          'â€¢ Does NOT include ads or trackers\n'
-          'â€¢ Processes all data locally on your device\n\n'
+          '• Does NOT collect personal data\n'
+          '• Does NOT transmit data to external servers\n'
+          '• Does NOT include ads or trackers\n'
+          '• Processes all data locally on your device\n\n'
           'Please refer to our Privacy Policy for more details.',
       true,
     ),
@@ -50,9 +50,9 @@ class TermsOfServiceScreen extends StatelessWidget {
     (
       '6. Disclaimer of Warranties',
       'The App is provided "AS IS" without warranties of any kind. We do not guarantee that:\n\n'
-          'â€¢ The App will be error-free\n'
-          'â€¢ Storage calculations will be 100% accurate\n'
-          'â€¢ The App will meet your specific requirements',
+          '• The App will be error-free\n'
+          '• Storage calculations will be 100% accurate\n'
+          '• The App will meet your specific requirements',
       true,
     ),
     (
@@ -73,7 +73,7 @@ class TermsOfServiceScreen extends StatelessWidget {
     (
       '10. Contact Information',
       'For questions about these Terms of Service:\n\n'
-          'Email: support@smartstorageanalyzer.com',
+          'Email: dimakhattab2017@gmail.com',
       true,
     ),
   ];

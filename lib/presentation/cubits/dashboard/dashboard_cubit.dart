@@ -1,24 +1,15 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:smart_storage_analyzer/core/errors/app_errors.dart';
-import 'package:smart_storage_analyzer/core/utils/logger.dart';
-import 'package:smart_storage_analyzer/domain/usecases/analyze_storage_usecase.dart';
-import 'package:smart_storage_analyzer/domain/usecases/get_categories_usecase.dart';
-import 'package:smart_storage_analyzer/domain/usecases/get_storage_info_usecase.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_state.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:smart_storage_analyzer/presentation/viewmodels/dashboard_viewmodel.dart';
 
+/// Cubit for managing Dashboard UI state
+/// Follows MVVM pattern - delegates business logic to ViewModel
 class DashboardCubit extends Cubit<DashboardState> {
-  final GetStorageInfoUsecase getStorageInfoUsecase;
-  final GetCategoriesUsecase getCategoriesUsecase;
-  final AnalyzeStorageUsecase analyzeStorageUsecase;
+  final DashboardViewModel _viewModel;
 
-  DashboardCubit({
-    required this.getStorageInfoUsecase,
-    required this.getCategoriesUsecase,
-    required this.analyzeStorageUsecase,
-  }) : super(DashboardInitial()) {
+  DashboardCubit({required DashboardViewModel viewModel})
+      : _viewModel = viewModel,
+        super(DashboardInitial()) {
     // Load dashboard data when cubit is created
     loadDashboardData();
   }
@@ -26,45 +17,20 @@ class DashboardCubit extends Cubit<DashboardState> {
   Future<void> loadDashboardData() async {
     emit(DashboardLoading());
     try {
-      // Check and request storage permission for Android
-      if (await _requestStoragePermission()) {
-        // Load storage info and categories in parallel for better performance
-        final results = await Future.wait([
-          getStorageInfoUsecase.excute(),
-          getCategoriesUsecase.excute(),
-        ]);
+      final data = await _viewModel.loadDashboardData();
+      
+      emit(
+        DashboardLoaded(
+          storageInfo: data.storageInfo,
+          categories: data.categories,
+        ),
+      );
 
-        final storageInfo = results[0] as dynamic;
-        final categories = results[1] as List<dynamic>;
-
-        emit(
-          DashboardLoaded(
-            storageInfo: storageInfo,
-            categories: categories.cast(),
-          ),
-        );
-
-        Logger.success("Dashboard data loaded successfully");
-
-        // Start background refresh to keep data current
-        _startBackgroundRefresh();
-      } else {
-        emit(
-          const DashboardError(
-            message:
-                "Storage permission is required to analyze your device storage",
-          ),
-        );
-      }
+      // Start background refresh to keep data current
+      _startBackgroundRefresh();
     } catch (e) {
-      Logger.error('Failed to load dashboard data', e);
-      if (e is PermissionError) {
-        emit(
-          const DashboardError(
-            message:
-                "Storage permission is required to analyze your device storage",
-          ),
-        );
+      if (e is PermissionException) {
+        emit(DashboardError(message: e.toString()));
       } else {
         emit(
           DashboardError(
@@ -76,91 +42,24 @@ class DashboardCubit extends Cubit<DashboardState> {
   }
 
   Future<void> analyzeAndClean() async {
-    try {
-      final currentState = state;
-      if (currentState is DashboardLoaded) {
-        // Show analyzing state with current data
-        emit(
-          DashboardAnalyzing(
-            message: "Scanning device storage...",
-            storageInfo: currentState.storageInfo,
-            categories: currentState.categories,
-          ),
-        );
-
-        // Perform actual analysis
-        await analyzeStorageUsecase.excute();
-
-        // Update with progress
-        emit(
-          DashboardAnalyzing(
-            message: "Analyzing file categories...",
-            storageInfo: currentState.storageInfo,
-            categories: currentState.categories,
-            progress: 0.5,
-          ),
-        );
-
-        // Reload data after analysis
-        await loadDashboardData();
-      }
-    } catch (e) {
-      Logger.error('Failed to analyze storage', e);
-      emit(const DashboardError(message: 'Analysis failed. Please try again.'));
-
-      // Try to reload previous state after error
-      Future.delayed(const Duration(seconds: 2), () {
-        loadDashboardData();
-      });
-    }
+    // Navigation to storage analysis screen will be handled in the UI layer
+    // This method is kept for compatibility but the actual navigation
+    // happens in the dashboard content widget
   }
 
   Future<void> refresh() async {
     // Don't show loading state for refresh to avoid UI flicker
     try {
-      final results = await Future.wait([
-        getStorageInfoUsecase.excute(),
-        getCategoriesUsecase.excute(),
-      ]);
-
-      final storageInfo = results[0] as dynamic;
-      final categories = results[1] as List<dynamic>;
-
+      final data = await _viewModel.loadDashboardData();
+      
       emit(
         DashboardLoaded(
-          storageInfo: storageInfo,
-          categories: categories.cast(),
+          storageInfo: data.storageInfo,
+          categories: data.categories,
         ),
       );
     } catch (e) {
-      Logger.error('Failed to refresh dashboard', e);
       // Don't show error on refresh failure
-    }
-  }
-
-  /// Request storage permission for Android
-  Future<bool> _requestStoragePermission() async {
-    try {
-      // Skip permission check in debug mode for easier development
-      if (kDebugMode) {
-        Logger.info('Debug mode: Skipping permission check');
-        return true;
-      }
-
-      // Check if we're on Android
-      if (Platform.isAndroid) {
-        final status = await Permission.storage.status;
-        if (!status.isGranted) {
-          final result = await Permission.storage.request();
-          return result.isGranted;
-        }
-        return true;
-      }
-      return true; // Non-Android platforms
-    } catch (e) {
-      // If permission check fails, assume we have permission
-      Logger.warning('Permission check failed: $e');
-      return true;
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:smart_storage_analyzer/core/utils/logger.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/statistics/statistics_state.dart';
 import 'package:smart_storage_analyzer/presentation/viewmodels/statistics_viewmodel.dart';
 
@@ -12,9 +13,9 @@ class StatisticsCubit extends Cubit<StatisticsState> {
       final statistics = await viewmodel.getStatistics(period);
       final periods = viewmodel.getAvailablePeriods();
       emit(StatisticsLoaded(statistics: statistics, availablePeriods: periods));
-      print('Statistics loaded successfully for period: $period');
+      Logger.info('Statistics loaded successfully for period: $period');
     } catch (e) {
-      print('Error loading statistics: $e');
+      Logger.error('Error loading statistics', e);
       emit(StatisticsError('Failed to load statistics'));
     }
   }

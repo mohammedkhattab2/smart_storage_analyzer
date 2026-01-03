@@ -1,0 +1,45 @@
+# Flutter Native Splash Configuration for Smart Storage Analyzer (SSA)
+
+flutter_native_splash:
+  # Main splash image configuration
+  # Since your image (1152x1152) has its own background, we'll display it properly
+  image: assets/splach_screen.png
+  
+  # Background color - using transparent or a matching color from your image
+  # You can update this to match your image's background color
+  color: "#0B1F3A"
+  
+  # Dark mode configuration (same as light mode)
+  color_dark: "#0B1F3A"
+  
+  # Android 12+ splash screen configuration
+  android_12:
+    # The splash screen image for Android 12+
+    image: assets/splach_screen.png
+    
+    # Background color for Android 12+
+    color: "#0B1F3A"
+    
+    # Dark mode for Android 12+
+    color_dark: "#0B1F3A"
+    
+  # iOS specific settings
+  ios: true
+  # Since image has background, use fill to show the full image
+  ios_content_mode: scaleAspectFill
+  
+  # Android specific settings  
+  android: true
+  # Fill the screen with the image
+  android_gravity: fill
+  
+  # Web configuration
+  web: true
+  # Cover the full viewport
+  web_image_mode: cover
+  
+  # Full screen mode
+  fullscreen: true
+  
+  # Since your image is 1152x1152 with background, we want to ensure
+  # it fills the screen properly without adding borders

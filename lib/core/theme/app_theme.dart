@@ -4,7 +4,7 @@ import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/theme/app_color_schemes.dart';
 
 /// Material 3 Theme Configuration
-/// Premium-quality theme implementation for Light and Dark modes
+/// Professional theme implementation for Light and Dark modes
 class AppTheme {
   AppTheme._();
 

@@ -16,7 +16,6 @@ class CategoryGridWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final columns = ResponsiveSize.gridColumns(context);
-    final isDark = Theme.of(context).colorScheme.brightness == Brightness.dark;
 
     return Container(
       padding: const EdgeInsets.only(top: AppSize.paddingSmall),

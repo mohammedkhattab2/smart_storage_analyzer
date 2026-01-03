@@ -87,49 +87,43 @@ class AboutScreen extends StatelessWidget {
                   ],
                 ),
                 child: ClipOval(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          colorScheme.primaryContainer
-                              .withValues(alpha: isDark ? .3 : .5,
-                              ),
-                          colorScheme.secondaryContainer
-                              .withValues(alpha: isDark ? .2 : .4,
-                              ),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: colorScheme.outline.withValues(alpha: .2,
-                        ),
-                        width: 1,
-                      ),
-                    ),
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(
-                              sigmaX: 10,
-                              sigmaY: 10,
-                            ),
-                            child: Container(
-                              color: Colors.transparent,
-                            ),
+                  child: Stack(
+                    children: [
+                      // App icon scaled larger to fill the entire circle
+                      SizedBox(
+                        width: 140,
+                        height: 140,
+                        child: Transform.scale(
+                          scale: 1.4, // Scale up to compensate for icon padding
+                          child: Image.asset(
+                            'assets/app_icon.png',
+                            fit: BoxFit.contain,
                           ),
                         ),
-                        Center(
-                          child: Icon(
-                            Icons.storage_rounded,
-                            size: 64,
-                            color: colorScheme.primary,
+                      ),
+                      // Glassmorphism overlay on top
+                      Container(
+                        width: 140,
+                        height: 140,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              colorScheme.primaryContainer
+                                  .withValues(alpha: isDark ? .15 : .25),
+                              colorScheme.secondaryContainer
+                                  .withValues(alpha: isDark ? .1 : .2),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: colorScheme.outline.withValues(alpha: .2),
+                            width: 1,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),

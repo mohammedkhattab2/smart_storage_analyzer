@@ -185,19 +185,7 @@ final errorColor = colorScheme.error;
 final errorContainer = colorScheme.errorContainer;
 ```
 
-### 2. Gradient Support
-```dart
-// Premium gradient
-Container(
-  decoration: BoxDecoration(
-    gradient: LinearGradient(
-      colors: colorScheme.premiumGradient,
-    ),
-  ),
-)
-```
-
-### 3. Shadow and Elevation
+### 2. Shadow and Elevation
 ```dart
 // Adaptive shadows
 BoxShadow(

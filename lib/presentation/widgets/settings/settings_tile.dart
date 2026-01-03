@@ -22,20 +22,7 @@ class SettingsTile extends StatefulWidget {
 }
 
 class _SettingsTileState extends State<SettingsTile> {
-  bool _isPressed = false;
   bool _isHovered = false;
-
-  void _handleTapDown(TapDownDetails details) {
-    setState(() => _isPressed = true);
-  }
-
-  void _handleTapUp(TapUpDetails details) {
-    setState(() => _isPressed = false);
-  }
-
-  void _handleTapCancel() {
-    setState(() => _isPressed = false);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,11 +81,6 @@ class _SettingsTileState extends State<SettingsTile> {
                         widget.onTap!();
                       }
                     : null,
-                onTapDown: widget.onTap != null ? _handleTapDown : null,
-                onTapUp: widget.onTap != null ? _handleTapUp : null,
-                onTapCancel: widget.onTap != null
-                    ? _handleTapCancel
-                    : null,
                 borderRadius: BorderRadius.circular(16),
                 splashColor: colorScheme.primary.withValues(alpha: 0.08),
                 highlightColor: colorScheme.primary.withValues(alpha: 0.04),
@@ -130,10 +112,10 @@ class _SettingsTileState extends State<SettingsTile> {
                               _isHovered
                                   ? colorScheme.primary.withValues(alpha: 0.08)
                                   : Color.fromARGB(
-                                      colorScheme.surfaceContainerHighest.alpha,
-                                      (colorScheme.surfaceContainerHighest.red * 0.95).round(),
-                                      (colorScheme.surfaceContainerHighest.green * 0.95).round(),
-                                      (colorScheme.surfaceContainerHighest.blue * 0.95).round(),
+                                      (colorScheme.surfaceContainerHighest.a * 255).round().clamp(0, 255),
+                                      (colorScheme.surfaceContainerHighest.r * 255 * 0.95).round().clamp(0, 255),
+                                      (colorScheme.surfaceContainerHighest.g * 255 * 0.95).round().clamp(0, 255),
+                                      (colorScheme.surfaceContainerHighest.b * 255 * 0.95).round().clamp(0, 255),
                                     ),
                             ],
                             begin: Alignment.topLeft,

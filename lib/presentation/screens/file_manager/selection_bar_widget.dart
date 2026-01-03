@@ -87,7 +87,7 @@ class SelectionBarWidget extends StatelessWidget {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                SizeFormatter.formateBytes(selectedSize),
+                                SizeFormatter.formatBytes(selectedSize),
                                 style: textTheme.bodyMedium?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
                                   fontWeight: FontWeight.w500,

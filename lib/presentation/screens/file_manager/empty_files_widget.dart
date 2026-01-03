@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/domain/value_objects/file_category.dart';
 
@@ -25,7 +24,7 @@ class EmptyFilesWidget extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Icon Container with glassmorphism
-            Container(
+            SizedBox(
               width: 140,
               height: 140,
               child: Stack(
@@ -181,6 +180,7 @@ class EmptyFilesWidget extends StatelessWidget {
   }
 
   Color _getCategoryColor(FileCategory category, ColorScheme colorScheme) {
+    // Using theme colors extensions from AppColorSchemes
     switch (category) {
       case FileCategory.large:
         return colorScheme.error;
@@ -189,18 +189,17 @@ class EmptyFilesWidget extends StatelessWidget {
       case FileCategory.old:
         return colorScheme.tertiary;
       case FileCategory.images:
-        return Colors.blue;
+        return colorScheme.primary;
       case FileCategory.videos:
-        return Colors.purple;
+        return colorScheme.secondary;
       case FileCategory.audio:
-        return Colors.orange;
+        return colorScheme.tertiary;
       case FileCategory.documents:
-        return Colors.green;
+        return colorScheme.primary;
       case FileCategory.apps:
-        return Colors.red;
+        return colorScheme.secondary;
       case FileCategory.all:
       case FileCategory.others:
-      default:
         return colorScheme.primary;
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:smart_storage_analyzer/core/utils/logger.dart';
 
 /// Service to communicate with native Android storage APIs
 /// Follows MVVM architecture - no direct UI interaction
@@ -20,10 +21,10 @@ class NativeStorageService {
       final int totalBytes = await _channel.invokeMethod('getTotalStorage');
       return totalBytes;
     } on PlatformException catch (e) {
-      print('Error getting total storage: ${e.message}');
+      Logger.error('Error getting total storage: ${e.message}');
       return 0;
     } catch (e) {
-      print('Unexpected error getting total storage: $e');
+      Logger.error('Unexpected error getting total storage', e);
       return 0;
     }
   }
@@ -35,10 +36,10 @@ class NativeStorageService {
       final int freeBytes = await _channel.invokeMethod('getFreeStorage');
       return freeBytes;
     } on PlatformException catch (e) {
-      print('Error getting free storage: ${e.message}');
+      Logger.error('Error getting free storage: ${e.message}');
       return 0;
     } catch (e) {
-      print('Unexpected error getting free storage: $e');
+      Logger.error('Unexpected error getting free storage', e);
       return 0;
     }
   }
@@ -50,10 +51,10 @@ class NativeStorageService {
       final int usedBytes = await _channel.invokeMethod('getUsedStorage');
       return usedBytes;
     } on PlatformException catch (e) {
-      print('Error getting used storage: ${e.message}');
+      Logger.error('Error getting used storage: ${e.message}');
       return 0;
     } catch (e) {
-      print('Unexpected error getting used storage: $e');
+      Logger.error('Unexpected error getting used storage', e);
       return 0;
     }
   }
@@ -75,7 +76,7 @@ class NativeStorageService {
         usedBytes: results[2],
       );
     } catch (e) {
-      print('Error getting storage data: $e');
+      Logger.error('Error getting storage data', e);
       // Return default values on error
       return StorageData(totalBytes: 0, freeBytes: 0, usedBytes: 0);
     }

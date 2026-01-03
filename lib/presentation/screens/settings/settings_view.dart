@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,7 +12,6 @@ import 'package:smart_storage_analyzer/presentation/widgets/settings/settings_se
 import 'package:smart_storage_analyzer/presentation/widgets/settings/settings_tile.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/settings/sign_out_button.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/settings/theme_selector.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/settings/premium_card.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -39,187 +37,555 @@ class SettingsView extends StatelessWidget {
           ),
         ),
       ),
-      body: SafeArea(
-        child: BlocBuilder<SettingsCubit, SettingsState>(
-          builder: (context, state) {
-            if (state is SettingsLoading) {
-              return const Center(child: LoadingWidget());
-            }
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              colorScheme.surface,
+              colorScheme.primary.withValues(alpha: 0.02),
+              colorScheme.secondary.withValues(alpha: 0.03),
+              colorScheme.tertiary.withValues(alpha: 0.02),
+            ],
+            stops: const [0.0, 0.3, 0.6, 1.0],
+          ),
+        ),
+        child: Stack(
+          children: [
+            // Magical background orbs
+            _buildMagicalBackground(context),
+            
+            SafeArea(
+              child: BlocBuilder<SettingsCubit, SettingsState>(
+                builder: (context, state) {
+                  if (state is SettingsLoading) {
+                    return Center(child: _buildMagicalLoadingWidget(context));
+                  }
 
-            if (state is SettingsLoaded) {
-              final cubit = context.read<SettingsCubit>();
-              final viewModel = SettingsViewModel(
-                context: context,
-                settings: state.settings,
-                onToggleNotifications: cubit.toggleNotifications,
-                onToggleDarkMode: cubit.toggleDarkMode,
-                onSignOut: cubit.signOut,
-              );
+                  if (state is SettingsLoaded) {
+                    final cubit = context.read<SettingsCubit>();
+                    final viewModel = SettingsViewModel(
+                      context: context,
+                      settings: state.settings,
+                      onToggleNotifications: cubit.toggleNotifications,
+                      onToggleDarkMode: cubit.toggleDarkMode,
+                      onSignOut: cubit.signOut,
+                    );
 
-              final sections = viewModel.getSections();
+                    final sections = viewModel.getSections();
 
-              return RefreshIndicator(
-                onRefresh: () async {
-                  HapticFeedback.mediumImpact();
-                  await cubit.loadSettings();
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        HapticFeedback.mediumImpact();
+                        await cubit.loadSettings();
+                      },
+                      color: colorScheme.primary,
+                      backgroundColor: colorScheme.surface,
+                      displacement: 80,
+                      strokeWidth: 3,
+                      triggerMode: RefreshIndicatorTriggerMode.onEdge,
+                      child: CustomScrollView(
+                        physics: const BouncingScrollPhysics(
+                          decelerationRate: ScrollDecelerationRate.fast,
+                        ),
+                        slivers: [
+                          // Magical Header
+                          SliverToBoxAdapter(
+                            child: _buildMagicalHeader(context),
+                          ),
+
+                          const SliverToBoxAdapter(
+                            child: SizedBox(height: AppSize.paddingLarge),
+                          ),
+
+                          // Settings Sections with magical styling
+                          SliverList(
+                            delegate: SliverChildBuilderDelegate((
+                              context,
+                              sectionIndex,
+                            ) {
+                              final section = sections[sectionIndex];
+                              return _buildMagicalSection(
+                                context,
+                                section,
+                                sectionIndex,
+                                viewModel,
+                              );
+                            }, childCount: sections.length),
+                          ),
+
+                          // Magical Sign Out Button
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSize.paddingLarge,
+                                AppSize.paddingXLarge,
+                                AppSize.paddingLarge,
+                                AppSize.paddingXLarge * 2,
+                              ),
+                              child: _buildMagicalSignOutButton(
+                                context,
+                                viewModel.showSignOutDialog,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return const SizedBox.shrink();
                 },
-                color: colorScheme.primary,
-                backgroundColor: colorScheme.surface,
-                displacement: 80,
-                strokeWidth: 3,
-                triggerMode: RefreshIndicatorTriggerMode.onEdge,
-                child: CustomScrollView(
-                  physics: const BouncingScrollPhysics(
-                    decelerationRate: ScrollDecelerationRate.fast,
-                  ),
-                  slivers: [
-                    // Header
-                    const SliverToBoxAdapter(
-                      child: SettingsHeader(),
-                    ),
-
-                    // Premium Card
-                    if (!state.settings.isPremiumUser)
-                      SliverToBoxAdapter(
-                        child: PremiumCard(
-                          isPremium: state.settings.isPremiumUser,
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            // Handle premium upgrade
-                          },
-                        ),
-                      ),
-
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: AppSize.paddingMedium),
-                    ),
-
-                    // Settings Sections
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate((
-                        context,
-                        sectionIndex,
-                      ) {
-                        final section = sections[sectionIndex];
-                        return _buildSection(
-                          context,
-                          section,
-                          sectionIndex,
-                          viewModel,
-                        );
-                      }, childCount: sections.length),
-                    ),
-
-                    // Sign Out Button
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSize.paddingLarge,
-                          AppSize.paddingXLarge,
-                          AppSize.paddingLarge,
-                          AppSize.paddingXLarge * 2,
-                        ),
-                        child: SignOutButton(
-                          onTap: viewModel.showSignOutDialog,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return const SizedBox.shrink();
-          },
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildSection(
+  Widget _buildMagicalBackground(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final size = MediaQuery.of(context).size;
+    
+    return Stack(
+      children: [
+        // Top left orb
+        Positioned(
+          top: -80,
+          left: -80,
+          child: Container(
+            width: 250,
+            height: 250,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  colorScheme.primary.withValues(alpha: 0.08),
+                  colorScheme.primary.withValues(alpha: 0.0),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // Bottom right orb
+        Positioned(
+          bottom: -100,
+          right: -100,
+          child: Container(
+            width: 300,
+            height: 300,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  colorScheme.secondary.withValues(alpha: 0.06),
+                  colorScheme.secondary.withValues(alpha: 0.0),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // Center accent
+        Positioned(
+          top: size.height * 0.4,
+          left: size.width * 0.7,
+          child: Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  colorScheme.tertiary.withValues(alpha: 0.05),
+                  colorScheme.tertiary.withValues(alpha: 0.0),
+                ],
+              ),
+            ),
+          ),
+        ),
+        // Decorative lines
+        CustomPaint(
+          size: size,
+          painter: _SettingsBackgroundPainter(
+            primaryColor: colorScheme.primary.withValues(alpha: 0.02),
+            secondaryColor: colorScheme.secondary.withValues(alpha: 0.02),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMagicalLoadingWidget(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                colorScheme.primary.withValues(alpha: 0.1),
+                colorScheme.primary.withValues(alpha: 0.05),
+                Colors.transparent,
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.primary.withValues(alpha: 0.3),
+                blurRadius: 30,
+                spreadRadius: 10,
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  colorScheme.primary,
+                ),
+              ),
+              Icon(
+                Icons.settings,
+                size: 32,
+                color: colorScheme.primary,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSize.paddingLarge),
+        Text(
+          'Loading Settings',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMagicalHeader(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    
+    return Container(
+      padding: const EdgeInsets.all(AppSize.paddingLarge),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colorScheme.primary.withValues(alpha: 0.05),
+            colorScheme.secondary.withValues(alpha: 0.03),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      colorScheme.primary.withValues(alpha: 0.15),
+                      colorScheme.primary.withValues(alpha: 0.08),
+                      colorScheme.primary.withValues(alpha: 0.0),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colorScheme.primary.withValues(alpha: 0.2),
+                      blurRadius: 15,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.settings_rounded,
+                  size: 32,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: AppSize.paddingMedium),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ShaderMask(
+                      shaderCallback: (bounds) => LinearGradient(
+                        colors: [
+                          colorScheme.primary,
+                          colorScheme.secondary,
+                        ],
+                      ).createShader(bounds),
+                      child: Text(
+                        'Settings',
+                        style: textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Customize your experience',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMagicalSection(
     BuildContext context,
     dynamic section,
     int sectionIndex,
     SettingsViewModel viewModel,
   ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSize.paddingMedium),
-      child: SettingsSection(
-        title: section.title,
-        children: _buildSectionItems(context, section.items),
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    
+    // Different gradient colors for each section
+    final gradientColors = [
+      [colorScheme.primary, colorScheme.secondary],
+      [colorScheme.secondary, colorScheme.tertiary],
+      [colorScheme.tertiary, colorScheme.primary],
+    ];
+    
+    final colors = gradientColors[sectionIndex % gradientColors.length];
+    
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppSize.paddingLarge,
+        0,
+        AppSize.paddingLarge,
+        AppSize.paddingLarge,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors[0].withValues(alpha: 0.05),
+            colors[1].withValues(alpha: 0.03),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: colors[0].withValues(alpha: 0.15),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors[0].withValues(alpha: 0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(
+              AppSize.paddingLarge,
+              AppSize.paddingMedium,
+              AppSize.paddingLarge,
+              AppSize.paddingSmall,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  colors[0].withValues(alpha: 0.1),
+                  colors[1].withValues(alpha: 0.05),
+                ],
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(19),
+                topRight: Radius.circular(19),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: colors,
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colors[0].withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSize.paddingMedium),
+                Text(
+                  section.title,
+                  style: textTheme.titleSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...section.items.asMap().entries.map<Widget>((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            return _buildMagicalSettingsTile(
+              context,
+              item,
+              index == section.items.length - 1,
+            );
+          }).toList(),
+        ],
       ),
     );
   }
 
-  List<Widget> _buildSectionItems(
+  Widget _buildMagicalSettingsTile(
     BuildContext context,
-    List<SettingsItemModel> items,
+    SettingsItemModel item,
+    bool isLast,
   ) {
-    final widgets = <Widget>[];
-
-    for (var i = 0; i < items.length; i++) {
-      final item = items[i];
-      widgets.add(_buildSettingsTile(context, item));
-    }
-
-    return widgets;
-  }
-
-  Widget _buildSettingsTile(BuildContext context, SettingsItemModel item) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    
     // Special handling for theme selector
     if (item.id == 'dark_mode' || item.id == 'theme_mode') {
-      return SettingsTile(
-        icon: Icons.dark_mode_outlined,
-        title: 'Appearance',
-        trailing: const ThemeSelector(),
-        onTap: null,
+      return Container(
+        decoration: BoxDecoration(
+          border: isLast 
+              ? null 
+              : Border(
+                  bottom: BorderSide(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.1),
+                    width: 0.5,
+                  ),
+                ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSize.paddingLarge),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      colors: [
+                        colorScheme.primary.withValues(alpha: 0.1),
+                        colorScheme.primary.withValues(alpha: 0.05),
+                        Colors.transparent,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colorScheme.primary.withValues(alpha: 0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.dark_mode_outlined,
+                    color: colorScheme.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: AppSize.paddingMedium),
+                Text(
+                  'Appearance',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                const ThemeSelector(),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
     Widget? trailing;
-    final colorScheme = Theme.of(context).colorScheme;
 
     switch (item.type) {
       case SettingsItemType.toggle:
-        trailing = Switch.adaptive(
+        trailing = _buildMagicalSwitch(
+          context,
           value: item.value ?? false,
           onChanged: (value) {
             HapticFeedback.lightImpact();
             item.onToggle?.call(value);
           },
-          thumbColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return colorScheme.primary;
-            }
-            return colorScheme.outline;
-          }),
-          trackColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return colorScheme.primary.withValues(alpha: .5);
-            }
-            return colorScheme.surfaceContainerHighest;
-          }),
         );
         break;
 
       case SettingsItemType.navigation:
         trailing = Container(
-          width: 32,
-          height: 32,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                colorScheme.primary.withValues(alpha: .1),
-                colorScheme.primary.withValues(alpha: .05),
+                colorScheme.primary.withValues(alpha: 0.1),
+                colorScheme.secondary.withValues(alpha: 0.08),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.primary.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Icon(
             Icons.arrow_forward_ios_rounded,
-            size: 14,
+            size: 16,
             color: colorScheme.primary,
           ),
         );
@@ -230,11 +596,236 @@ class SettingsView extends StatelessWidget {
         break;
     }
 
-    return SettingsTile(
-      icon: item.icon,
-      title: item.title,
-      trailing: trailing,
-      onTap: item.onTap,
+    return Container(
+      decoration: BoxDecoration(
+        color: item.onTap != null && item.type == SettingsItemType.navigation
+            ? colorScheme.primary.withValues(alpha: 0.02)
+            : Colors.transparent,
+        border: isLast 
+            ? null 
+            : Border(
+                bottom: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.1),
+                  width: 0.5,
+                ),
+              ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: item.onTap,
+          borderRadius: isLast
+              ? const BorderRadius.only(
+                  bottomLeft: Radius.circular(19),
+                  bottomRight: Radius.circular(19),
+                )
+              : BorderRadius.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSize.paddingLarge),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      colors: [
+                        colorScheme.primary.withValues(alpha: 0.08),
+                        colorScheme.primary.withValues(alpha: 0.04),
+                        Colors.transparent,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colorScheme.primary.withValues(alpha: 0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    item.icon,
+                    color: colorScheme.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: AppSize.paddingMedium),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (trailing != null) trailing,
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
+
+  Widget _buildMagicalSwitch(
+    BuildContext context, {
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: value
+                ? colorScheme.primary.withValues(alpha: 0.2)
+                : Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Switch.adaptive(
+        value: value,
+        onChanged: onChanged,
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          return colorScheme.outline;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.primary;
+          }
+          return colorScheme.surfaceContainerHighest;
+        }),
+      ),
+    );
+  }
+
+  Widget _buildMagicalSignOutButton(
+    BuildContext context,
+    VoidCallback onTap,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            colorScheme.error.withValues(alpha: 0.1),
+            colorScheme.error.withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colorScheme.error.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.error.withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(15),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSize.paddingMedium + 4,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colorScheme.error.withValues(alpha: 0.1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colorScheme.error.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.logout_rounded,
+                    color: colorScheme.error,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: AppSize.paddingMedium),
+                Text(
+                  'Sign Out',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: colorScheme.error,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Custom painter for decorative background
+class _SettingsBackgroundPainter extends CustomPainter {
+  final Color primaryColor;
+  final Color secondaryColor;
+  
+  _SettingsBackgroundPainter({
+    required this.primaryColor,
+    required this.secondaryColor,
+  });
+  
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.5;
+    
+    // Draw curved lines
+    paint.color = primaryColor;
+    final path1 = Path();
+    path1.moveTo(0, size.height * 0.2);
+    path1.quadraticBezierTo(
+      size.width * 0.3,
+      size.height * 0.15,
+      size.width,
+      size.height * 0.25,
+    );
+    canvas.drawPath(path1, paint);
+    
+    paint.color = secondaryColor;
+    final path2 = Path();
+    path2.moveTo(size.width, size.height * 0.6);
+    path2.quadraticBezierTo(
+      size.width * 0.7,
+      size.height * 0.65,
+      0,
+      size.height * 0.55,
+    );
+    canvas.drawPath(path2, paint);
+  }
+  
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

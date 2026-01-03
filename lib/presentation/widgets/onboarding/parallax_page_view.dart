@@ -19,19 +19,6 @@ class ParallaxPageView extends StatefulWidget {
 }
 
 class _ParallaxPageViewState extends State<ParallaxPageView> {
-  double _currentPage = 0.0;
-
-  @override
-  void initState() {
-    super.initState();
-    
-    widget.controller.addListener(() {
-      setState(() {
-        _currentPage = widget.controller.page ?? 0.0;
-      });
-    });
-  }
-  
   @override
   Widget build(BuildContext context) {
     return PageView.builder(

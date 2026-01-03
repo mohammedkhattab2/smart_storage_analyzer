@@ -94,10 +94,6 @@ class SettingsViewModel {
     );
   }
 
-  void showPremium() {
-    // TODO: Implement premium screen navigation
-  }
-
   void showSignOutDialog() {
     showDialog(
       context: context,

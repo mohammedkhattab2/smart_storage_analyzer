@@ -25,7 +25,6 @@ class _SignOutButtonState extends State<SignOutButton> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final isDark = colorScheme.brightness == Brightness.dark;
 
     return GestureDetector(
       onTapDown: (_) {

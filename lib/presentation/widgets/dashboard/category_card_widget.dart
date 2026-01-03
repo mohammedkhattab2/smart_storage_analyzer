@@ -62,7 +62,6 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
     final textTheme = Theme.of(context).textTheme;
     final isLargeCategory = widget.category.sizeInBytes > 1000000000; // 1GB
     final categoryColor = _getCategoryColor(context, widget.category);
-    final isDark = colorScheme.brightness == Brightness.dark;
     
     final scale = _isPressed ? 0.88 : (_isHovered ? 1.03 : 1.0);
     final translateY = _isHovered ? -3.0 : 0.0;
@@ -198,7 +197,7 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
                             ),
                           ),
                           child: Text(
-                            SizeFormatter.formateBytes(
+                            SizeFormatter.formatBytes(
                               widget.category.sizeInBytes.toInt(),
                             ),
                             style: textTheme.labelSmall?.copyWith(

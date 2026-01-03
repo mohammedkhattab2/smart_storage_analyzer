@@ -1,54 +1,55 @@
-import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class PermissionHandler {
-  static Future<bool> checkStoragePermission(BuildContext context) async {
+  static Future<PermissionResult> checkStoragePermission() async {
     PermissionStatus status;
 
-    // android 13
-    if (Theme.of(context).platform == TargetPlatform.android) {
-      if (await Permission.manageExternalStorage.isGranted) {
-        return true;
-      }
-      status = await Permission.manageExternalStorage.request();
-    } else {
-      status = await Permission.storage.request();
-    }
+    // For Android, we only need READ_EXTERNAL_STORAGE permission
+    // MANAGE_EXTERNAL_STORAGE is restricted and not needed for our use case
+    status = await Permission.storage.request();
+    
     switch (status) {
       case PermissionStatus.granted:
-        return true;
+        return PermissionResult(
+          isGranted: true,
+          status: PermissionResultStatus.granted,
+        );
       case PermissionStatus.denied:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Storage permission is needed to analyze your files"),
-            backgroundColor: Colors.orange,
-          ),
+        return PermissionResult(
+          isGranted: false,
+          status: PermissionResultStatus.denied,
+          message: "Storage permission is needed to analyze your files",
         );
-        return false;
       case PermissionStatus.permanentlyDenied:
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text("Permission Required"),
-            content: Text('Please enable storage permission from settings'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text("Cancel"),
-              ),
-              TextButton(
-                onPressed: () {
-                  openAppSettings();
-                  Navigator.pop(context);
-                },
-                child: Text('Open Settings'),
-              ),
-            ],
-          ),
+        return PermissionResult(
+          isGranted: false,
+          status: PermissionResultStatus.permanentlyDenied,
+          message: "Please enable storage permission from settings",
         );
-        return false;
       default:
-        return false;
+        return PermissionResult(
+          isGranted: false,
+          status: PermissionResultStatus.denied,
+          message: "Storage permission is needed",
+        );
     }
   }
+}
+
+class PermissionResult {
+  final bool isGranted;
+  final PermissionResultStatus status;
+  final String? message;
+
+  PermissionResult({
+    required this.isGranted,
+    required this.status,
+    this.message,
+  });
+}
+
+enum PermissionResultStatus {
+  granted,
+  denied,
+  permanentlyDenied,
 }

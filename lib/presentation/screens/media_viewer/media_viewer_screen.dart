@@ -9,10 +9,10 @@ class MediaViewerScreen extends StatefulWidget {
   final List<FileItem> allFiles;
 
   const MediaViewerScreen({
-    Key? key,
+    super.key,
     required this.file,
     required this.allFiles,
-  }) : super(key: key);
+  });
 
   @override
   State<MediaViewerScreen> createState() => _MediaViewerScreenState();
@@ -281,7 +281,7 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
                                         ),
                                       ),
                                       Text(
-                                        SizeFormatter.formateBytes(
+                                        SizeFormatter.formatBytes(
                                           widget
                                               .allFiles[_currentIndex]
                                               .sizeInBytes,

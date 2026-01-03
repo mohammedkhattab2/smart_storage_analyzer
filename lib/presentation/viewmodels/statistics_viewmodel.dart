@@ -1,3 +1,4 @@
+import 'package:smart_storage_analyzer/core/utils/logger.dart';
 import 'package:smart_storage_analyzer/domain/entities/statistics.dart';
 import 'package:smart_storage_analyzer/domain/repositories/statistics_repository.dart';
 import 'package:smart_storage_analyzer/domain/usecases/get_statistics_usecase.dart';
@@ -18,7 +19,7 @@ class StatisticsViewmodel {
     try {
       return await getStatisticsUsecase.excute(period);
     } catch (e) {
-      print('Error getting statistics in ViewModel: $e');
+      Logger.error('Error getting statistics in ViewModel', e);
       rethrow;
     }
   }

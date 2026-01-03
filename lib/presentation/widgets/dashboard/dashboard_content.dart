@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
-import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_state.dart';
 import 'package:smart_storage_analyzer/presentation/screens/category_details/category_details_screen.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/analyze_button.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/category_grid_widget.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/details_section.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/storage_circle_widget.dart';
+import 'package:smart_storage_analyzer/routes/app_routes.dart';
 
 class DashboardContent extends StatelessWidget {
   final DashboardLoaded state;
@@ -30,7 +30,7 @@ class DashboardContent extends StatelessWidget {
           const SizedBox(height: AppSize.paddingXLarge),
           AnalyzeButton(
             onPressed: () {
-              context.read<DashboardCubit>().analyzeAndClean();
+              context.push(AppRoutes.storageAnalysis);
             },
           ),
           const SizedBox(height: AppSize.paddingXLarge),

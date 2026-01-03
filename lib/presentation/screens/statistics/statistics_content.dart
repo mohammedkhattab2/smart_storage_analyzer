@@ -4,8 +4,8 @@ import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/statistics/statistics_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/statistics/statistics_state.dart';
 import 'package:smart_storage_analyzer/presentation/screens/statistics/quick_stats_section.dart';
-import 'package:smart_storage_analyzer/presentation/screens/statistics/storage_chart_widget.dart';
 import 'package:smart_storage_analyzer/presentation/screens/statistics/storage_history_section.dart';
+import 'package:smart_storage_analyzer/presentation/screens/statistics/simple_storage_chart.dart';
 
 class StatisticsContent extends StatelessWidget {
   final StatisticsLoaded state;
@@ -13,7 +13,7 @@ class StatisticsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSize.paddingMedium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,8 +26,8 @@ class StatisticsContent extends StatelessWidget {
             },
           ),
           const SizedBox(height: AppSize.paddingMedium),
-          StorageChartWidget(
-            dataPoints: state.statistics.dataPoint,
+          SimpleStorageChart(
+            dataPoints: state.statistics.dataPoints,
             period: state.statistics.period,
           ),
           const SizedBox(height: AppSize.paddingLarge),

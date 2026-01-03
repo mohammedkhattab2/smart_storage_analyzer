@@ -7,17 +7,14 @@ import 'package:smart_storage_analyzer/presentation/screens/main/main_screen.dar
 import 'package:smart_storage_analyzer/presentation/screens/onboarding/onboarding_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/settings/settings_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/statistics/statistics_screen.dart';
+import 'package:smart_storage_analyzer/presentation/screens/storage_analysis/storage_analysis_screen.dart';
+import 'package:smart_storage_analyzer/presentation/screens/cleanup_results/cleanup_results_screen.dart';
+import 'package:smart_storage_analyzer/domain/entities/storage_analysis_results.dart';
 import 'package:smart_storage_analyzer/routes/app_routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppPages {
   AppPages._();
-
-  static Future<String> _getInitialLocation() async {
-    final pref = await SharedPreferences.getInstance();
-    final hasSeenOnboarding = pref.getBool("hasSeenOnboarding") ?? false;
-    return hasSeenOnboarding ? AppRoutes.dashboard : AppRoutes.onboarding;
-  }
 
   static final GoRouter router = GoRouter(
     initialLocation:
@@ -103,6 +100,38 @@ class AppPages {
             ),
           ),
         ],
+      ),
+      // Storage Analysis route (outside shell for full screen)
+      GoRoute(
+        path: AppRoutes.storageAnalysis,
+        name: "storageAnalysis",
+        pageBuilder: (context, state) => MaterialPage<void>(
+          key: state.pageKey,
+          child: const StorageAnalysisScreen(),
+        ),
+      ),
+      // Cleanup Results route
+      GoRoute(
+        path: AppRoutes.cleanupResults,
+        name: "cleanupResults",
+        pageBuilder: (context, state) {
+          final results = state.extra as StorageAnalysisResults?;
+          if (results == null) {
+            // If no results, go back to dashboard
+            return MaterialPage<void>(
+              key: state.pageKey,
+              child: const Scaffold(
+                body: Center(
+                  child: Text('No analysis results found'),
+                ),
+              ),
+            );
+          }
+          return MaterialPage<void>(
+            key: state.pageKey,
+            child: CleanupResultsScreen(results: results),
+          );
+        },
       ),
     ],
 

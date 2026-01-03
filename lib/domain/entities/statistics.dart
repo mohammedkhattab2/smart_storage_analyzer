@@ -15,17 +15,17 @@ abstract class StorageDataPoint extends Equatable {
 }
 
 abstract class StorageStatistics extends Equatable {
-  final List<StorageDataPoint> dataPoint;
+  final List<StorageDataPoint> dataPoints;
   final double currentFreeSpace;
   final double totalSpace;
   final String period; // "This Week", "This Month", "This Year"
 
   const StorageStatistics({
-    required this.dataPoint,
+    required this.dataPoints,
     required this.currentFreeSpace,
     required this.totalSpace,
     required this.period,
   });
   @override
-  List<Object> get props => [dataPoint, currentFreeSpace, totalSpace, period];
+  List<Object> get props => [dataPoints, currentFreeSpace, totalSpace, period];
 }

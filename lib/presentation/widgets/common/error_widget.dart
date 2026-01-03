@@ -4,11 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/common/custom_button.dart';
 
-class ErrorT extends StatelessWidget {
+class AppErrorWidget extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
-  const ErrorT({super.key, required this.message, required this.onRetry});
+  const AppErrorWidget({super.key, required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {

@@ -20,7 +20,7 @@ class AppColorSchemes {
     onSecondary: Color(0xFFFFFFFF), // White on secondary
     secondaryContainer: Color(0xFFB2EBF2), // Light teal container
     onSecondaryContainer: Color(0xFF002022), // Dark teal on container
-    // Tertiary colors - Purple accent for premium features
+    // Tertiary colors - Purple accent
     tertiary: Color(0xFF6750A4), // Material purple
     onTertiary: Color(0xFFFFFFFF), // White on tertiary
     tertiaryContainer: Color(0xFFE7DEFF), // Light purple container
@@ -138,16 +138,6 @@ class AppColorSchemes {
   static const Color othersCategoryDark = Color(0xFF8D6E63);
 
   // === Gradient Colors ===
-  static const List<Color> premiumGradientLight = [
-    Color(0xFF6750A4),
-    Color(0xFF9C27B0),
-  ];
-
-  static const List<Color> premiumGradientDark = [
-    Color(0xFF9580DB),
-    Color(0xFFBA68C8),
-  ];
-
   static const List<Color> storageGradientLight = [
     Color(0xFF1565C0),
     Color(0xFF2196F3),
@@ -215,10 +205,6 @@ extension SemanticColors on ColorScheme {
 
 /// Extension for gradient colors
 extension GradientColors on ColorScheme {
-  List<Color> get premiumGradient => brightness == Brightness.light
-      ? AppColorSchemes.premiumGradientLight
-      : AppColorSchemes.premiumGradientDark;
-
   List<Color> get storageGradient => brightness == Brightness.light
       ? AppColorSchemes.storageGradientLight
       : AppColorSchemes.storageGradientDark;

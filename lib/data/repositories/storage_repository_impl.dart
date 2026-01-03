@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:smart_storage_analyzer/core/constants/app_colors.dart';
 import 'package:smart_storage_analyzer/core/constants/app_icons.dart';
 import 'package:smart_storage_analyzer/core/constants/file_extensions.dart';
 import 'package:smart_storage_analyzer/core/services/native_storage_service.dart';
+import 'package:smart_storage_analyzer/core/theme/app_color_schemes.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
 import 'package:smart_storage_analyzer/data/models/category_model.dart';
 import 'package:smart_storage_analyzer/data/models/storage_info_model.dart';
@@ -214,37 +214,37 @@ class StorageRepositoryImpl implements StorageRepository {
       'images': CategoryData(
         name: 'Images',
         icon: AppIcons.images,
-        color: AppColors.imageColor,
+        color: AppColorSchemes.imageCategoryLight, // Will be adjusted in presentation layer
         extensions: FileExtensions.imageExtensions,
       ),
       'videos': CategoryData(
         name: 'Videos',
         icon: AppIcons.videos,
-        color: AppColors.videosColor,
+        color: AppColorSchemes.videoCategoryLight,
         extensions: FileExtensions.videoExtensions,
       ),
       'audio': CategoryData(
         name: 'Audio',
         icon: AppIcons.audio,
-        color: AppColors.audioColor,
+        color: AppColorSchemes.audioCategoryLight,
         extensions: FileExtensions.audioExtensions,
       ),
       'documents': CategoryData(
         name: 'Documents',
         icon: AppIcons.documents,
-        color: AppColors.documentsColor,
+        color: AppColorSchemes.documentCategoryLight,
         extensions: FileExtensions.documentExtensions,
       ),
       'apps': CategoryData(
         name: 'Apps',
         icon: AppIcons.apps,
-        color: AppColors.appsColor,
+        color: AppColorSchemes.appsCategoryLight,
         extensions: FileExtensions.appExtensions,
       ),
       'others': CategoryData(
         name: 'Others',
         icon: AppIcons.others,
-        color: AppColors.othersColor,
+        color: AppColorSchemes.othersCategoryLight,
         extensions: [],
       ),
     };
@@ -384,7 +384,7 @@ class StorageRepositoryImpl implements StorageRepository {
         id: 'images',
         name: 'Images',
         icon: AppIcons.images,
-        color: AppColors.imageColor,
+        color: AppColorSchemes.imageCategoryLight,
         sizeInBytes: 0.0,
         filesCount: 0,
       ),
@@ -392,7 +392,7 @@ class StorageRepositoryImpl implements StorageRepository {
         id: 'videos',
         name: 'Videos',
         icon: AppIcons.videos,
-        color: AppColors.videosColor,
+        color: AppColorSchemes.videoCategoryLight,
         sizeInBytes: 0.0,
         filesCount: 0,
       ),
@@ -400,7 +400,7 @@ class StorageRepositoryImpl implements StorageRepository {
         id: 'audio',
         name: 'Audio',
         icon: AppIcons.audio,
-        color: AppColors.audioColor,
+        color: AppColorSchemes.audioCategoryLight,
         sizeInBytes: 0.0,
         filesCount: 0,
       ),
@@ -408,7 +408,7 @@ class StorageRepositoryImpl implements StorageRepository {
         id: 'documents',
         name: 'Documents',
         icon: AppIcons.documents,
-        color: AppColors.documentsColor,
+        color: AppColorSchemes.documentCategoryLight,
         sizeInBytes: 0.0,
         filesCount: 0,
       ),
@@ -416,7 +416,7 @@ class StorageRepositoryImpl implements StorageRepository {
         id: 'apps',
         name: 'Apps',
         icon: AppIcons.apps,
-        color: AppColors.appsColor,
+        color: AppColorSchemes.appsCategoryLight,
         sizeInBytes: 0.0,
         filesCount: 0,
       ),
@@ -424,7 +424,7 @@ class StorageRepositoryImpl implements StorageRepository {
         id: 'others',
         name: 'Others',
         icon: AppIcons.others,
-        color: AppColors.othersColor,
+        color: AppColorSchemes.othersCategoryLight,
         sizeInBytes: 0.0,
         filesCount: 0,
       ),

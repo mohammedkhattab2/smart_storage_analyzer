@@ -50,7 +50,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
     ),
     (
       'Contact Us',
-      'If you have any questions about this Privacy Policy, please contact us at:\n\nsupport@smartstorageanalyzer.com',
+      'If you have any questions about this Privacy Policy, please contact us at:\n\ndimakhattab2017@gmail.com',
     ),
   ];
 

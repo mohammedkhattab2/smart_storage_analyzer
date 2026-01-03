@@ -80,7 +80,7 @@ class FileItemWidget extends StatelessWidget {
         subtitle: Row(
           children: [
             Text(
-              SizeFormatter.formateBytes(file.sizeInBytes),
+              SizeFormatter.formatBytes(file.sizeInBytes),
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 14,

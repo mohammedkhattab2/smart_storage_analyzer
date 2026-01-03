@@ -31,9 +31,6 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
   intl: ^0.20.2
   permission_handler: ^12.0.1
   flutter_bloc: ^9.1.1
@@ -48,7 +45,8 @@ dependencies:
   disk_space_plus: ^0.2.6
   sqflite: ^2.4.2
   path: ^1.9.1
-  
+  flutter_native_splash: ^2.4.7
+  crypto: ^3.0.5
 
 dev_dependencies:
   flutter_test:
@@ -60,7 +58,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
-  bloc_test: ^10.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -74,9 +72,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+     - assets/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -103,3 +100,74 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Flutter launcher icons configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/app_icon.png"
+  
+  # Android specific settings
+  android_min_sdk: 21
+  android_adaptive_icon_background: "#ffffff"
+  android_adaptive_icon_foreground: "assets/app_icon.png"
+  
+  # iOS specific settings
+  remove_alpha_ios: true
+  ios_content_mode: "scaleAspectFill"
+  
+  # Web favicon
+  web:
+    generate: true
+    image_path: "assets/app_icon.png"
+    background_color: "#ffffff"
+    theme_color: "#000000"
+  
+  # Windows icon
+  windows:
+    generate: true
+    image_path: "assets/app_icon.png"
+    icon_size: 256
+  
+  # macOS icon
+  macos:
+    generate: true
+    image_path: "assets/app_icon.png"
+
+# Flutter Native Splash configuration
+flutter_native_splash:
+  # Main splash image
+  image: assets/splach_screen.png
+  
+  # Background color - SSA base color
+  # Note: flutter_native_splash doesn't support gradients directly
+  color: "#0B1F3A"
+  
+  # Dark mode configuration (same as light mode)
+  color_dark: "#0B1F3A"
+  
+  # Android 12+ specific configuration
+  android_12:
+    # The splash screen image for Android 12+
+    image: assets/splach_screen.png
+    
+    # Background color for Android 12+
+    color: "#0B1F3A"
+    
+    # Dark mode for Android 12+
+    color_dark: "#0B1F3A"
+    
+  # iOS specific configuration
+  ios: true
+  ios_content_mode: scaleAspectFit
+  
+  # Android configuration
+  android: true
+  android_gravity: center
+  
+  # Web configuration
+  web: true
+  web_image_mode: contain
+  
+  # Full screen mode
+  fullscreen: true

@@ -10,10 +10,10 @@ class QuickStatsSection extends StatelessWidget {
   final double totalSpace;
 
   const QuickStatsSection({
-    Key? key,
+    super.key,
     required this.freeSpace,
     required this.totalSpace,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +63,7 @@ class QuickStatsSection extends StatelessWidget {
               child: _buildStatCard(
                 context: context,
                 title: AppStrings.freeSpace,
-                value: SizeFormatter.formateBytes(freeSpace.toInt()),
+                value: SizeFormatter.formatBytes(freeSpace.toInt()),
                 color: colorScheme.primary,
                 icon: Icons.cloud_done_rounded,
                 percentage: (freeSpace / totalSpace * 100),
@@ -76,7 +76,7 @@ class QuickStatsSection extends StatelessWidget {
               child: _buildStatCard(
                 context: context,
                 title: 'Used Space',
-                value: SizeFormatter.formateBytes(usedSpace.toInt()),
+                value: SizeFormatter.formatBytes(usedSpace.toInt()),
                 color: colorScheme.secondary,
                 icon: Icons.storage_rounded,
                 percentage: usagePercentage,
@@ -277,7 +277,7 @@ class QuickStatsSection extends StatelessWidget {
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
-                          Container(
+                          SizedBox(
                             height: 8,
                             width: double.infinity,
                             child: FractionallySizedBox(

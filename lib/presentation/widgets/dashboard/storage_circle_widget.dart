@@ -43,12 +43,10 @@ class StorageCircleWidget extends StatelessWidget {
     // Use the storage info from Native Bridge (passed via DashboardCubit)
     final totalBytes = storageInfo.totalSpace;
     final usedBytes = storageInfo.usedSpace;
-    final availableBytes = storageInfo.freeSpace;
 
     // Convert storage values to GB
     final usedGB = _bytesToGB(usedBytes);
     final totalGB = _bytesToGB(totalBytes);
-    final availableGB = _bytesToGB(availableBytes);
 
     // Calculate percentage based on actual values
     // Ensure percentage is between 0 and 1

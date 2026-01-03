@@ -2,10 +2,10 @@ import 'package:smart_storage_analyzer/domain/entities/statistics.dart';
 
 class StorageDataPointModel extends StorageDataPoint {
   const StorageDataPointModel({
-    required DateTime date,
-    required double usedSpace,
-    required double freeSpace,
-  }) : super(date: date, usedSpace: usedSpace, freeSpace: freeSpace);
+    required super.date,
+    required super.usedSpace,
+    required super.freeSpace,
+  });
 
   factory StorageDataPointModel.fromJson(Map<String, dynamic> json) {
     return StorageDataPointModel(
@@ -26,16 +26,11 @@ class StorageDataPointModel extends StorageDataPoint {
 
 class StorageStatisticsModel extends StorageStatistics {
   const StorageStatisticsModel({
-    required List<StorageDataPoint> dataPoints,
-    required double currentFreeSpace,
-    required double totalSpace,
-    required String period,
-  }) : super(
-         dataPoint: dataPoints,
-         currentFreeSpace: currentFreeSpace,
-         totalSpace: totalSpace,
-         period: period,
-       );
+    required super.dataPoints,
+    required super.currentFreeSpace,
+    required super.totalSpace,
+    required super.period,
+  });
 
   factory StorageStatisticsModel.fromJson(Map<String, dynamic> json) {
     return StorageStatisticsModel(
@@ -50,7 +45,7 @@ class StorageStatisticsModel extends StorageStatistics {
 
   Map<String, dynamic> toJson() {
     return {
-      'dataPoints': dataPoint
+      'dataPoints': dataPoints
           .map(
             (e) => {
               'date': e.date.toIso8601String(),

@@ -3,24 +3,15 @@ import '../../domain/value_objects/file_category.dart';
 
 class FileItemModel extends FileItem {
   const FileItemModel({
-    required String id,
-    required String name,
-    required String path,
-    required int sizeInBytes,
-    required DateTime lastModified,
-    required String extension,
-    required FileCategory category,
-    bool isSelected = false,
-  }) : super(
-         id: id,
-         name: name,
-         path: path,
-         sizeInBytes: sizeInBytes,
-         lastModified: lastModified,
-         extension: extension,
-         category: category,
-         isSelected: isSelected,
-       );
+    required super.id,
+    required super.name,
+    required super.path,
+    required super.sizeInBytes,
+    required super.lastModified,
+    required super.extension,
+    required super.category,
+    super.isSelected,
+  });
 
   factory FileItemModel.fromJson(Map<String, dynamic> json) {
     return FileItemModel(

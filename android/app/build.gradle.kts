@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.smart_storage_analyzer"
+    namespace = "com.smarttools.storageanalyzer"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,8 +20,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.smart_storage_analyzer"
+        // Unique Application ID for Smart Storage Analyzer
+        applicationId = "com.smarttools.storageanalyzer"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -41,4 +41,11 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // WorkManager for scheduling periodic notifications
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    // Core AndroidX dependencies
+    implementation("androidx.core:core-ktx:1.12.0")
 }

@@ -3,6 +3,7 @@ import 'package:smart_storage_analyzer/domain/usecases/get_settings_usecase.dart
 import 'package:smart_storage_analyzer/domain/usecases/sign_out_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/update_settings_usecase.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/settings/settings_state.dart';
+import 'package:smart_storage_analyzer/core/services/notification_service.dart';
 
 class SettingsCubit extends Cubit<SettingsState> {
   final GetSettingsUsecase getSettingsUsecase;
@@ -35,6 +36,14 @@ class SettingsCubit extends Cubit<SettingsState> {
           settings: currentSettings.copyWith(notificationsEnabled: newValue),
         ),
       );
+      
+      // Schedule or cancel notifications based on the new value
+      if (newValue) {
+        await NotificationService.instance.scheduleNotifications();
+      } else {
+        await NotificationService.instance.cancelNotifications();
+      }
+      
       await updateSettingsUsecase.updateNotifications(newValue);
     }
   }

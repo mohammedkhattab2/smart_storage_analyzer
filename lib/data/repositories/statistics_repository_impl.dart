@@ -46,8 +46,15 @@ class StatisticsRepositoryImpl implements StatisticsRepository {
   Future<StorageStatistics> getStatistics(String period) async {
     try {
       final currentStorage = await __getCurrentStorageInfo();
+
+      // If native/disk query fails, return an error state (no mock data)
+      if (currentStorage.totalSpace <= 0) {
+        throw Exception('NO_STORAGE_INFO');
+      }
+
       await _saveDataPoint(currentStorage);
       final dataPoints = await _getHistoricalData(period);
+
       return StorageStatisticsModel(
         dataPoints: dataPoints,
         currentFreeSpace: currentStorage.freeSpace,
@@ -86,16 +93,12 @@ class StatisticsRepositoryImpl implements StatisticsRepository {
     } catch (e) {
       Logger.error("Error getting real storage info: $e");
       
-      // Return mock data for development/testing when disk_space_plus is not available
-      Logger.info("Using mock storage data for statistics");
-      const totalSpaceBytes = 128.0 * 1024 * 1024 * 1024; // 128 GB
-      const usedSpaceBytes = 75.0 * 1024 * 1024 * 1024; // 75 GB used
-      const freeSpaceBytes = totalSpaceBytes - usedSpaceBytes;
-      
+      // Return zero values to indicate error state
+      // The UI should handle this gracefully
       return StorageInfo(
-        totalSpace: totalSpaceBytes,
-        usedSpace: usedSpaceBytes,
-        freeSpace: freeSpaceBytes,
+        totalSpace: 0,
+        usedSpace: 0,
+        freeSpace: 0,
       );
     }
   }

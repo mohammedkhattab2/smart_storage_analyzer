@@ -64,7 +64,7 @@ class FileRepositoryImpl implements FileRepository {
         {'category': category},
       );
 
-      Logger.info('Got ${result.length} files from native scanner');
+      Logger.info('Got ${result.length} files from native scanner for category: $category');
 
       // Convert to FileItem objects
       final files = result.map((fileData) {
@@ -90,6 +90,94 @@ class FileRepositoryImpl implements FileRepository {
       // Return empty list on error
       return [];
     }
+  }
+
+  @override
+  Future<List<FileItem>> getImageFiles() async {
+    return _getFilesByCategory('images');
+  }
+
+  @override
+  Future<List<FileItem>> getVideoFiles() async {
+    return _getFilesByCategory('videos');
+  }
+
+  @override
+  Future<List<FileItem>> getAudioFiles() async {
+    return _getFilesByCategory('audio');
+  }
+
+  @override
+  Future<List<FileItem>> getDocumentFiles() async {
+    return _getFilesByCategory('documents');
+  }
+
+  @override
+  Future<List<FileItem>> getAppFiles() async {
+    return _getFilesByCategory('apps');
+  }
+
+  @override
+  Future<List<FileItem>> getOtherFiles() async {
+    return _getFilesByCategory('others');
+  }
+
+  @override
+  Future<List<FileItem>> getFilesByCategory(FileCategory category) async {
+    switch (category) {
+      case FileCategory.all:
+        return getAllFiles();
+      case FileCategory.large:
+        return getLargeFiles();
+      case FileCategory.duplicates:
+        return getDuplicateFiles();
+      case FileCategory.old:
+        return getOldFiles();
+      case FileCategory.images:
+        return getImageFiles();
+      case FileCategory.videos:
+        return getVideoFiles();
+      case FileCategory.audio:
+        return getAudioFiles();
+      case FileCategory.documents:
+        return getDocumentFiles();
+      case FileCategory.apps:
+        return getAppFiles();
+      case FileCategory.others:
+        return getOtherFiles();
+    }
+  }
+
+  @override
+  Future<List<FileItem>> getFilesByCategoryPaginated({
+    required FileCategory category,
+    required int page,
+    required int pageSize,
+  }) async {
+    // Get all files for the category
+    final allFiles = await getFilesByCategory(category);
+    
+    // Calculate pagination indices
+    final startIndex = page * pageSize;
+    final endIndex = (page + 1) * pageSize;
+    
+    // Return empty list if start index is beyond available files
+    if (startIndex >= allFiles.length) {
+      return [];
+    }
+    
+    // Return the paginated subset
+    return allFiles.sublist(
+      startIndex,
+      endIndex > allFiles.length ? allFiles.length : endIndex,
+    );
+  }
+
+  @override
+  Future<int> getFilesCount(FileCategory category) async {
+    // Get all files for the category to count them
+    final files = await getFilesByCategory(category);
+    return files.length;
   }
 
   // Removed all mock file methods - app now only uses real file data

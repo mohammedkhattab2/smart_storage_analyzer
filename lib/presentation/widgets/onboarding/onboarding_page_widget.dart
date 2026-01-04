@@ -73,7 +73,7 @@ class OnboardingPageWidget extends StatelessWidget {
     final containerSize = isSmallScreen ? 140.0 : 180.0;
     final iconSize = isSmallScreen ? 60.0 : 80.0;
 
-    return Container(
+    return SizedBox(
       width: containerSize,
       height: containerSize,
       child: Stack(

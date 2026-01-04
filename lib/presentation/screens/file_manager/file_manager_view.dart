@@ -4,11 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_storage_analyzer/domain/value_objects/file_category.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/file_manager/file_manager_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/file_manager/file_manager_state.dart';
-import 'package:smart_storage_analyzer/presentation/screens/file_manager/file_manager_header.dart';
 import 'package:smart_storage_analyzer/presentation/screens/file_manager/file_tabs_widget.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/common/loading_widget.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
+import 'package:smart_storage_analyzer/core/services/file_operations_service.dart';
+import 'package:smart_storage_analyzer/presentation/widgets/common/skeleton_loader.dart';
 
 class FileManagerView extends StatefulWidget {
   const FileManagerView({super.key});
@@ -249,7 +249,7 @@ class _FileManagerViewState extends State<FileManagerView> {
               icon: Icons.select_all,
               onTap: () {
                 HapticFeedback.lightImpact();
-                context.read<FileManagerCubit>().selectAll();
+                context.read<FileManagerCubit>().toggleSelectAll();
               },
             ),
             const SizedBox(width: AppSize.paddingSmall),
@@ -448,25 +448,65 @@ class _FileManagerViewState extends State<FileManagerView> {
         return _buildMagicalEmptyState(context, state.currentCategory);
       }
 
-      return ListView.builder(
-        key: ValueKey(state.currentCategory),
-        padding: const EdgeInsets.all(AppSize.paddingMedium),
-        itemCount: state.files.length,
-        itemBuilder: (context, index) {
-          final file = state.files[index];
-          final isSelected = state.selectedFileIds.contains(file.id);
+      return Stack(
+        children: [
+          ListView.builder(
+            key: ValueKey(state.currentCategory),
+            padding: EdgeInsets.only(
+              left: AppSize.paddingMedium,
+              right: AppSize.paddingMedium,
+              top: AppSize.paddingMedium,
+              bottom: _isSelectionMode ? 80 : AppSize.paddingMedium,
+            ),
+            itemCount: state.files.length,
+            itemBuilder: (context, index) {
+              final file = state.files[index];
+              final isSelected = state.selectedFileIds.contains(file.id);
 
-          return _MagicalFileItemWidget(
-            file: file,
-            isSelected: isSelected,
-            isSelectionMode: _isSelectionMode,
-            index: index,
-            onTap: () {
-              HapticFeedback.lightImpact();
-              context.read<FileManagerCubit>().toggleFileSelection(file.id);
+              return _MagicalFileItemWidget(
+                file: file,
+                isSelected: isSelected,
+                isSelectionMode: _isSelectionMode,
+                index: index,
+                onTap: () async {
+                  HapticFeedback.lightImpact();
+                  if (_isSelectionMode) {
+                    context.read<FileManagerCubit>().toggleFileSelection(file.id);
+                  } else {
+                    // Open file
+                    final fileOperations = FileOperationsService();
+                    final success = await fileOperations.openFile(file.path);
+                    
+                    if (!success && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Cannot open ${file.name}'),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppSize.radiusSmall,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                },
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  if (!_isSelectionMode) {
+                    setState(() {
+                      _isSelectionMode = true;
+                    });
+                  }
+                  context.read<FileManagerCubit>().toggleFileSelection(file.id);
+                },
+              );
             },
-          );
-        },
+          ),
+          if (_isSelectionMode && state.selectedCount > 0)
+            _buildSelectionBottomBar(context, state),
+        ],
       );
     }
 
@@ -477,86 +517,271 @@ class _FileManagerViewState extends State<FileManagerView> {
     return const SizedBox.shrink();
   }
 
-  Widget _buildMagicalLoadingWidget(BuildContext context) {
+  Widget _buildSelectionBottomBar(BuildContext context, FileManagerLoaded state) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 140,
-            height: 140,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  colorScheme.primary.withValues(alpha: 0.1),
-                  colorScheme.secondary.withValues(alpha: 0.08),
-                  Colors.transparent,
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: colorScheme.primary.withValues(alpha: 0.3),
-                  blurRadius: 40,
-                  spreadRadius: 20,
+
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.all(AppSize.paddingMedium),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              colorScheme.surface.withValues(alpha: 0.95),
+              colorScheme.surface,
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.shadow.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${state.selectedCount} selected',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      SizeFormatter.formatBytes(
+                        state.files
+                            .where((f) => state.selectedFileIds.contains(f.id))
+                            .fold(0, (sum, file) => sum + file.sizeInBytes),
+                      ),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              _buildBottomAction(
+                context,
+                icon: Icons.share_rounded,
+                onTap: () async {
+                  HapticFeedback.lightImpact();
+                  final selectedFiles = state.files
+                      .where((f) => state.selectedFileIds.contains(f.id))
+                      .toList();
+                  
+                  if (selectedFiles.isEmpty) return;
+                  
+                  final fileOperations = FileOperationsService();
+                  final success = await fileOperations.shareFiles(
+                    selectedFiles.map((f) => f.path).toList(),
+                  );
+                  
+                  if (!success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Failed to share files'),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppSize.radiusSmall,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(width: AppSize.paddingSmall),
+              _buildBottomAction(
+                context,
+                icon: Icons.delete_rounded,
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  _showDeleteConfirmationDialog(context, state);
+                },
+                isDestructive: true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomAction(
+    BuildContext context, {
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = isDestructive ? colorScheme.error : colorScheme.primary;
+
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Icon(
+            icon,
+            color: color,
+            size: 24,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmationDialog(BuildContext context, FileManagerLoaded state) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final selectedCount = state.selectedCount;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colorScheme.surface,
+                colorScheme.error.withValues(alpha: 0.05),
               ],
             ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      colorScheme.primary,
-                    ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: colorScheme.error.withValues(alpha: 0.2),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.error.withValues(alpha: 0.15),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(AppSize.paddingXLarge),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colorScheme.error.withValues(alpha: 0.1),
+                  border: Border.all(
+                    color: colorScheme.error.withValues(alpha: 0.2),
+                    width: 2,
                   ),
                 ),
-                Icon(
-                  Icons.folder_open_rounded,
-                  size: 48,
-                  color: colorScheme.primary,
+                child: Icon(
+                  Icons.delete_forever_rounded,
+                  size: 40,
+                  color: colorScheme.error,
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSize.paddingXLarge),
-          Text(
-            'Loading Files',
-            style: textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: AppSize.paddingSmall),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSize.paddingLarge,
-              vertical: AppSize.paddingSmall,
-            ),
-            decoration: BoxDecoration(
-              color: colorScheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: colorScheme.primary.withValues(alpha: 0.2),
               ),
-            ),
-            child: Text(
-              'Scanning your storage...',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w500,
+              const SizedBox(height: AppSize.paddingLarge),
+              Text(
+                'Delete $selectedCount ${selectedCount == 1 ? 'File' : 'Files'}?',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
               ),
-            ),
+              const SizedBox(height: AppSize.paddingSmall),
+              Text(
+                'This action cannot be undone. Are you sure you want to permanently delete the selected files?',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSize.paddingXLarge),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSize.paddingMedium),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                        context.read<FileManagerCubit>().deleteSelectedFiles();
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colorScheme.error,
+                        foregroundColor: colorScheme.onError,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildMagicalLoadingWidget(BuildContext context) {
+    return const SkeletonListLoader(
+      itemCount: 8,
+      itemHeight: 80,
+      padding: EdgeInsets.all(AppSize.paddingMedium),
     );
   }
 
@@ -789,6 +1014,7 @@ class _MagicalFileItemWidget extends StatefulWidget {
   final bool isSelectionMode;
   final int index;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   const _MagicalFileItemWidget({
     required this.file,
@@ -796,6 +1022,7 @@ class _MagicalFileItemWidget extends StatefulWidget {
     required this.isSelectionMode,
     required this.index,
     required this.onTap,
+    required this.onLongPress,
   });
 
   @override
@@ -862,6 +1089,7 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.onTap,
+            onLongPress: widget.onLongPress,
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.all(AppSize.paddingMedium),
@@ -996,7 +1224,6 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
     required String text,
     required Color color,
   }) {
-    final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     
     return Container(

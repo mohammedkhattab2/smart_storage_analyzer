@@ -16,7 +16,14 @@ class StatisticsCubit extends Cubit<StatisticsState> {
       Logger.info('Statistics loaded successfully for period: $period');
     } catch (e) {
       Logger.error('Error loading statistics', e);
-      emit(StatisticsError('Failed to load statistics'));
+      
+      // Handle specific error cases
+      String errorMessage = 'Failed to load statistics';
+      if (e.toString().contains('NO_STORAGE_INFO')) {
+        errorMessage = 'Unable to access storage information. Please check app permissions.';
+      }
+      
+      emit(StatisticsError(errorMessage));
     }
   }
 

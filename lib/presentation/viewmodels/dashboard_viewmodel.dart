@@ -1,7 +1,8 @@
-import 'dart:io';
+
 import 'package:flutter/foundation.dart' hide Category;
-import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/material.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
+import 'package:smart_storage_analyzer/core/services/permission_service.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_info.dart';
 import 'package:smart_storage_analyzer/domain/usecases/analyze_storage_usecase.dart';
@@ -14,6 +15,7 @@ class DashboardViewModel {
   final GetStorageInfoUsecase _getStorageInfoUsecase;
   final GetCategoriesUsecase _getCategoriesUsecase;
   final AnalyzeStorageUsecase _analyzeStorageUsecase;
+  final _permissionService = PermissionService();
 
   DashboardViewModel({
     required GetStorageInfoUsecase getStorageInfoUsecase,
@@ -24,12 +26,12 @@ class DashboardViewModel {
         _analyzeStorageUsecase = analyzeStorageUsecase;
 
   /// Load dashboard data (storage info and categories)
-  Future<DashboardData> loadDashboardData() async {
+  Future<DashboardData> loadDashboardData({BuildContext? context}) async {
     try {
       Logger.info("Loading dashboard data...");
 
       // Check storage permission
-      final hasPermission = await checkStoragePermission();
+      final hasPermission = await checkStoragePermission(context: context);
       if (!hasPermission) {
         throw PermissionException(
           'Storage permission is required to analyze your device storage',
@@ -70,7 +72,7 @@ class DashboardViewModel {
   }
 
   /// Check and request storage permission
-  Future<bool> checkStoragePermission() async {
+  Future<bool> checkStoragePermission({BuildContext? context}) async {
     try {
       // Skip permission check in debug mode
       if (kDebugMode) {
@@ -78,16 +80,8 @@ class DashboardViewModel {
         return true;
       }
 
-      // Check if on Android
-      if (Platform.isAndroid) {
-        final status = await Permission.storage.status;
-        if (!status.isGranted) {
-          final result = await Permission.storage.request();
-          return result.isGranted;
-        }
-        return true;
-      }
-      return true; // Non-Android platforms
+      // Use centralized permission service
+      return await _permissionService.requestStoragePermission(context: context);
     } catch (e) {
       Logger.warning('Permission check failed: $e');
       return true;
@@ -95,10 +89,9 @@ class DashboardViewModel {
   }
 
   /// Request storage permission
-  Future<bool> requestStoragePermission() async {
+  Future<bool> requestStoragePermission({BuildContext? context}) async {
     try {
-      final status = await Permission.storage.request();
-      return status.isGranted;
+      return await _permissionService.requestStoragePermission(context: context);
     } catch (e) {
       Logger.error('Failed to request permission', e);
       return false;

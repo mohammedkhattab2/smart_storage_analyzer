@@ -49,6 +49,19 @@ class FileManagerViewmodel {
     return Set.from(_selectedFileIds);
   }
 
+  // Toggle select all - if all are selected, deselect all; otherwise select all
+  Set<String> toggleSelectAll() {
+    if (_selectedFileIds.length == _allFiles.length && _allFiles.isNotEmpty) {
+      // All files are selected, so deselect all
+      _selectedFileIds.clear();
+    } else {
+      // Not all files are selected, so select all
+      _selectedFileIds.clear();
+      _selectedFileIds.addAll(_allFiles.map((file) => file.id));
+    }
+    return Set.from(_selectedFileIds);
+  }
+
   Future<void> deleteSelectedFiles() async {
     if (_selectedFileIds.isEmpty) return;
     try {

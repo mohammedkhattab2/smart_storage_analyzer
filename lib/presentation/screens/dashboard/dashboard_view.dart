@@ -1,14 +1,13 @@
 ﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
+import 'package:smart_storage_analyzer/core/services/permission_service.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_state.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/common/error_widget.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/common/loading_widget.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/dashboard_content.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/dashboard_header.dart';
+import 'package:smart_storage_analyzer/presentation/widgets/common/skeleton_loader.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -20,6 +19,7 @@ class DashboardView extends StatefulWidget {
 class _DashboardViewState extends State<DashboardView>
     with WidgetsBindingObserver {
   bool _isCheckingPermission = false;
+  final _permissionService = PermissionService();
 
   @override
   void initState() {
@@ -46,16 +46,16 @@ class _DashboardViewState extends State<DashboardView>
 
     _isCheckingPermission = true;
 
-    // Check if permission is now granted
-    final status = await Permission.storage.status;
-    if (status.isGranted && mounted) {
+    // Check if permission is now granted using the centralized service
+    final hasPermission = await _permissionService.hasStoragePermission();
+    if (hasPermission && mounted) {
       // Get current state
       final currentState = context.read<DashboardCubit>().state;
 
       // Only reload if we're in error state (permission was denied before)
       if (currentState is DashboardError &&
           currentState.message.toLowerCase().contains('permission')) {
-        context.read<DashboardCubit>().loadDashboardData();
+        context.read<DashboardCubit>().loadDashboardData(context: context);
       }
     }
 
@@ -63,16 +63,9 @@ class _DashboardViewState extends State<DashboardView>
   }
 
   Future<void> _handlePermissionRequest() async {
-    // First try to request permission again
-    final status = await Permission.storage.request();
-
-    if (status.isPermanentlyDenied) {
-      // Open app settings if permission is permanently denied
-      await openAppSettings();
-      // Note: The app will auto-reload when user returns
-    } else if (status.isGranted && mounted) {
-      // Reload dashboard if permission granted
-      context.read<DashboardCubit>().loadDashboardData();
+    // The dashboard cubit will handle the permission request with the new PermissionService
+    if (mounted) {
+      context.read<DashboardCubit>().loadDashboardData(context: context);
     }
   }
 
@@ -105,7 +98,7 @@ class _DashboardViewState extends State<DashboardView>
               child: BlocBuilder<DashboardCubit, DashboardState>(
                 builder: (context, state) {
                   return RefreshIndicator(
-                    onRefresh: () => context.read<DashboardCubit>().refresh(),
+                    onRefresh: () => context.read<DashboardCubit>().refresh(context: context),
                     color: colorScheme.primary,
                     backgroundColor: colorScheme.surfaceContainer,
                     child: SingleChildScrollView(
@@ -233,7 +226,7 @@ class _DashboardViewState extends State<DashboardView>
         padding: const EdgeInsets.all(AppSize.paddingLarge),
         child: _buildMagicalErrorWidget(
           message: state.message,
-          onRetry: () => context.read<DashboardCubit>().loadDashboardData(),
+          onRetry: () => context.read<DashboardCubit>().loadDashboardData(context: context),
         ),
       );
     }
@@ -241,65 +234,61 @@ class _DashboardViewState extends State<DashboardView>
   }
 
   Widget _buildMagicalLoadingWidget() {
-    final colorScheme = Theme.of(context).colorScheme;
-    
-    return Column(
-      children: [
-        // Magical loading indicator
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [
-                colorScheme.primary.withValues(alpha: 0.1),
-                colorScheme.primary.withValues(alpha: 0.05),
-                Colors.transparent,
-              ],
+    return Padding(
+      padding: const EdgeInsets.all(AppSize.paddingLarge),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Storage circle skeleton
+          Center(
+            child: SkeletonLoader(
+              width: 240,
+              height: 240,
+              borderRadius: BorderRadius.circular(120),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: colorScheme.primary.withValues(alpha: 0.3),
-                blurRadius: 30,
-                spreadRadius: 10,
-              ),
-            ],
           ),
-          child: Stack(
-            alignment: Alignment.center,
+          const SizedBox(height: AppSize.paddingXLarge),
+          // Details section skeleton
+          SkeletonLoader(
+            height: 20,
+            width: 150,
+            borderRadius: BorderRadius.circular(4),
+            margin: const EdgeInsets.only(bottom: AppSize.paddingMedium),
+          ),
+          Row(
             children: [
-              CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  colorScheme.primary,
+              Expanded(
+                child: SkeletonLoader(
+                  height: 60,
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              Icon(
-                Icons.dashboard_rounded,
-                size: 32,
-                color: colorScheme.primary,
+              const SizedBox(width: AppSize.paddingMedium),
+              Expanded(
+                child: SkeletonLoader(
+                  height: 60,
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: AppSize.paddingXLarge),
-        Text(
-          'Loading Dashboard',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
+          const SizedBox(height: AppSize.paddingXLarge),
+          // Categories section skeleton
+          SkeletonLoader(
+            height: 20,
+            width: 120,
+            borderRadius: BorderRadius.circular(4),
+            margin: const EdgeInsets.only(bottom: AppSize.paddingMedium),
           ),
-        ),
-        const SizedBox(height: AppSize.paddingSmall),
-        Text(
-          'Preparing your storage insights...',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurfaceVariant,
+          const SkeletonGridLoader(
+            itemCount: 6,
+            crossAxisCount: 2,
+            padding: EdgeInsets.zero,
+            childAspectRatio: 1.3,
           ),
-        ),
-      ],
+          const SizedBox(height: 100),
+        ],
+      ),
     );
   }
 

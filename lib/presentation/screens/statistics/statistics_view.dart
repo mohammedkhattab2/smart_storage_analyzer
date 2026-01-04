@@ -5,9 +5,6 @@ import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/statistics/statistics_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/statistics/statistics_state.dart';
 import 'package:smart_storage_analyzer/presentation/screens/statistics/statistics_content.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/common/error_widget.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/common/loading_widget.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/statistics/statistics_header.dart';
 
 class StatisticsView extends StatelessWidget {
   const StatisticsView({super.key});

@@ -80,6 +80,16 @@ class FileManagerCubit extends Cubit<FileManagerState> {
     }
   }
 
+  /// Toggle select all - if all are selected, deselect all; otherwise select all
+  void toggleSelectAll() {
+    if (state is FileManagerLoaded) {
+      final currentState = state as FileManagerLoaded;
+      final newSelectedIds = viewModel.toggleSelectAll();
+
+      emit(currentState.copyWith(selectedFileIds: newSelectedIds));
+    }
+  }
+
   /// Clear selection
   void clearSelection() {
     if (state is FileManagerLoaded) {

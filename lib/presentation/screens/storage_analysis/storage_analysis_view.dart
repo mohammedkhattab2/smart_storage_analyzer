@@ -9,7 +9,6 @@ class StorageAnalysisView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -44,9 +43,6 @@ class StorageAnalysisView extends StatelessWidget {
   }
 
   Widget _buildMagicalProgressView(BuildContext context, StorageAnalysisInProgress state) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final size = MediaQuery.of(context).size;
 
     return Stack(
       children: [
@@ -370,7 +366,6 @@ class StorageAnalysisView extends StatelessWidget {
 
   Widget _buildStatsCards(BuildContext context, StorageAnalysisInProgress state) {
     final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     
     // Calculate estimated values based on progress
     final filesScanned = (state.progress * 15000).toInt();

@@ -10,9 +10,7 @@ import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/domain/entities/file_item.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/category_details/category_details_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/category_details/category_details_state.dart';
-import 'package:smart_storage_analyzer/presentation/screens/media_viewer/media_viewer_screen.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/common/loading_widget.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/common/error_widget.dart';
+import 'package:smart_storage_analyzer/core/services/file_operations_service.dart';
 
 class CategoryDetailsScreen extends StatelessWidget {
   final Category category;
@@ -503,25 +501,15 @@ class _CategoryDetailsView extends StatelessWidget {
             category: category,
             index: index,
             isDark: isDark,
-            onTap: () {
-              // Navigate to media viewer for images and videos
-              if (_isMediaFile(file)) {
-                final mediaFiles = state.files
-                    .where((f) => _isMediaFile(f))
-                    .toList();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => MediaViewerScreen(
-                      file: file,
-                      allFiles: mediaFiles,
-                    ),
-                  ),
-                );
-              } else {
-                // For non-media files, show a snackbar or different viewer
+            onTap: () async {
+              // Use native file opening functionality
+              final fileOperations = FileOperationsService();
+              final success = await fileOperations.openFile(file.path);
+              
+              if (!success && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Opening ${file.name}'),
+                    content: Text('Cannot open ${file.name}'),
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
@@ -538,20 +526,6 @@ class _CategoryDetailsView extends StatelessWidget {
     );
   }
 
-  bool _isMediaFile(FileItem file) {
-    final extension = file.extension.toLowerCase();
-    return [
-      '.jpg',
-      '.jpeg',
-      '.png',
-      '.gif',
-      '.webp',
-      '.mp4',
-      '.avi',
-      '.mov',
-      '.mkv',
-    ].contains(extension);
-  }
 
   IconData _getCategoryIcon(String categoryName) {
     switch (categoryName.toLowerCase()) {

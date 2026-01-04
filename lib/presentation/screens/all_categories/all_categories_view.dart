@@ -8,7 +8,6 @@ import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/all_categories/all_categories_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/all_categories/all_categories_state.dart';
 import 'package:smart_storage_analyzer/presentation/screens/category_details/category_details_screen.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/common/loading_widget.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
 
 class AllCategoriesView extends StatelessWidget {
@@ -28,7 +27,7 @@ class AllCategoriesView extends StatelessWidget {
       body: Stack(
         children: [
           // Magical gradient background
-          _buildMagicalBackground(colorScheme, isDark),
+          _buildMagicalBackground(context, colorScheme, isDark),
 
           // Main content
           SafeArea(
@@ -226,7 +225,7 @@ class AllCategoriesView extends StatelessWidget {
     );
   }
 
-  Widget _buildMagicalBackground(ColorScheme colorScheme, bool isDark) {
+  Widget _buildMagicalBackground(BuildContext context, ColorScheme colorScheme, bool isDark) {
     return Stack(
       children: [
         // Primary gradient
@@ -317,7 +316,7 @@ class AllCategoriesView extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Layered loading indicator
-          Container(
+          SizedBox(
             width: 150,
             height: 150,
             child: Stack(
@@ -819,7 +818,7 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard> {
   Widget _buildMagicalIcon() {
     return Hero(
       tag: 'category-icon-${widget.category.name}',
-      child: Container(
+      child: SizedBox(
         width: _isHovered ? 64 : 60,
         height: _isHovered ? 64 : 60,
         child: Stack(

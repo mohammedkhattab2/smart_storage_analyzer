@@ -12,7 +12,6 @@ class CleanupResultsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -100,7 +99,7 @@ class CleanupResultsView extends StatelessWidget {
             ),
             child: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.go('/dashboard'),
+              onPressed: () => context.pop(),
             ),
           ),
           const SizedBox(width: AppSize.paddingMedium),
@@ -127,8 +126,6 @@ class CleanupResultsView extends StatelessWidget {
   }
 
   Widget _buildMagicalLoadedView(BuildContext context, CleanupResultsLoaded state) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     return Stack(
       children: [
@@ -1066,7 +1063,7 @@ class CleanupResultsView extends StatelessWidget {
                         child: InkWell(
                           onTap: () {
                             Navigator.of(dialogContext).pop();
-                            context.read<CleanupResultsCubit>().performCleanup();
+                            context.read<CleanupResultsCubit>().performCleanup(context: context);
                           },
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
@@ -1277,7 +1274,8 @@ class CleanupResultsView extends StatelessWidget {
                   child: InkWell(
                     onTap: () {
                       Navigator.of(dialogContext).pop();
-                      context.go('/dashboard');
+                      // Use pop() to go back properly instead of go()
+                      context.pop();
                     },
                     borderRadius: BorderRadius.circular(16),
                     child: Container(

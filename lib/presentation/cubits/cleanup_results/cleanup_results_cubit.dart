@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_analysis_results.dart';
@@ -95,7 +96,7 @@ class CleanupResultsCubit extends Cubit<CleanupResultsState> {
     }
   }
 
-  Future<void> performCleanup() async {
+  Future<void> performCleanup({BuildContext? context}) async {
     final state = this.state;
     if (state is CleanupResultsLoaded) {
       emit(CleanupInProgress(
@@ -119,7 +120,7 @@ class CleanupResultsCubit extends Cubit<CleanupResultsState> {
         }
 
         // Perform actual file deletion
-        final success = await _viewModel.deleteFiles(filesToDelete);
+        final success = await _viewModel.deleteFiles(filesToDelete, context: context);
         
         if (!success) {
           emit(const CleanupError(

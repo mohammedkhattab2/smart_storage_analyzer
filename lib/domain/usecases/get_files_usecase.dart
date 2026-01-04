@@ -8,19 +8,8 @@ class GetFilesUsecase {
   GetFilesUsecase(this.repository);
 
   Future<List<FileItem>> excute(FileCategory category) async {
-    switch (category) {
-      case FileCategory.all:
-        return await repository.getAllFiles();
-      case FileCategory.large:
-        return await repository.getLargeFiles();
-      case FileCategory.duplicates:
-        return await repository.getDuplicateFiles();
-      case FileCategory.old:
-        return await repository.getOldFiles();
-      default:
-        // For other categories (images, videos, etc.), filter by file extension
-        final allFiles = await repository.getAllFiles();
-        return allFiles.where((file) => file.category == category).toList();
-    }
+    // Now all categories are handled directly by the repository
+    // which calls the native Android implementation with proper category filtering
+    return await repository.getFilesByCategory(category);
   }
 }

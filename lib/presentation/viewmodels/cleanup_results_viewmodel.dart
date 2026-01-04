@@ -1,16 +1,19 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:smart_storage_analyzer/domain/entities/file_item.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
+import 'package:smart_storage_analyzer/core/services/permission_service.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class CleanupResultsViewModel {
-  Future<bool> deleteFiles(List<FileItem> files) async {
+  final _permissionService = PermissionService();
+  
+  Future<bool> deleteFiles(List<FileItem> files, {BuildContext? context}) async {
     try {
       Logger.info('Deleting ${files.length} files...');
       
       // Check if we have storage permission
-      final hasPermission = await _checkStoragePermission();
+      final hasPermission = await _permissionService.requestStoragePermission(context: context);
       if (!hasPermission) {
         Logger.error('Storage permission denied');
         return false;
@@ -134,19 +137,5 @@ class CleanupResultsViewModel {
            lowercasePath.contains('thumbnail') ||
            lowercasePath.endsWith('.jpg') && lowercasePath.contains('thumb') ||
            lowercasePath.endsWith('.png') && lowercasePath.contains('thumb');
-  }
-  
-  Future<bool> _checkStoragePermission() async {
-    final status = await Permission.storage.status;
-    if (status.isGranted) {
-      return true;
-    }
-    
-    if (status.isDenied) {
-      final result = await Permission.storage.request();
-      return result.isGranted;
-    }
-    
-    return false;
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_state.dart';
 import 'package:smart_storage_analyzer/presentation/viewmodels/dashboard_viewmodel.dart';
@@ -9,15 +10,12 @@ class DashboardCubit extends Cubit<DashboardState> {
 
   DashboardCubit({required DashboardViewModel viewModel})
       : _viewModel = viewModel,
-        super(DashboardInitial()) {
-    // Load dashboard data when cubit is created
-    loadDashboardData();
-  }
+        super(DashboardInitial());
 
-  Future<void> loadDashboardData() async {
+  Future<void> loadDashboardData({BuildContext? context}) async {
     emit(DashboardLoading());
     try {
-      final data = await _viewModel.loadDashboardData();
+      final data = await _viewModel.loadDashboardData(context: context);
       
       emit(
         DashboardLoaded(
@@ -47,10 +45,10 @@ class DashboardCubit extends Cubit<DashboardState> {
     // happens in the dashboard content widget
   }
 
-  Future<void> refresh() async {
+  Future<void> refresh({BuildContext? context}) async {
     // Don't show loading state for refresh to avoid UI flicker
     try {
-      final data = await _viewModel.loadDashboardData();
+      final data = await _viewModel.loadDashboardData(context: context);
       
       emit(
         DashboardLoaded(

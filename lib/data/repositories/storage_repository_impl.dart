@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:smart_storage_analyzer/core/constants/app_icons.dart';
 import 'package:smart_storage_analyzer/core/constants/file_extensions.dart';
 import 'package:smart_storage_analyzer/core/services/native_storage_service.dart';
+import 'package:smart_storage_analyzer/core/services/permission_service.dart';
 import 'package:smart_storage_analyzer/core/theme/app_color_schemes.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
 import 'package:smart_storage_analyzer/data/models/category_model.dart';
@@ -12,24 +13,24 @@ import 'package:smart_storage_analyzer/data/models/storage_info_model.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_info.dart';
 import 'package:smart_storage_analyzer/domain/repositories/storage_repository.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class StorageRepositoryImpl implements StorageRepository {
-  static const platform = MethodChannel('storage_info_channel');
+  static const platform = MethodChannel('com.smartstorage/native');
 
   // Native storage service instance
   final NativeStorageService _nativeStorageService = NativeStorageService();
+  final _permissionService = PermissionService();
 
   @override
-  Future<void> analyzeStorage() async {
+  Future<void> analyzeStorage({BuildContext? context}) async {
     try {
       Logger.info("Starting real storage analysis...");
 
       // Request storage permission if needed
       if (Platform.isAndroid) {
-        final status = await Permission.storage.status;
-        if (!status.isGranted) {
-          await Permission.storage.request();
+        final hasPermission = await _permissionService.hasStoragePermission();
+        if (!hasPermission && context != null && context.mounted) {
+          await _permissionService.requestStoragePermission(context: context);
         }
       }
 
@@ -50,8 +51,8 @@ class StorageRepositoryImpl implements StorageRepository {
 
       if (Platform.isAndroid) {
         // Check storage permission
-        final status = await Permission.storage.status;
-        if (!status.isGranted) {
+        final hasPermission = await _permissionService.hasStoragePermission();
+        if (!hasPermission) {
           // Return empty categories if no permission
           return _getEmptyCategories();
         }
@@ -250,13 +251,32 @@ class StorageRepositoryImpl implements StorageRepository {
     };
 
     try {
-      // Get common directories to scan
-      final directories = await _getDirectoriesToScan();
-
-      // Scan each directory
-      for (final dir in directories) {
-        if (await dir.exists()) {
-          await _scanDirectory(dir, categoryMap);
+      // Use the native Android implementation to get files by category
+      // This ensures consistency with FileManager and other views
+      for (final categoryId in categoryMap.keys) {
+        try {
+          final List<dynamic> result = await platform.invokeMethod(
+            'getFilesByCategory',
+            {'category': categoryId},
+          );
+          
+          // Calculate total size and file count
+          int totalSize = 0;
+          int fileCount = result.length;
+          
+          for (final fileData in result) {
+            final Map<String, dynamic> data = Map<String, dynamic>.from(fileData);
+            final size = (data['size'] as num?)?.toInt() ?? 0;
+            totalSize += size;
+          }
+          
+          categoryMap[categoryId]!.totalSize = totalSize;
+          categoryMap[categoryId]!.fileCount = fileCount;
+          
+          Logger.info('Category $categoryId: $fileCount files, total size: $totalSize bytes');
+        } catch (e) {
+          Logger.warning('Failed to get files for category $categoryId: $e');
+          // Keep the category with 0 size/count
         }
       }
 
@@ -283,99 +303,6 @@ class StorageRepositoryImpl implements StorageRepository {
     }
   }
 
-  /// Get directories to scan for files
-  Future<List<Directory>> _getDirectoriesToScan() async {
-    final List<Directory> directories = [];
-
-    try {
-      // External storage (main storage)
-      final externalDir = await getExternalStorageDirectory();
-      if (externalDir != null) {
-        final rootPath = externalDir.path.split('Android')[0];
-
-        // Common user directories
-        directories.addAll([
-          Directory('$rootPath/Download'),
-          Directory('$rootPath/Downloads'),
-          Directory('$rootPath/DCIM'),
-          Directory('$rootPath/Pictures'),
-          Directory('$rootPath/Movies'),
-          Directory('$rootPath/Music'),
-          Directory('$rootPath/Documents'),
-          Directory('$rootPath/WhatsApp'),
-          Directory('$rootPath/Telegram'),
-        ]);
-      }
-
-      // App-specific external storage directories
-      final externalDirs = await getExternalStorageDirectories();
-      if (externalDirs != null) {
-        directories.addAll(externalDirs);
-      }
-    } catch (e) {
-      Logger.error('Failed to get directories to scan', e);
-    }
-
-    return directories;
-  }
-
-  /// Recursively scan a directory and categorize files
-  Future<void> _scanDirectory(
-    Directory dir,
-    Map<String, CategoryData> categoryMap,
-  ) async {
-    try {
-      final entities = dir.listSync(recursive: false, followLinks: false);
-
-      for (final entity in entities) {
-        if (entity is File) {
-          await _categorizeFile(entity, categoryMap);
-        } else if (entity is Directory) {
-          // Limit recursion depth to avoid performance issues
-          if (!entity.path.contains('/.') && // Skip hidden directories
-              !entity.path.contains('/Android/data') && // Skip app data
-              !entity.path.contains('/Android/obb')) {
-            // Skip app data
-            await _scanDirectory(entity, categoryMap);
-          }
-        }
-      }
-    } catch (e) {
-      // Ignore permission errors for individual directories
-      if (!e.toString().contains('Permission denied')) {
-        Logger.warning('Failed to scan directory: ${dir.path}');
-      }
-    }
-  }
-
-  /// Categorize a file based on its extension
-  Future<void> _categorizeFile(
-    File file,
-    Map<String, CategoryData> categoryMap,
-  ) async {
-    try {
-      final stat = await file.stat();
-      final size = stat.size;
-      final extension = file.path
-          .substring(file.path.lastIndexOf('.'))
-          .toLowerCase();
-
-      // Find matching category
-      String categoryId = 'others';
-      for (final entry in categoryMap.entries) {
-        if (entry.value.extensions.contains(extension)) {
-          categoryId = entry.key;
-          break;
-        }
-      }
-
-      // Update category data
-      categoryMap[categoryId]!.totalSize += size;
-      categoryMap[categoryId]!.fileCount += 1;
-    } catch (e) {
-      // Ignore file access errors
-    }
-  }
 
   /// Returns empty categories with zero sizes
   List<Category> _getEmptyCategories() {

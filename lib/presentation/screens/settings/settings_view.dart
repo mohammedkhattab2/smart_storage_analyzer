@@ -6,11 +6,6 @@ import 'package:smart_storage_analyzer/domain/models/settings_item_model.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/settings/settings_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/settings/settings_state.dart';
 import 'package:smart_storage_analyzer/presentation/viewmodels/settings_viewmodel.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/common/loading_widget.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/settings/settings_header.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/settings/settings_section.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/settings/settings_tile.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/settings/sign_out_button.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/settings/theme_selector.dart';
 
 class SettingsView extends StatelessWidget {
@@ -57,7 +52,13 @@ class SettingsView extends StatelessWidget {
             _buildMagicalBackground(context),
             
             SafeArea(
-              child: BlocBuilder<SettingsCubit, SettingsState>(
+              child: BlocConsumer<SettingsCubit, SettingsState>(
+                listener: (context, state) {
+                  if (state is SettingsSignedOut) {
+                    // Close the app when signed out
+                    SystemNavigator.pop();
+                  }
+                },
                 builder: (context, state) {
                   if (state is SettingsLoading) {
                     return Center(child: _buildMagicalLoadingWidget(context));

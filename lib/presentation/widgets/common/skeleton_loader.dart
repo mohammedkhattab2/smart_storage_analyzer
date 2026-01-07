@@ -35,10 +35,7 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
     _animation = Tween<double>(
       begin: 0.4,
       end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     _controller.repeat(reverse: true);
   }
 
@@ -107,6 +104,7 @@ class SkeletonListLoader extends StatelessWidget {
     return ListView.builder(
       padding: padding,
       physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
       itemCount: itemCount,
       itemBuilder: (context, index) {
         return _buildSkeletonItem(context);
@@ -182,6 +180,7 @@ class SkeletonGridLoader extends StatelessWidget {
     return GridView.builder(
       padding: padding,
       physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
         crossAxisSpacing: 12,
@@ -197,9 +196,7 @@ class SkeletonGridLoader extends StatelessWidget {
 
   Widget _buildSkeletonGridItem(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
       child: Column(
         children: [
           // Icon skeleton

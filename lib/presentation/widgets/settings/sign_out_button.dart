@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
@@ -29,7 +29,7 @@ class _SignOutButtonState extends State<SignOutButton> {
     return GestureDetector(
       onTapDown: (_) {
         setState(() => _isPressed = true);
-        },
+      },
       onTapUp: (_) {
         setState(() => _isPressed = false);
         _handleTap();
@@ -72,9 +72,7 @@ class _SignOutButtonState extends State<SignOutButton> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(20),
                     splashColor: colorScheme.error.withValues(alpha: .15),
-                    highlightColor: colorScheme.error.withValues(
-                      alpha: .08,
-                    ),
+                    highlightColor: colorScheme.error.withValues(alpha: .08),
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -110,9 +108,7 @@ class _SignOutButtonState extends State<SignOutButton> {
                           Transform.rotate(
                             angle: _isHovered ? -0.2 : 0,
                             child: Container(
-                              padding: EdgeInsets.all(
-                                _isHovered ? 10 : 8,
-                              ),
+                              padding: EdgeInsets.all(_isHovered ? 10 : 8),
                               decoration: BoxDecoration(
                                 gradient: RadialGradient(
                                   colors: [
@@ -135,8 +131,9 @@ class _SignOutButtonState extends State<SignOutButton> {
                                 boxShadow: _isHovered
                                     ? [
                                         BoxShadow(
-                                          color: colorScheme.error
-                                              .withValues(alpha: .2),
+                                          color: colorScheme.error.withValues(
+                                            alpha: .2,
+                                          ),
                                           blurRadius: 8,
                                           spreadRadius: -2,
                                         ),

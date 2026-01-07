@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
+import 'package:smart_storage_analyzer/core/services/permission_manager.dart';
 import 'package:smart_storage_analyzer/core/theme/app_theme.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/theme/theme_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/theme/theme_state.dart';
@@ -11,12 +12,15 @@ import 'package:smart_storage_analyzer/routes/app_pages.dart';
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
-  
+
   await setupServiceLocator();
   await _setupSystemUi();
   
+  // Initialize permission manager
+  await PermissionManager().initialize();
+
   runApp(const MyApp());
-  
+
   // Remove splash screen after app is loaded
   FlutterNativeSplash.remove();
 }

@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
@@ -130,10 +130,7 @@ class QuickStatsSection extends StatelessWidget {
               stops: const [0.0, 0.5, 1.0],
             ),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: color.withValues(alpha: .15),
-              width: 1.5,
-            ),
+            border: Border.all(color: color.withValues(alpha: .15), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: color.withValues(alpha: isDark ? .15 : .2),
@@ -222,7 +219,9 @@ class QuickStatsSection extends StatelessWidget {
                       Text(
                         title.toUpperCase(),
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: .8),
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: .8,
+                          ),
                           letterSpacing: 1.5,
                           fontWeight: FontWeight.w600,
                           fontSize: 11,
@@ -273,7 +272,8 @@ class QuickStatsSection extends StatelessWidget {
                           Container(
                             height: 8,
                             decoration: BoxDecoration(
-                              color: colorScheme.surfaceContainerHighest.withValues(alpha: .5),
+                              color: colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: .5),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -286,7 +286,10 @@ class QuickStatsSection extends StatelessWidget {
                               child: Container(
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [color, color.withValues(alpha: .8)],
+                                    colors: [
+                                      color,
+                                      color.withValues(alpha: .8),
+                                    ],
                                   ),
                                   borderRadius: BorderRadius.circular(4),
                                   boxShadow: [

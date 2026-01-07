@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_storage_analyzer/presentation/screens/dashboard/dashboard_screen.dart';
-import 'package:smart_storage_analyzer/presentation/screens/file_details/file_details_screen.dart';
-import 'package:smart_storage_analyzer/presentation/screens/file_manager/file_manager_screen.dart';
+import 'package:smart_storage_analyzer/presentation/screens/file_manager/optimized_file_manager_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/main/main_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/onboarding/onboarding_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/settings/settings_screen.dart';
-import 'package:smart_storage_analyzer/presentation/screens/statistics/statistics_screen.dart';
+import 'package:smart_storage_analyzer/presentation/screens/statistics/optimized_statistics_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/storage_analysis/storage_analysis_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/cleanup_results/cleanup_results_screen.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_analysis_results.dart';
@@ -71,24 +70,15 @@ class AppPages {
             name: "fileManager",
             pageBuilder: (context, state) => NoTransitionPage<void>(
               key: state.pageKey,
-              child: FileManagerScreen(),
+              child: const OptimizedFileManagerScreen(),
             ),
-            routes: <RouteBase>[
-              GoRoute(
-                path: "details",
-                name: "fileDetails",
-                builder: (context, state) {
-                  return FileDetailsScreen();
-                },
-              ),
-            ],
           ),
           GoRoute(
             path: AppRoutes.statistics,
             name: "statistics",
             pageBuilder: (context, state) => NoTransitionPage<void>(
               key: state.pageKey,
-              child: StatisticsScreen(),
+              child: const OptimizedStatisticsScreen(),
             ),
           ),
           GoRoute(
@@ -121,9 +111,7 @@ class AppPages {
             return MaterialPage<void>(
               key: state.pageKey,
               child: const Scaffold(
-                body: Center(
-                  child: Text('No analysis results found'),
-                ),
+                body: Center(child: Text('No analysis results found')),
               ),
             );
           }

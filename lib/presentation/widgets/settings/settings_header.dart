@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/constants/app_strings.dart';
@@ -59,9 +59,11 @@ class SettingsHeader extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      colorScheme.primaryContainer.withValues(alpha: isDark ? .08 : .15,
+                      colorScheme.primaryContainer.withValues(
+                        alpha: isDark ? .08 : .15,
                       ),
-                      colorScheme.secondaryContainer.withValues(alpha: isDark ? .05 : .1,
+                      colorScheme.secondaryContainer.withValues(
+                        alpha: isDark ? .05 : .1,
                       ),
                     ],
                     begin: Alignment.topLeft,

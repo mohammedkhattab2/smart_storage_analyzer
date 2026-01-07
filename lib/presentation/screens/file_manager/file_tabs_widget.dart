@@ -82,7 +82,9 @@ class _FileTabsWidgetState extends State<FileTabsWidget> {
         AppSize.paddingMedium,
       ),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer.withValues(alpha: isDark ? 0.3 : 0.5),
+        color: colorScheme.surfaceContainer.withValues(
+          alpha: isDark ? 0.3 : 0.5,
+        ),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.1),
@@ -163,7 +165,9 @@ class _FileTabsWidgetState extends State<FileTabsWidget> {
                     end: Alignment.bottomRight,
                   )
                 : null,
-            color: isSelected ? null : colorScheme.surface.withValues(alpha: 0.8),
+            color: isSelected
+                ? null
+                : colorScheme.surface.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: isSelected

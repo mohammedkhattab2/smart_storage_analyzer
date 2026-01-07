@@ -5,7 +5,7 @@ import 'package:smart_storage_analyzer/domain/value_objects/file_category.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/category_details/category_details_state.dart';
 
 class CategoryDetailsCubit extends Cubit<CategoryDetailsState> {
-  final GetFilesUsecase getFilesUsecase;
+  final GetFilesUseCase getFilesUsecase;
 
   CategoryDetailsCubit({required this.getFilesUsecase})
     : super(CategoryDetailsInitial());

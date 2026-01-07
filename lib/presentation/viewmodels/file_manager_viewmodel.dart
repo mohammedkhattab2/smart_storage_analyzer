@@ -4,14 +4,14 @@ import 'package:smart_storage_analyzer/domain/usecases/delete_files_usecase.dart
 import 'package:smart_storage_analyzer/domain/usecases/get_files_usecase.dart';
 import 'package:smart_storage_analyzer/domain/value_objects/file_category.dart';
 
-class FileManagerViewmodel {
-  final GetFilesUsecase getFilesUsecase;
-  final DeleteFilesUsecase deleteFilesUsecase;
+class FileManagerViewModel {
+  final GetFilesUseCase getFilesUsecase;
+  final DeleteFilesUseCase deleteFilesUsecase;
   List<FileItem> _allFiles = [];
   final Set<String> _selectedFileIds = {};
   FileCategory _currentCategory = FileCategory.all;
 
-  FileManagerViewmodel({
+  FileManagerViewModel({
     required this.getFilesUsecase,
     required this.deleteFilesUsecase,
   });
@@ -65,7 +65,7 @@ class FileManagerViewmodel {
   Future<void> deleteSelectedFiles() async {
     if (_selectedFileIds.isEmpty) return;
     try {
-      await deleteFilesUsecase.excute(_selectedFileIds.toList());
+      await deleteFilesUsecase.execute(_selectedFileIds.toList());
       _allFiles.removeWhere((file) => _selectedFileIds.contains(file.id));
       _selectedFileIds.clear();
     } catch (e) {
@@ -88,4 +88,15 @@ class FileManagerViewmodel {
 
   FileCategory get currentCategory => _currentCategory;
   Set<String> get selectedFileIds => Set.from(_selectedFileIds);
+
+  /// Clear all data to free memory
+  void clearData() {
+    _allFiles.clear();
+    _selectedFileIds.clear();
+  }
+
+  /// Dispose resources
+  void dispose() {
+    clearData();
+  }
 }

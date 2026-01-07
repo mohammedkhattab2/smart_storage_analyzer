@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class BottomNavItem extends StatefulWidget {
   final IconData icon;
@@ -66,9 +66,7 @@ class _BottomNavItemState extends State<BottomNavItem> {
 
                     // Icon
                     Icon(
-                      widget.isSelected
-                          ? widget.activeIcon
-                          : widget.icon,
+                      widget.isSelected ? widget.activeIcon : widget.icon,
                       color: widget.isSelected
                           ? colorScheme.primary
                           : colorScheme.onSurfaceVariant.withValues(alpha: .7),
@@ -83,19 +81,22 @@ class _BottomNavItemState extends State<BottomNavItem> {
               // Label
               Text(
                 widget.label,
-                style: (widget.isSelected
-                        ? textTheme.labelSmall
-                        : textTheme.bodySmall)
-                    ?.copyWith(
-                      fontSize: widget.isSelected ? 11 : 10,
-                      color: widget.isSelected
-                          ? colorScheme.primary
-                          : colorScheme.onSurfaceVariant.withValues(alpha: .8),
-                      fontWeight: widget.isSelected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      letterSpacing: widget.isSelected ? 0.5 : 0.3,
-                    ) ??
+                style:
+                    (widget.isSelected
+                            ? textTheme.labelSmall
+                            : textTheme.bodySmall)
+                        ?.copyWith(
+                          fontSize: widget.isSelected ? 11 : 10,
+                          color: widget.isSelected
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant.withValues(
+                                  alpha: .8,
+                                ),
+                          fontWeight: widget.isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          letterSpacing: widget.isSelected ? 0.5 : 0.3,
+                        ) ??
                     TextStyle(
                       fontSize: 10,
                       color: colorScheme.onSurfaceVariant,
@@ -109,7 +110,9 @@ class _BottomNavItemState extends State<BottomNavItem> {
                 width: widget.isSelected ? 4 : 0,
                 margin: EdgeInsets.only(top: widget.isSelected ? 4 : 0),
                 decoration: BoxDecoration(
-                  color: widget.isSelected ? colorScheme.primary : Colors.transparent,
+                  color: widget.isSelected
+                      ? colorScheme.primary
+                      : Colors.transparent,
                   shape: BoxShape.circle,
                   boxShadow: widget.isSelected
                       ? [

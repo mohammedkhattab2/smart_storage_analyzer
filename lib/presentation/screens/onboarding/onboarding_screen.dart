@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -143,10 +143,16 @@ class OnboardingViewState extends State<OnboardingView> {
               center: const Alignment(-0.5, -0.5),
               radius: 2.0,
               colors: [
-                colorScheme.primaryContainer.withValues(alpha: isDark ? .15 : .25),
+                colorScheme.primaryContainer.withValues(
+                  alpha: isDark ? .15 : .25,
+                ),
                 colorScheme.surface,
-                colorScheme.secondaryContainer.withValues(alpha: isDark ? .08 : .15),
-                colorScheme.tertiaryContainer.withValues(alpha: isDark ? .05 : .1),
+                colorScheme.secondaryContainer.withValues(
+                  alpha: isDark ? .08 : .15,
+                ),
+                colorScheme.tertiaryContainer.withValues(
+                  alpha: isDark ? .05 : .1,
+                ),
               ],
               stops: const [0.0, 0.4, 0.7, 1.0],
             ),
@@ -184,9 +190,7 @@ class OnboardingViewState extends State<OnboardingView> {
         // Soft Blur Layer
         BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 1.0, sigmaY: 1.0),
-          child: Container(
-            color: colorScheme.surface.withValues(alpha: .01),
-          ),
+          child: Container(color: colorScheme.surface.withValues(alpha: .01)),
         ),
       ],
     );
@@ -269,10 +273,7 @@ class OnboardingViewState extends State<OnboardingView> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [
-                  colorScheme.primary,
-                  colorScheme.primaryContainer,
-                ],
+                colors: [colorScheme.primary, colorScheme.primaryContainer],
               ),
               boxShadow: [
                 BoxShadow(
@@ -316,10 +317,7 @@ class OnboardingViewState extends State<OnboardingView> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(25),
             child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: 15,
-                sigmaY: 15,
-              ),
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
@@ -336,10 +334,12 @@ class OnboardingViewState extends State<OnboardingView> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          colorScheme.surfaceContainerHighest
-                              .withValues(alpha: isDark ? .2 : .3),
-                          colorScheme.surfaceContainer
-                              .withValues(alpha: isDark ? .15 : .25),
+                          colorScheme.surfaceContainerHighest.withValues(
+                            alpha: isDark ? .2 : .3,
+                          ),
+                          colorScheme.surfaceContainer.withValues(
+                            alpha: isDark ? .15 : .25,
+                          ),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(25),
@@ -387,10 +387,7 @@ class OnboardingViewState extends State<OnboardingView> {
     );
   }
 
-  Widget _buildMagicalBottomSection(
-    int currentPage,
-    ColorScheme colorScheme,
-  ) {
+  Widget _buildMagicalBottomSection(int currentPage, ColorScheme colorScheme) {
     return Container(
       padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
       decoration: BoxDecoration(
@@ -423,10 +420,7 @@ class OnboardingViewState extends State<OnboardingView> {
                 width: 1,
               ),
             ),
-            child: PageIndicatorWidget(
-              currentPage: currentPage,
-              pageCount: 3,
-            ),
+            child: PageIndicatorWidget(currentPage: currentPage, pageCount: 3),
           ),
 
           const SizedBox(height: 40),
@@ -529,7 +523,11 @@ class MagicalBackgroundPatternPainter extends CustomPainter {
         );
 
         paint.shader = gradient.createShader(
-          Rect.fromCenter(center: Offset(x, y), width: spacing, height: spacing),
+          Rect.fromCenter(
+            center: Offset(x, y),
+            width: spacing,
+            height: spacing,
+          ),
         );
 
         canvas.drawPath(path, paint);

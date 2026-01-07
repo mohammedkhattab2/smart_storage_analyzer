@@ -37,7 +37,9 @@ class LoadingWidget extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .6),
+                        colorScheme.surfaceContainer.withValues(
+                          alpha: isDark ? .3 : .6,
+                        ),
                         colorScheme.surface.withValues(alpha: isDark ? .2 : .4),
                       ],
                       begin: Alignment.topLeft,
@@ -73,7 +75,9 @@ class LoadingWidget extends StatelessWidget {
                           height: 48,
                           child: CircularProgressIndicator(
                             strokeWidth: 3,
-                            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              colorScheme.primary,
+                            ),
                             strokeCap: StrokeCap.round,
                           ),
                         ),

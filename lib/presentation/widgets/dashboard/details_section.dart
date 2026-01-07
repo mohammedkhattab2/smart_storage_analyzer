@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/constants/app_strings.dart';
@@ -63,7 +63,8 @@ class DetailsSection extends StatelessWidget {
                 HapticFeedback.lightImpact();
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => AllCategoriesScreen(categories: categories),
+                    builder: (context) =>
+                        AllCategoriesScreen(categories: categories),
                   ),
                 );
               },

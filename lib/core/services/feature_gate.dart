@@ -7,10 +7,10 @@ import 'package:smart_storage_analyzer/domain/entities/pro_access.dart';
 /// This ensures clean separation between free and Pro features
 class FeatureGate {
   final ProAccessService _proAccessService;
-  
+
   FeatureGate({required ProAccessService proAccessService})
-      : _proAccessService = proAccessService;
-  
+    : _proAccessService = proAccessService;
+
   /// Check if a feature is available
   Future<bool> isFeatureAvailable(ProFeature feature) async {
     try {
@@ -24,7 +24,7 @@ class FeatureGate {
       return false;
     }
   }
-  
+
   /// Execute a function only if feature is available
   Future<T?> executeIfAvailable<T>({
     required ProFeature feature,
@@ -33,7 +33,7 @@ class FeatureGate {
     VoidCallback? onRestricted,
   }) async {
     final isAvailable = await isFeatureAvailable(feature);
-    
+
     if (isAvailable) {
       return await action();
     } else {
@@ -41,14 +41,14 @@ class FeatureGate {
       return fallback != null ? await fallback() : null;
     }
   }
-  
+
   /// Show Pro feature dialog when accessing restricted feature
   Future<void> showProFeatureDialog(
     BuildContext context,
     ProFeature feature,
   ) async {
     final featureInfo = ProAccessService.getFeatureInfo(feature);
-    
+
     await showDialog(
       context: context,
       barrierDismissible: true,
@@ -61,7 +61,7 @@ class FeatureGate {
       ),
     );
   }
-  
+
   /// Show upgrade information (no payment)
   void _showUpgradeInfo(BuildContext context) {
     showDialog(
@@ -75,21 +75,19 @@ class FeatureGate {
 class ProFeatureDialog extends StatelessWidget {
   final ProFeatureInfo featureInfo;
   final VoidCallback onUpgrade;
-  
+
   const ProFeatureDialog({
     super.key,
     required this.featureInfo,
     required this.onUpgrade,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
           Container(
@@ -106,10 +104,7 @@ class ProFeatureDialog extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              featureInfo.name,
-              style: const TextStyle(fontSize: 20),
-            ),
+            child: Text(featureInfo.name, style: const TextStyle(fontSize: 20)),
           ),
         ],
       ),
@@ -141,11 +136,7 @@ class ProFeatureDialog extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.star_rounded,
-                  color: colorScheme.primary,
-                  size: 20,
-                ),
+                Icon(Icons.star_rounded, color: colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Coming Soon',
@@ -172,7 +163,7 @@ class ProFeatureDialog extends StatelessWidget {
       ],
     );
   }
-  
+
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'analytics':
@@ -202,15 +193,13 @@ class ProFeatureDialog extends StatelessWidget {
 /// Upgrade information dialog (no payment)
 class UpgradeInfoDialog extends StatelessWidget {
   const UpgradeInfoDialog({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: const Text('Smart Storage Pro'),
       content: SingleChildScrollView(
         child: Column(
@@ -273,7 +262,7 @@ class UpgradeInfoDialog extends StatelessWidget {
       ],
     );
   }
-  
+
   List<Widget> _buildFeatureList(BuildContext context) {
     final features = [
       'Deep file analysis',
@@ -286,20 +275,24 @@ class UpgradeInfoDialog extends StatelessWidget {
       'Advanced statistics',
       'Export reports',
     ];
-    
-    return features.map((feature) => Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(
-            Icons.check_circle_outline,
-            color: Theme.of(context).colorScheme.primary,
-            size: 20,
+
+    return features
+        .map(
+          (feature) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(feature),
+              ],
+            ),
           ),
-          const SizedBox(width: 8),
-          Text(feature),
-        ],
-      ),
-    )).toList();
+        )
+        .toList();
   }
 }

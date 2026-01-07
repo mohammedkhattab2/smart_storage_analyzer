@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 
@@ -50,10 +50,7 @@ class _SettingsSectionState extends State<SettingsSection> {
                     shaderCallback: (rect) {
                       return LinearGradient(
                         colors: _isHovered
-                            ? [
-                                colorScheme.primary,
-                                colorScheme.secondary,
-                              ]
+                            ? [colorScheme.primary, colorScheme.secondary]
                             : [
                                 colorScheme.onSurfaceVariant,
                                 colorScheme.onSurfaceVariant,
@@ -152,9 +149,7 @@ class _SettingsSectionState extends State<SettingsSection> {
                                   center: const Alignment(0.7, -0.6),
                                   radius: 2,
                                   colors: [
-                                    colorScheme.primary.withValues(
-                                      alpha: .03,
-                                    ),
+                                    colorScheme.primary.withValues(alpha: .03),
                                     Colors.transparent,
                                   ],
                                 ),
@@ -164,7 +159,11 @@ class _SettingsSectionState extends State<SettingsSection> {
                         // Children with dividers
                         Column(
                           children: [
-                            for (int i = 0; i < widget.children.length; i++) ...[
+                            for (
+                              int i = 0;
+                              i < widget.children.length;
+                              i++
+                            ) ...[
                               widget.children[i],
                               if (i < widget.children.length - 1)
                                 Divider(
@@ -172,8 +171,9 @@ class _SettingsSectionState extends State<SettingsSection> {
                                   thickness: 0.5,
                                   indent: AppSize.paddingLarge + 56,
                                   endIndent: AppSize.paddingLarge,
-                                  color: colorScheme.outlineVariant
-                                      .withValues(alpha: .15),
+                                  color: colorScheme.outlineVariant.withValues(
+                                    alpha: .15,
+                                  ),
                                 ),
                             ],
                           ],

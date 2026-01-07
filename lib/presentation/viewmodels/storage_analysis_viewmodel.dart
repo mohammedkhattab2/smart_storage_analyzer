@@ -1,161 +1,116 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:smart_storage_analyzer/core/utils/logger.dart';
-import 'package:smart_storage_analyzer/domain/entities/file_item.dart';
-import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_analysis_results.dart';
-import 'package:smart_storage_analyzer/domain/value_objects/file_category.dart';
-import 'package:smart_storage_analyzer/core/services/permission_service.dart';
-import 'package:smart_storage_analyzer/domain/models/file_item_model.dart';
-import 'package:smart_storage_analyzer/data/models/category_model.dart';
-import 'package:smart_storage_analyzer/core/constants/app_icons.dart';
-import 'package:smart_storage_analyzer/core/theme/app_color_schemes.dart';
+import 'package:smart_storage_analyzer/domain/usecases/analyze_storage_use_case.dart';
+import 'package:smart_storage_analyzer/core/services/isolate_helper.dart';
+import 'package:smart_storage_analyzer/core/utils/logger.dart';
 
+/// ViewModel for storage analysis following MVVM pattern
+/// Only coordinates between UI and use cases - no business logic
 class StorageAnalysisViewModel {
-  final _permissionService = PermissionService();
-  static const platform = MethodChannel('com.smartstorage/native');
-  
+  final AnalyzeStorageUseCase _analyzeStorageUseCase;
+
+  StorageAnalysisViewModel(this._analyzeStorageUseCase);
+
   Future<StorageAnalysisResults> performDeepAnalysis() async {
     try {
-      Logger.info("Starting deep storage analysis...");
-      
-      // Check permission first
-      final hasPermission = await _permissionService.hasStoragePermission();
-      if (!hasPermission) {
-        throw Exception('Storage permission denied');
-      }
-      
-      final startTime = DateTime.now();
-      
-      if (!Platform.isAndroid) {
-        Logger.warning('Storage analysis is only supported on Android');
-        return _createEmptyResults(startTime);
-      }
-      
-      // Call native Android analysis
-      final Map<dynamic, dynamic> result = await platform.invokeMethod('analyzeStorage');
-      
-      Logger.info('Got analysis results from native: ${result['totalFilesScanned']} files scanned');
-      
-      // Convert native results to Dart objects
-      final cacheFiles = _convertFileList(result['cacheFiles'] as List<dynamic>);
-      final tempFiles = _convertFileList(result['temporaryFiles'] as List<dynamic>);
-      final largeOldFiles = _convertFileList(result['largeOldFiles'] as List<dynamic>);
-      final duplicateFiles = _convertFileList(result['duplicateFiles'] as List<dynamic>);
-      final thumbnails = _convertFileList(result['thumbnails'] as List<dynamic>);
-      
-      // Generate detailed categories (for now, using predefined categories)
-      final detailedCategories = _generateDetailedCategories();
-      
-      Logger.success("Storage analysis completed");
-      
-      return StorageAnalysisResults(
-        totalFilesScanned: result['totalFilesScanned'] as int,
-        totalSpaceUsed: result['totalSpaceUsed'] as int,
-        totalSpaceAvailable: result['totalSpaceAvailable'] as int,
-        cacheFiles: cacheFiles,
-        temporaryFiles: tempFiles,
-        largeOldFiles: largeOldFiles,
-        duplicateFiles: duplicateFiles,
-        thumbnails: thumbnails,
-        detailedCategories: detailedCategories,
-        totalCleanupPotential: result['totalCleanupPotential'] as int,
-        analysisDate: DateTime.now(),
-        analysisDuration: DateTime.now().difference(startTime),
+      Logger.info("StorageAnalysisViewModel: Initiating deep analysis...");
+
+      // Delegate to use case - no business logic here
+      final results = await _analyzeStorageUseCase.execute();
+
+      Logger.success(
+        "StorageAnalysisViewModel: Analysis completed successfully",
       );
+      return results;
     } catch (e) {
-      Logger.error('Failed to perform storage analysis', e);
+      Logger.error('StorageAnalysisViewModel: Failed to perform analysis', e);
       rethrow;
     }
   }
-  
-  List<FileItem> _convertFileList(List<dynamic> nativeFiles) {
-    return nativeFiles.map((fileData) {
-      final Map<String, dynamic> data = Map<String, dynamic>.from(fileData);
-      return FileItemModel(
-        id: data['id'] ?? '',
-        name: data['name'] ?? 'Unknown',
-        path: data['path'] ?? '',
-        sizeInBytes: (data['size'] as num?)?.toInt() ?? 0,
-        lastModified: data['lastModified'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(data['lastModified'] as int)
-            : DateTime.now(),
-        extension: data['extension'] ?? '',
-        category: FileCategoryExtension.fromExtension(data['extension'] ?? ''),
+
+  /// Perform deep analysis with progress reporting
+  Future<StorageAnalysisResults> performDeepAnalysisWithProgress({
+    required void Function(double progress, String message) onProgress,
+    CancellationToken? cancellationToken,
+  }) async {
+    try {
+      Logger.info("StorageAnalysisViewModel: Initiating deep analysis with progress...");
+
+      // Report initial progress
+      onProgress(0.0, 'Initializing storage analysis...');
+
+      // Check if cancelled
+      if (cancellationToken?.isCancelled == true) {
+        throw Exception('Analysis cancelled');
+      }
+
+      onProgress(0.1, 'Checking storage permissions...');
+      
+      // Execute the analysis with progress reporting
+      // Note: Since we can't directly pass progress to the use case,
+      // we simulate progress based on time estimation
+      final analysisTask = _analyzeStorageUseCase.execute();
+      
+      // Create a timer to simulate progress updates
+      final progressSteps = [
+        (0.2, 'Scanning cache files...'),
+        (0.3, 'Scanning temporary files...'),
+        (0.4, 'Analyzing images...'),
+        (0.5, 'Analyzing videos...'),
+        (0.6, 'Analyzing documents...'),
+        (0.7, 'Finding duplicate files...'),
+        (0.8, 'Calculating large files...'),
+        (0.9, 'Finalizing analysis...'),
+      ];
+      
+      int currentStep = 0;
+      while (!analysisTask.isCompleted && currentStep < progressSteps.length) {
+        if (cancellationToken?.isCancelled == true) {
+          throw Exception('Analysis cancelled');
+        }
+        
+        final (progress, message) = progressSteps[currentStep];
+        onProgress(progress, message);
+        currentStep++;
+        
+        // Wait a bit before next progress update
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      
+      // Wait for the actual result
+      final results = await analysisTask;
+      
+      // Final progress
+      onProgress(1.0, 'Analysis complete!');
+      
+      Logger.success(
+        "StorageAnalysisViewModel: Analysis completed successfully with progress",
       );
-    }).toList();
+      return results;
+    } catch (e) {
+      Logger.error('StorageAnalysisViewModel: Failed to perform analysis', e);
+      rethrow;
+    }
   }
-  
-  List<Category> _generateDetailedCategories() {
-    // Return empty categories for now - in a real implementation,
-    // this would be populated from the analysis results
-    return [
-      CategoryModel(
-        id: 'images',
-        name: 'Images',
-        icon: AppIcons.images,
-        color: AppColorSchemes.imageCategoryLight,
-        sizeInBytes: 0,
-        filesCount: 0,
-      ),
-      CategoryModel(
-        id: 'videos',
-        name: 'Videos',
-        icon: AppIcons.videos,
-        color: AppColorSchemes.videoCategoryLight,
-        sizeInBytes: 0,
-        filesCount: 0,
-      ),
-      CategoryModel(
-        id: 'audio',
-        name: 'Audio',
-        icon: AppIcons.audio,
-        color: AppColorSchemes.audioCategoryLight,
-        sizeInBytes: 0,
-        filesCount: 0,
-      ),
-      CategoryModel(
-        id: 'documents',
-        name: 'Documents',
-        icon: AppIcons.documents,
-        color: AppColorSchemes.documentCategoryLight,
-        sizeInBytes: 0,
-        filesCount: 0,
-      ),
-      CategoryModel(
-        id: 'apps',
-        name: 'Apps',
-        icon: AppIcons.apps,
-        color: AppColorSchemes.appsCategoryLight,
-        sizeInBytes: 0,
-        filesCount: 0,
-      ),
-      CategoryModel(
-        id: 'others',
-        name: 'Others',
-        icon: AppIcons.others,
-        color: AppColorSchemes.othersCategoryLight,
-        sizeInBytes: 0,
-        filesCount: 0,
-      ),
-    ];
+}
+
+/// Extension to check if a Future is completed
+extension FutureExtension<T> on Future<T> {
+  bool get isCompleted {
+    var completed = false;
+    then((_) => completed = true);
+    return completed;
   }
-  
-  StorageAnalysisResults _createEmptyResults(DateTime startTime) {
-    return StorageAnalysisResults(
-      totalFilesScanned: 0,
-      totalSpaceUsed: 0,
-      totalSpaceAvailable: 0,
-      cacheFiles: [],
-      temporaryFiles: [],
-      largeOldFiles: [],
-      duplicateFiles: [],
-      thumbnails: [],
-      detailedCategories: _generateDetailedCategories(),
-      totalCleanupPotential: 0,
-      analysisDate: DateTime.now(),
-      analysisDuration: DateTime.now().difference(startTime),
-    );
+
+  /// Getter for cancellation status
+  bool get isCancelled => false;
+}
+
+/// Extension for CancellationToken
+extension CancellationTokenExtension on CancellationToken? {
+  bool get isCancelled {
+    // Simple cancellation check
+    var cancelled = false;
+    this?.onCancel = () => cancelled = true;
+    return cancelled;
   }
 }

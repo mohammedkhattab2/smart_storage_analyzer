@@ -53,7 +53,7 @@ class AllCategoriesView extends StatelessWidget {
                         decelerationRate: ScrollDecelerationRate.fast,
                       ),
                       slivers: [
-                        // Magical Header
+                        // Magical Header with Action Buttons
                         _buildMagicalHeader(
                           context,
                           state,
@@ -61,7 +61,7 @@ class AllCategoriesView extends StatelessWidget {
                           textTheme,
                           isDark,
                         ),
-                        
+
                         // Categories List
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(
@@ -71,22 +71,28 @@ class AllCategoriesView extends StatelessWidget {
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
                                 final category = state.categories[index];
-                                return _MagicalCategoryCard(
-                                  category: category,
-                                  totalStorage: state.totalStorage,
-                                  index: index,
-                                  onTap: () {
-                                    HapticFeedback.lightImpact();
-                                    _navigateToCategoryFiles(context, category);
-                                  },
+                                return RepaintBoundary(
+                                  child: _MagicalCategoryCard(
+                                    category: category,
+                                    totalStorage: state.totalStorage,
+                                    index: index,
+                                    onTap: () {
+                                      HapticFeedback.lightImpact();
+                                      _navigateToCategoryFiles(context, category);
+                                    },
+                                  ),
                                 );
                               },
                               childCount: state.categories.length,
+                              addAutomaticKeepAlives: false,
+                              addRepaintBoundaries: false, // We're adding manually
                             ),
                           ),
                         ),
                         const SliverPadding(
-                          padding: EdgeInsets.only(bottom: AppSize.paddingXLarge),
+                          padding: EdgeInsets.only(
+                            bottom: AppSize.paddingXLarge,
+                          ),
                         ),
                       ],
                     ),
@@ -121,7 +127,7 @@ class AllCategoriesView extends StatelessWidget {
       preferredSize: const Size.fromHeight(kToolbarHeight),
       child: ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: AppBar(
             backgroundColor: Colors.transparent,
             surfaceTintColor: Colors.transparent,
@@ -225,7 +231,11 @@ class AllCategoriesView extends StatelessWidget {
     );
   }
 
-  Widget _buildMagicalBackground(BuildContext context, ColorScheme colorScheme, bool isDark) {
+  Widget _buildMagicalBackground(
+    BuildContext context,
+    ColorScheme colorScheme,
+    bool isDark,
+  ) {
     return Stack(
       children: [
         // Primary gradient
@@ -235,10 +245,16 @@ class AllCategoriesView extends StatelessWidget {
               center: const Alignment(0.5, -0.3),
               radius: 2.0,
               colors: [
-                colorScheme.primaryContainer.withValues(alpha: isDark ? .05 : .1),
+                colorScheme.primaryContainer.withValues(
+                  alpha: isDark ? .05 : .1,
+                ),
                 colorScheme.surface,
-                colorScheme.secondaryContainer.withValues(alpha: isDark ? .03 : .08),
-                colorScheme.tertiaryContainer.withValues(alpha: isDark ? .02 : .05),
+                colorScheme.secondaryContainer.withValues(
+                  alpha: isDark ? .03 : .08,
+                ),
+                colorScheme.tertiaryContainer.withValues(
+                  alpha: isDark ? .02 : .05,
+                ),
               ],
               stops: const [0.0, 0.4, 0.7, 1.0],
             ),
@@ -298,14 +314,17 @@ class AllCategoriesView extends StatelessWidget {
           ),
         ),
 
-        // Custom pattern
-        CustomPaint(
-          size: Size.infinite,
-          painter: _AllCategoriesBackgroundPainter(
-            primaryColor: colorScheme.primary.withValues(alpha: .02),
-            secondaryColor: colorScheme.secondary.withValues(alpha: .01),
+        // Custom pattern - optimized
+        if (!isDark)  // Only show pattern in light mode for performance
+          RepaintBoundary(
+            child: CustomPaint(
+              size: Size.infinite,
+              painter: _OptimizedAllCategoriesBackgroundPainter(
+                primaryColor: colorScheme.primary.withValues(alpha: .02),
+                secondaryColor: colorScheme.secondary.withValues(alpha: .01),
+              ),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -383,10 +402,7 @@ class AllCategoriesView extends StatelessWidget {
           const SizedBox(height: 32),
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
-              colors: [
-                colorScheme.onSurface,
-                colorScheme.primary,
-              ],
+              colors: [colorScheme.onSurface, colorScheme.primary],
             ).createShader(bounds),
             child: Text(
               'Loading Categories...',
@@ -432,7 +448,7 @@ class AllCategoriesView extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -659,9 +675,49 @@ class _MagicalCategoryCard extends StatefulWidget {
   State<_MagicalCategoryCard> createState() => _MagicalCategoryCardState();
 }
 
-class _MagicalCategoryCardState extends State<_MagicalCategoryCard> {
+class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
+    with SingleTickerProviderStateMixin {
   bool _isHovered = false;
   bool _isPressed = false;
+  
+  // Cache expensive calculations
+  late final double _percentage;
+  late final String _formattedSize;
+  late final String _percentageString;
+  
+  late AnimationController _hoverController;
+  late Animation<double> _hoverAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Pre-calculate values
+    _percentage = widget.totalStorage > 0
+        ? (widget.category.sizeInBytes / widget.totalStorage * 100)
+        : 0.0;
+    _formattedSize = SizeFormatter.formatBytes(widget.category.sizeInBytes.toInt());
+    _percentageString = '${_percentage.toStringAsFixed(1)}%';
+    
+    // Setup hover animation
+    _hoverController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _hoverAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.02,
+    ).animate(CurvedAnimation(
+      parent: _hoverController,
+      curve: Curves.easeInOut,
+    ));
+  }
+  
+  @override
+  void dispose() {
+    _hoverController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -669,22 +725,32 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     final isDark = theme.brightness == Brightness.dark;
-
-    final percentage = widget.totalStorage > 0
-        ? (widget.category.sizeInBytes / widget.totalStorage * 100)
-        : 0.0;
+    
+    if (!mounted) return const SizedBox.shrink();
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) => setState(() => _isPressed = false),
       onTapCancel: () => setState(() => _isPressed = false),
       child: MouseRegion(
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
+        onEnter: (_) {
+          setState(() => _isHovered = true);
+          _hoverController.forward();
+        },
+        onExit: (_) {
+          setState(() => _isHovered = false);
+          _hoverController.reverse();
+        },
         child: Padding(
           padding: const EdgeInsets.only(bottom: AppSize.paddingMedium),
-          child: Transform.scale(
-            scale: _isPressed ? 0.95 : 1.0,
+          child: AnimatedBuilder(
+            animation: _hoverAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _isPressed ? 0.95 : _hoverAnimation.value,
+                child: child!,
+              );
+            },
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
@@ -709,18 +775,18 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(28),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: widget.onTap,
                       borderRadius: BorderRadius.circular(28),
                       splashColor: widget.category.color.withValues(alpha: .08),
-                      highlightColor: widget.category.color.withValues(alpha: .05),
+                      highlightColor: widget.category.color.withValues(
+                        alpha: .05,
+                      ),
                       child: Container(
-                        padding: EdgeInsets.all(
-                          _isHovered ? 22 : 20,
-                        ),
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
@@ -756,51 +822,78 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard> {
                                 const SizedBox(width: 18),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       ShaderMask(
-                                        shaderCallback: (bounds) => LinearGradient(
-                                          colors: _isHovered
-                                              ? [
-                                                  widget.category.color,
-                                                  widget.category.color.withValues(
-                                                    red: math.min(1.0,
-                                                        widget.category.color.r * 1.2),
-                                                    green: math.min(1.0,
-                                                        widget.category.color.g * 1.2),
-                                                    blue: math.min(1.0,
-                                                        widget.category.color.b * 1.2),
-                                                  ),
-                                                ]
-                                              : [
-                                                  colorScheme.onSurface,
-                                                  colorScheme.onSurface,
-                                                ],
-                                        ).createShader(bounds),
+                                        shaderCallback: (bounds) =>
+                                            LinearGradient(
+                                              colors: _isHovered
+                                                  ? [
+                                                      widget.category.color,
+                                                      widget.category.color
+                                                          .withValues(
+                                                            red: math.min(
+                                                              1.0,
+                                                              widget
+                                                                      .category
+                                                                      .color
+                                                                      .r *
+                                                                  1.2,
+                                                            ),
+                                                            green: math.min(
+                                                              1.0,
+                                                              widget
+                                                                      .category
+                                                                      .color
+                                                                      .g *
+                                                                  1.2,
+                                                            ),
+                                                            blue: math.min(
+                                                              1.0,
+                                                              widget
+                                                                      .category
+                                                                      .color
+                                                                      .b *
+                                                                  1.2,
+                                                            ),
+                                                          ),
+                                                    ]
+                                                  : [
+                                                      colorScheme.onSurface,
+                                                      colorScheme.onSurface,
+                                                    ],
+                                            ).createShader(bounds),
                                         child: Text(
                                           widget.category.name,
-                                          style: textTheme.titleMedium?.copyWith(
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: -0.3,
-                                            fontSize: _isHovered ? 18 : 17,
-                                            color: Colors.white,
-                                          ),
+                                          style: textTheme.titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w800,
+                                                letterSpacing: -0.3,
+                                                fontSize: _isHovered ? 18 : 17,
+                                                color: Colors.white,
+                                              ),
                                         ),
                                       ),
                                       const SizedBox(height: 6),
-                                      _buildFileCountChip(colorScheme, textTheme),
+                                      _buildFileCountChip(
+                                        colorScheme,
+                                        textTheme,
+                                      ),
                                     ],
                                   ),
                                 ),
-                                _buildStorageInfo(colorScheme, textTheme, percentage),
+                                _buildStorageInfo(
+                                  colorScheme,
+                                  textTheme,
+                                  _percentage,
+                                ),
                               ],
                             ),
                             const SizedBox(height: 20),
-                            _buildMagicalProgressBar(
-                              percentage,
-                              colorScheme,
-                            ),
-                            if (_isHovered) _buildHoverHint(colorScheme, textTheme),
+                            _buildMagicalProgressBar(_percentage, colorScheme),
+                            if (_isHovered)
+                              _buildHoverHint(colorScheme, textTheme),
                           ],
                         ),
                       ),
@@ -898,11 +991,7 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.folder_rounded,
-            size: 16,
-            color: colorScheme.primary,
-          ),
+          Icon(Icons.folder_rounded, size: 16, color: colorScheme.primary),
           const SizedBox(width: 6),
           Text(
             '${widget.category.fileCount} files',
@@ -933,11 +1022,11 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard> {
             ],
           ).createShader(bounds),
           child: Text(
-            SizeFormatter.formatBytes(widget.category.sizeInBytes.toInt()),
+            _formattedSize,
             style: textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
-              fontSize: _isHovered ? 24 : 22,
+              fontSize: 22,
               color: Colors.white,
             ),
           ),
@@ -969,7 +1058,7 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard> {
             ],
           ),
           child: Text(
-            '${percentage.toStringAsFixed(1)}%',
+            _percentageString,
             style: textTheme.labelMedium?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w800,
@@ -1109,12 +1198,12 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard> {
   }
 }
 
-// Custom background painter
-class _AllCategoriesBackgroundPainter extends CustomPainter {
+// Optimized background painter
+class _OptimizedAllCategoriesBackgroundPainter extends CustomPainter {
   final Color primaryColor;
   final Color secondaryColor;
 
-  _AllCategoriesBackgroundPainter({
+  _OptimizedAllCategoriesBackgroundPainter({
     required this.primaryColor,
     required this.secondaryColor,
   });
@@ -1122,15 +1211,25 @@ class _AllCategoriesBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..strokeWidth = 1
+      ..strokeWidth = 0.5
       ..style = PaintingStyle.stroke;
 
-    // Draw diamond pattern
-    const spacing = 100.0;
+    // Draw simplified pattern with larger spacing
+    const spacing = 150.0;
     paint.color = primaryColor;
+    
+    // Only draw visible diamonds
+    final startX = 0.0;
+    final endX = size.width;
+    final startY = 0.0;
+    final endY = size.height;
 
-    for (double x = -spacing; x < size.width + spacing; x += spacing) {
-      for (double y = -spacing; y < size.height + spacing; y += spacing) {
+    for (double x = startX; x <= endX; x += spacing) {
+      for (double y = startY; y <= endY; y += spacing) {
+        // Skip if diamond would be completely outside canvas
+        if (x - spacing/2 > endX && x + spacing/2 < startX) continue;
+        if (y - spacing/2 > endY && y + spacing/2 < startY) continue;
+        
         final path = Path();
         path.moveTo(x, y - spacing / 2);
         path.lineTo(x + spacing / 2, y);
@@ -1142,13 +1241,13 @@ class _AllCategoriesBackgroundPainter extends CustomPainter {
       }
     }
 
-    // Draw circles at intersections
+    // Draw fewer circles
     paint.color = secondaryColor;
     paint.style = PaintingStyle.fill;
 
-    for (double x = 0; x < size.width; x += spacing) {
-      for (double y = 0; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), 4, paint);
+    for (double x = startX; x <= endX; x += spacing * 2) {
+      for (double y = startY; y <= endY; y += spacing * 2) {
+        canvas.drawCircle(Offset(x, y), 2, paint);
       }
     }
   }

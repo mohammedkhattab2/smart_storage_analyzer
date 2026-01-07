@@ -1,10 +1,10 @@
 import 'package:smart_storage_analyzer/domain/repositories/settings_repository.dart';
 
-class SignOutUsecase {
+class SignOutUseCase {
   final SettingsRepository repository;
-  SignOutUsecase(this.repository);
 
-  Future<void> excute() async {
+  SignOutUseCase(this.repository);
+  Future<void> execute() async {
     await repository.signOut();
   }
 }

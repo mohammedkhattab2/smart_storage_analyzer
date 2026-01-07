@@ -39,7 +39,8 @@ class AboutScreen extends StatelessWidget {
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Container(
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .6,
+                  color: colorScheme.surfaceContainer.withValues(
+                    alpha: isDark ? .3 : .6,
                   ),
                   shape: BoxShape.circle,
                   border: Border.all(
@@ -78,8 +79,7 @@ class AboutScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: colorScheme.primary.withValues(alpha: .2,
-                      ),
+                      color: colorScheme.primary.withValues(alpha: .2),
                       blurRadius: 30,
                       offset: const Offset(0, 10),
                       spreadRadius: -5,
@@ -108,10 +108,12 @@ class AboutScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              colorScheme.primaryContainer
-                                  .withValues(alpha: isDark ? .15 : .25),
-                              colorScheme.secondaryContainer
-                                  .withValues(alpha: isDark ? .1 : .2),
+                              colorScheme.primaryContainer.withValues(
+                                alpha: isDark ? .15 : .25,
+                              ),
+                              colorScheme.secondaryContainer.withValues(
+                                alpha: isDark ? .1 : .2,
+                              ),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
@@ -136,10 +138,7 @@ class AboutScreen extends StatelessWidget {
                   letterSpacing: -0.8,
                   foreground: Paint()
                     ..shader = LinearGradient(
-                      colors: [
-                        colorScheme.primary,
-                        colorScheme.secondary,
-                      ],
+                      colors: [colorScheme.primary, colorScheme.secondary],
                     ).createShader(const Rect.fromLTWH(0, 0, 200, 70)),
                 ),
               ),
@@ -151,12 +150,10 @@ class AboutScreen extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer.withValues(alpha: .2,
-                  ),
+                  color: colorScheme.primaryContainer.withValues(alpha: .2),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: colorScheme.primary.withValues(alpha: .3,
-                    ),
+                    color: colorScheme.primary.withValues(alpha: .3),
                     width: 1,
                   ),
                 ),
@@ -189,15 +186,15 @@ class AboutScreen extends StatelessWidget {
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                     child: Container(
-                      padding: const EdgeInsets.all(
-                        AppSize.paddingLarge,
-                      ),
+                      padding: const EdgeInsets.all(AppSize.paddingLarge),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .8,
+                            colorScheme.surfaceContainer.withValues(
+                              alpha: isDark ? .3 : .8,
                             ),
-                            colorScheme.surface.withValues(alpha: isDark ? .2 : .6,
+                            colorScheme.surface.withValues(
+                              alpha: isDark ? .2 : .6,
                             ),
                           ],
                           begin: Alignment.topLeft,
@@ -205,8 +202,7 @@ class AboutScreen extends StatelessWidget {
                         ),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: colorScheme.outline.withValues(alpha: .1,
-                          ),
+                          color: colorScheme.outline.withValues(alpha: .1),
                           width: 1,
                         ),
                       ),
@@ -232,14 +228,8 @@ class AboutScreen extends StatelessWidget {
                                 Icons.privacy_tip_rounded,
                                 'Privacy-First Design',
                               ),
-                              (
-                                Icons.block_rounded,
-                                'No Ads, No Tracking',
-                              ),
-                              (
-                                Icons.speed_rounded,
-                                'Fast & Lightweight',
-                              ),
+                              (Icons.block_rounded, 'No Ads, No Tracking'),
+                              (Icons.speed_rounded, 'Fast & Lightweight'),
                             ];
                             return _buildFeature(
                               context,
@@ -276,8 +266,7 @@ class AboutScreen extends StatelessWidget {
                   Text(
                     '© 2026 Smart Storage Analyzer',
                     style: textTheme.labelMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant
-                          .withValues(alpha: .6),
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: .6),
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -285,8 +274,7 @@ class AboutScreen extends StatelessWidget {
                   Text(
                     'All rights reserved',
                     style: textTheme.labelMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant
-                          .withValues(alpha: .6),
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: .6),
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -300,14 +288,17 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFeature(BuildContext context, IconData icon, String text, int index) {
+  Widget _buildFeature(
+    BuildContext context,
+    IconData icon,
+    String text,
+    int index,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: index < 3 ? AppSize.paddingMedium : 0,
-      ),
+      padding: EdgeInsets.only(bottom: index < 3 ? AppSize.paddingMedium : 0),
       child: Row(
         children: [
           Container(
@@ -334,7 +325,12 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoSection(BuildContext context, String label, String value, IconData icon) {
+  Widget _buildInfoSection(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isDark = colorScheme.brightness == Brightness.dark;
@@ -342,8 +338,7 @@ class AboutScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSize.paddingLarge),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .8,
-        ),
+        color: colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .8),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: colorScheme.outline.withValues(alpha: .1),
@@ -383,11 +378,6 @@ class AboutScreen extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-          Icon(
-            Icons.arrow_forward_ios_rounded,
-            size: 16,
-            color: colorScheme.onSurfaceVariant.withValues(alpha: .5),
           ),
         ],
       ),

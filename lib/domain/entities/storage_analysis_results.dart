@@ -5,24 +5,24 @@ class StorageAnalysisResults {
   final int totalFilesScanned;
   final int totalSpaceUsed;
   final int totalSpaceAvailable;
-  
+
   // Cleanup opportunities
   final List<FileItem> cacheFiles;
   final List<FileItem> temporaryFiles;
   final List<FileItem> largeOldFiles;
   final List<FileItem> duplicateFiles;
   final List<FileItem> thumbnails;
-  
+
   // Category breakdown after deep scan
   final List<Category> detailedCategories;
-  
+
   // Total space that can be freed
   final int totalCleanupPotential;
-  
+
   // Analysis metadata
   final DateTime analysisDate;
   final Duration analysisDuration;
-  
+
   const StorageAnalysisResults({
     required this.totalFilesScanned,
     required this.totalSpaceUsed,
@@ -37,14 +37,19 @@ class StorageAnalysisResults {
     required this.analysisDate,
     required this.analysisDuration,
   });
-  
+
   // Helper getters
-  int get totalCacheSize => cacheFiles.fold(0, (sum, file) => sum + file.sizeInBytes);
-  int get totalTempSize => temporaryFiles.fold(0, (sum, file) => sum + file.sizeInBytes);
-  int get totalDuplicatesSize => duplicateFiles.fold(0, (sum, file) => sum + file.sizeInBytes);
-  int get totalLargeOldSize => largeOldFiles.fold(0, (sum, file) => sum + file.sizeInBytes);
-  int get totalThumbnailsSize => thumbnails.fold(0, (sum, file) => sum + file.sizeInBytes);
-  
+  int get totalCacheSize =>
+      cacheFiles.fold(0, (sum, file) => sum + file.sizeInBytes);
+  int get totalTempSize =>
+      temporaryFiles.fold(0, (sum, file) => sum + file.sizeInBytes);
+  int get totalDuplicatesSize =>
+      duplicateFiles.fold(0, (sum, file) => sum + file.sizeInBytes);
+  int get totalLargeOldSize =>
+      largeOldFiles.fold(0, (sum, file) => sum + file.sizeInBytes);
+  int get totalThumbnailsSize =>
+      thumbnails.fold(0, (sum, file) => sum + file.sizeInBytes);
+
   List<CleanupCategory> get cleanupCategories => [
     CleanupCategory(
       name: 'Cache Files',
@@ -54,7 +59,7 @@ class StorageAnalysisResults {
       description: 'Temporary files stored by apps',
     ),
     CleanupCategory(
-      name: 'Temporary Files', 
+      name: 'Temporary Files',
       icon: 'temp_files',
       files: temporaryFiles,
       totalSize: totalTempSize,
@@ -62,7 +67,7 @@ class StorageAnalysisResults {
     ),
     CleanupCategory(
       name: 'Duplicate Files',
-      icon: 'duplicates', 
+      icon: 'duplicates',
       files: duplicateFiles,
       totalSize: totalDuplicatesSize,
       description: 'Files with identical content',
@@ -90,7 +95,7 @@ class CleanupCategory {
   final List<FileItem> files;
   final int totalSize;
   final String description;
-  
+
   const CleanupCategory({
     required this.name,
     required this.icon,

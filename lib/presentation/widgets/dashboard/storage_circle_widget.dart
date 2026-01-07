@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
@@ -55,9 +55,7 @@ class StorageCircleWidget extends StatelessWidget {
     final isHighUsage = percentage > 0.8;
 
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppSize.paddingSmall,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: AppSize.paddingSmall),
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -97,8 +95,9 @@ class StorageCircleWidget extends StatelessWidget {
                           ]
                         : [
                             colorScheme.surfaceContainer.withValues(alpha: .95),
-                            colorScheme.surfaceContainerHighest
-                                .withValues(alpha: .85),
+                            colorScheme.surfaceContainerHighest.withValues(
+                              alpha: .85,
+                            ),
                           ],
                   ),
                   borderRadius: BorderRadius.circular(28),
@@ -150,35 +149,29 @@ class StorageCircleWidget extends StatelessWidget {
                             animation: false,
                             percent: percentage,
                             center: Column(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 // Percentage display
                                 Text(
                                   '$percentageInt%',
-                                  style: textTheme.headlineLarge
-                                      ?.copyWith(
-                                        fontWeight:
-                                            FontWeight.w700,
-                                        color: isHighUsage
-                                            ? colorScheme.error
-                                            : colorScheme
-                                                  .onSurface,
-                                        letterSpacing: -1,
-                                        fontSize: 36,
-                                      ),
+                                  style: textTheme.headlineLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: isHighUsage
+                                        ? colorScheme.error
+                                        : colorScheme.onSurface,
+                                    letterSpacing: -1,
+                                    fontSize: 36,
+                                  ),
                                 ),
                                 const SizedBox(height: 4),
                                 // GB display
                                 Text(
                                   '${_formatGB(usedGB)} GB',
-                                  style: textTheme.bodyLarge
-                                      ?.copyWith(
-                                        color: colorScheme
-                                            .onSurfaceVariant,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                  style: textTheme.bodyLarge?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ],
                             ),
@@ -186,8 +179,7 @@ class StorageCircleWidget extends StatelessWidget {
                             progressColor: isHighUsage
                                 ? colorScheme.error
                                 : colorScheme.primary,
-                            backgroundColor: colorScheme
-                                .surfaceContainerHighest
+                            backgroundColor: colorScheme.surfaceContainerHighest
                                 .withValues(alpha: .25),
                             backgroundWidth: 12,
                             animateFromLastPercent: false,
@@ -204,14 +196,17 @@ class StorageCircleWidget extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? colorScheme.surfaceContainerHigh
-                                  .withValues(alpha: .6)
-                            : colorScheme.surfaceContainerHighest
-                                  .withValues(alpha: .8),
+                            ? colorScheme.surfaceContainerHigh.withValues(
+                                alpha: .6,
+                              )
+                            : colorScheme.surfaceContainerHighest.withValues(
+                                alpha: .8,
+                              ),
                         borderRadius: BorderRadius.circular(100),
                         border: Border.all(
-                          color: colorScheme.outlineVariant
-                              .withValues(alpha: .1),
+                          color: colorScheme.outlineVariant.withValues(
+                            alpha: .1,
+                          ),
                           width: 1,
                         ),
                         boxShadow: [
@@ -228,8 +223,9 @@ class StorageCircleWidget extends StatelessWidget {
                           Icon(
                             Icons.storage_rounded,
                             size: 16,
-                            color: colorScheme.onSurfaceVariant
-                                .withValues(alpha: .7),
+                            color: colorScheme.onSurfaceVariant.withValues(
+                              alpha: .7,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Text(

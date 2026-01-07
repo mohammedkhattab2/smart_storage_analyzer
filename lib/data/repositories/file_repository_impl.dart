@@ -1,14 +1,15 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:smart_storage_analyzer/core/constants/channel_constants.dart';
+import 'package:smart_storage_analyzer/core/services/file_scanner_service.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
 import 'package:smart_storage_analyzer/domain/entities/file_item.dart';
-import 'package:smart_storage_analyzer/domain/models/file_item_model.dart';
 import 'package:smart_storage_analyzer/domain/repositories/file_repository.dart';
 import 'package:smart_storage_analyzer/domain/value_objects/file_category.dart';
 
 class FileRepositoryImpl implements FileRepository {
-  static const platform = MethodChannel('com.smartstorage/native');
+  static const platform = MethodChannel(ChannelConstants.mainChannel);
   @override
   Future<void> deleteFiles(List<String> fileIds) async {
     if (!Platform.isAndroid) {
@@ -58,31 +59,17 @@ class FileRepositoryImpl implements FileRepository {
     }
 
     try {
-      // Get files from native Android scanner
-      final List<dynamic> result = await platform.invokeMethod(
-        'getFilesByCategory',
-        {'category': category},
+      // Use the optimized file scanner service that runs in isolates
+      final files = await FileScannerService.scanFilesByCategory(
+        category,
+        onProgress: (progress, message) {
+          Logger.debug('File scan progress: ${(progress * 100).toInt()}% - $message');
+        },
       );
 
-      Logger.info('Got ${result.length} files from native scanner for category: $category');
-
-      // Convert to FileItem objects
-      final files = result.map((fileData) {
-        final Map<String, dynamic> data = Map<String, dynamic>.from(fileData);
-        return FileItemModel(
-          id: data['id'] ?? data['path'].hashCode.toString(),
-          name: data['name'] ?? 'Unknown',
-          path: data['path'] ?? '',
-          sizeInBytes: (data['size'] as num?)?.toInt() ?? 0,
-          lastModified: data['lastModified'] != null
-              ? DateTime.fromMillisecondsSinceEpoch(data['lastModified'] as int)
-              : DateTime.now(),
-          extension: data['extension'] ?? '',
-          category: FileCategoryExtension.fromExtension(
-            data['extension'] ?? '',
-          ),
-        );
-      }).toList();
+      Logger.info(
+        'Got ${files.length} files from optimized scanner for category: $category',
+      );
 
       return files;
     } catch (e) {
@@ -154,23 +141,22 @@ class FileRepositoryImpl implements FileRepository {
     required int page,
     required int pageSize,
   }) async {
-    // Get all files for the category
-    final allFiles = await getFilesByCategory(category);
-    
-    // Calculate pagination indices
-    final startIndex = page * pageSize;
-    final endIndex = (page + 1) * pageSize;
-    
-    // Return empty list if start index is beyond available files
-    if (startIndex >= allFiles.length) {
+    try {
+      // Use optimized pagination from file scanner service
+      final result = await FileScannerService.scanFilesWithPagination(
+        category: _getCategoryString(category),
+        page: page,
+        pageSize: pageSize,
+        onProgress: (progress, message) {
+          Logger.debug('Paginated scan: ${(progress * 100).toInt()}% - $message');
+        },
+      );
+
+      return result.files;
+    } catch (e) {
+      Logger.error('Failed to get paginated files', e);
       return [];
     }
-    
-    // Return the paginated subset
-    return allFiles.sublist(
-      startIndex,
-      endIndex > allFiles.length ? allFiles.length : endIndex,
-    );
   }
 
   @override
@@ -178,6 +164,32 @@ class FileRepositoryImpl implements FileRepository {
     // Get all files for the category to count them
     final files = await getFilesByCategory(category);
     return files.length;
+  }
+
+  // Helper method to convert FileCategory to string
+  String _getCategoryString(FileCategory category) {
+    switch (category) {
+      case FileCategory.all:
+        return 'all';
+      case FileCategory.large:
+        return 'large';
+      case FileCategory.duplicates:
+        return 'duplicates';
+      case FileCategory.old:
+        return 'old';
+      case FileCategory.images:
+        return 'images';
+      case FileCategory.videos:
+        return 'videos';
+      case FileCategory.audio:
+        return 'audio';
+      case FileCategory.documents:
+        return 'documents';
+      case FileCategory.apps:
+        return 'apps';
+      case FileCategory.others:
+        return 'others';
+    }
   }
 
   // Removed all mock file methods - app now only uses real file data

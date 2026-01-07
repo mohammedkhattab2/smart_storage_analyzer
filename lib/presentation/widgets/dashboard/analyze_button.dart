@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_icons.dart';
@@ -17,9 +17,7 @@ class AnalyzeButton extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: 56,
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppSize.paddingSmall,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: AppSize.paddingSmall),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(100),
         gradient: LinearGradient(
@@ -72,9 +70,7 @@ class AnalyzeButton extends StatelessWidget {
                       size: 22,
                       color: colorScheme.onPrimary,
                     ),
-                    const SizedBox(
-                      width: AppSize.paddingSmall + 2,
-                    ),
+                    const SizedBox(width: AppSize.paddingSmall + 2),
                     Text(
                       AppStrings.analyzeClean,
                       style: textTheme.titleMedium?.copyWith(

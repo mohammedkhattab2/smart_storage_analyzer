@@ -9,21 +9,21 @@ import 'package:smart_storage_analyzer/presentation/widgets/common/pro_badge.dar
 /// Pro upgrade card for settings screen
 class ProUpgradeCard extends StatelessWidget {
   const ProUpgradeCard({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return BlocBuilder<ProAccessCubit, ProAccessState>(
       builder: (context, state) {
         final isProUser = state is ProAccessLoaded && state.proAccess.isProUser;
-        
+
         if (isProUser) {
           // Show Pro status for Pro users (future feature)
           return const SizedBox.shrink();
         }
-        
+
         return Container(
           margin: const EdgeInsets.all(AppSize.paddingMedium),
           decoration: BoxDecoration(
@@ -31,8 +31,12 @@ class ProUpgradeCard extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                colorScheme.primaryContainer.withValues(alpha: isDark ? .3 : .5),
-                colorScheme.secondaryContainer.withValues(alpha: isDark ? .3 : .5),
+                colorScheme.primaryContainer.withValues(
+                  alpha: isDark ? .3 : .5,
+                ),
+                colorScheme.secondaryContainer.withValues(
+                  alpha: isDark ? .3 : .5,
+                ),
               ],
             ),
             borderRadius: BorderRadius.circular(20),
@@ -74,7 +78,9 @@ class ProUpgradeCard extends StatelessWidget {
                                 children: [
                                   Text(
                                     'Upgrade to',
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
                                   ),
                                   const SizedBox(width: 8),
                                   const ProBadge(),
@@ -83,9 +89,10 @@ class ProUpgradeCard extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 'Unlock powerful features',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
                               ),
                             ],
                           ),
@@ -139,7 +146,7 @@ class ProUpgradeCard extends StatelessWidget {
       },
     );
   }
-  
+
   void _showProInfo(BuildContext context) {
     showDialog(
       context: context,

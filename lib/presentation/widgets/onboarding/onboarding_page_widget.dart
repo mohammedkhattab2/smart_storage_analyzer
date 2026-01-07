@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'dart:math' as math;
 
@@ -361,19 +361,19 @@ class _OrbitingParticlesPainter extends CustomPainter {
     // Draw orbiting particles
     const particleCount = 12;
     const orbitRadius = 65.0;
-    
+
     for (int i = 0; i < particleCount; i++) {
       final angle = (i * 360 / particleCount) * math.pi / 180;
       final x = center.dx + orbitRadius * math.cos(angle);
       final y = center.dy + orbitRadius * math.sin(angle);
-      
+
       final particleSize = 2.0 + (math.sin(angle) * 1.0);
-      
+
       // Draw particle with glow
       final glowPaint = Paint()
         ..color = color.withValues(alpha: .1)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-      
+
       canvas.drawCircle(Offset(x, y), particleSize + 4, glowPaint);
       canvas.drawCircle(Offset(x, y), particleSize, paint);
     }

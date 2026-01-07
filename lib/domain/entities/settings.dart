@@ -9,10 +9,7 @@ class Settings extends Equatable {
     required this.darkModeEnabled,
   });
 
-  Settings copyWith({
-    bool? notificationsEnabled,
-    bool? darkModeEnabled,
-  }) {
+  Settings copyWith({bool? notificationsEnabled, bool? darkModeEnabled}) {
     return Settings(
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       darkModeEnabled: darkModeEnabled ?? this.darkModeEnabled,
@@ -20,8 +17,5 @@ class Settings extends Equatable {
   }
 
   @override
-  List<Object> get props => [
-    notificationsEnabled,
-    darkModeEnabled,
-  ];
+  List<Object> get props => [notificationsEnabled, darkModeEnabled];
 }

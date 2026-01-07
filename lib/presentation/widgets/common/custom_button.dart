@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -54,12 +54,16 @@ class _CustomButtonState extends State<CustomButton> {
 
     final buttonColor =
         widget.backgroundColor ??
-        (widget.isPrimary ? colorScheme.primary : colorScheme.surfaceContainerHighest);
+        (widget.isPrimary
+            ? colorScheme.primary
+            : colorScheme.surfaceContainerHighest);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      cursor: widget.isLoading ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
+      cursor: widget.isLoading
+          ? SystemMouseCursors.forbidden
+          : SystemMouseCursors.click,
       child: Transform.scale(
         scale: _isPressed ? 0.94 : 1.0,
         child: Container(
@@ -100,12 +104,20 @@ class _CustomButtonState extends State<CustomButton> {
                   onTapCancel: _onTapCancel,
                   onTap: widget.isLoading ? null : widget.onPressed,
                   borderRadius: BorderRadius.circular(20),
-                  splashColor: (widget.isPrimary ? colorScheme.onPrimary : colorScheme.primary)
-                      .withValues(alpha: .15),
-                  highlightColor: (widget.isPrimary ? colorScheme.onPrimary : colorScheme.primary)
-                      .withValues(alpha: .08),
+                  splashColor:
+                      (widget.isPrimary
+                              ? colorScheme.onPrimary
+                              : colorScheme.primary)
+                          .withValues(alpha: .15),
+                  highlightColor:
+                      (widget.isPrimary
+                              ? colorScheme.onPrimary
+                              : colorScheme.primary)
+                          .withValues(alpha: .08),
                   child: Container(
-                    padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 24),
+                    padding:
+                        widget.padding ??
+                        const EdgeInsets.symmetric(horizontal: 24),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
                       gradient: widget.isPrimary
@@ -136,7 +148,9 @@ class _CustomButtonState extends State<CustomButton> {
                               width: 24,
                               height: 24,
                               child: CircularProgressIndicator(
-                                color: widget.isPrimary ? colorScheme.onPrimary : colorScheme.primary,
+                                color: widget.isPrimary
+                                    ? colorScheme.onPrimary
+                                    : colorScheme.primary,
                                 strokeWidth: 2.5,
                                 strokeCap: StrokeCap.round,
                               ),
@@ -154,7 +168,9 @@ class _CustomButtonState extends State<CustomButton> {
   }
 
   Widget _buildContent(BuildContext context, ColorScheme colorScheme) {
-    final textColor = widget.isPrimary ? colorScheme.onPrimary : colorScheme.onSurfaceVariant;
+    final textColor = widget.isPrimary
+        ? colorScheme.onPrimary
+        : colorScheme.onSurfaceVariant;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -162,7 +178,8 @@ class _CustomButtonState extends State<CustomButton> {
       children: [
         Text(
           widget.text,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          style:
+              Theme.of(context).textTheme.labelLarge?.copyWith(
                 fontSize: _isHovered ? 17 : 16,
                 fontWeight: FontWeight.w600,
                 color: textColor,
@@ -176,11 +193,7 @@ class _CustomButtonState extends State<CustomButton> {
         ),
         if (widget.icon != null) ...[
           const SizedBox(width: 8),
-          Icon(
-            widget.icon,
-            color: textColor,
-            size: _isHovered ? 22 : 20,
-          ),
+          Icon(widget.icon, color: textColor, size: _isHovered ? 22 : 20),
         ],
       ],
     );
@@ -268,7 +281,9 @@ class _CustomOutlinedButtonState extends State<CustomOutlinedButton> {
                           )
                         : null,
                     color: !_isHovered
-                        ? colorScheme.surface.withValues(alpha: isDark ? .6 : .8)
+                        ? colorScheme.surface.withValues(
+                            alpha: isDark ? .6 : .8,
+                          )
                         : null,
                     border: Border.all(
                       color: borderColor.withValues(alpha: .5),
@@ -292,7 +307,10 @@ class _CustomOutlinedButtonState extends State<CustomOutlinedButton> {
                             children: [
                               Text(
                                 widget.text,
-                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                style:
+                                    Theme.of(
+                                      context,
+                                    ).textTheme.labelLarge?.copyWith(
                                       fontSize: _isHovered ? 17 : 16,
                                       fontWeight: FontWeight.w600,
                                       color: borderColor,

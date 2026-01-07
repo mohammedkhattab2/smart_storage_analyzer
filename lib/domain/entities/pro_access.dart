@@ -15,10 +15,10 @@ class ProAccess {
 
   /// Default free user state
   factory ProAccess.free() => const ProAccess(
-        isProUser: false,
-        accessType: ProAccessType.free,
-        enabledFeatures: [],
-      );
+    isProUser: false,
+    accessType: ProAccessType.free,
+    enabledFeatures: [],
+  );
 
   bool hasFeature(ProFeature feature) => enabledFeatures.contains(feature);
 }
@@ -36,12 +36,12 @@ enum ProFeature {
   deepAnalysis,
   autoCleanup,
   cloudBackup,
-  
+
   // File features
   batchOperations,
   advancedFilters,
   duplicateFinder,
-  
+
   // UI features
   customThemes,
   advancedStatistics,

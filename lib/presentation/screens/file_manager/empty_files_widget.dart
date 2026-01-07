@@ -47,10 +47,7 @@ class EmptyFilesWidget extends StatelessWidget {
                   // Glassmorphic circle
                   ClipOval(
                     child: BackdropFilter(
-                      filter: ImageFilter.blur(
-                        sigmaX: 10,
-                        sigmaY: 10,
-                      ),
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                       child: Container(
                         width: 120,
                         height: 120,
@@ -114,10 +111,7 @@ class EmptyFilesWidget extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: 5,
-                  sigmaY: 5,
-                ),
+                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSize.paddingLarge,
@@ -157,9 +151,7 @@ class EmptyFilesWidget extends StatelessWidget {
                           color: colorScheme.secondary,
                         ),
                       ),
-                      const SizedBox(
-                        width: AppSize.paddingMedium,
-                      ),
+                      const SizedBox(width: AppSize.paddingMedium),
                       Text(
                         'Try another category or scan storage',
                         style: textTheme.labelLarge?.copyWith(

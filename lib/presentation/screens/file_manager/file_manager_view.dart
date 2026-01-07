@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_storage_analyzer/domain/value_objects/file_category.dart';
@@ -7,8 +7,10 @@ import 'package:smart_storage_analyzer/presentation/cubits/file_manager/file_man
 import 'package:smart_storage_analyzer/presentation/screens/file_manager/file_tabs_widget.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
-import 'package:smart_storage_analyzer/core/services/file_operations_service.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/common/skeleton_loader.dart';
+import 'package:smart_storage_analyzer/presentation/screens/media_viewer/in_app_media_viewer_screen.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:open_filex/open_filex.dart';
 
 class FileManagerView extends StatefulWidget {
   const FileManagerView({super.key});
@@ -45,7 +47,7 @@ class _FileManagerViewState extends State<FileManagerView> {
           children: [
             // Magical background
             _buildMagicalBackground(context),
-            
+
             SafeArea(
               child: BlocConsumer<FileManagerCubit, FileManagerState>(
                 listener: (context, state) {
@@ -70,7 +72,9 @@ class _FileManagerViewState extends State<FileManagerView> {
                     children: [
                       _buildMagicalHeader(
                         context,
-                        showSelectionActions: state is FileManagerLoaded && state.selectedCount > 0,
+                        showSelectionActions:
+                            state is FileManagerLoaded &&
+                            state.selectedCount > 0,
                       ),
                       if (state is! FileManagerLoading)
                         _buildMagicalTabs(
@@ -94,79 +98,25 @@ class _FileManagerViewState extends State<FileManagerView> {
   Widget _buildMagicalBackground(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final size = MediaQuery.of(context).size;
-    
-    return Stack(
-      children: [
-        // Top left orb
-        Positioned(
-          top: -80,
-          left: -80,
-          child: Container(
-            width: 200,
-            height: 200,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  colorScheme.primary.withValues(alpha: 0.06),
-                  colorScheme.primary.withValues(alpha: 0.0),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Bottom right orb
-        Positioned(
-          bottom: -120,
-          right: -100,
-          child: Container(
-            width: 280,
-            height: 280,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  colorScheme.secondary.withValues(alpha: 0.05),
-                  colorScheme.secondary.withValues(alpha: 0.0),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Center accent
-        Positioned(
-          top: size.height * 0.5,
-          left: size.width * 0.8,
-          child: Container(
-            width: 150,
-            height: 150,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  colorScheme.tertiary.withValues(alpha: 0.04),
-                  colorScheme.tertiary.withValues(alpha: 0.0),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Pattern overlay
-        CustomPaint(
-          size: size,
-          painter: _FileManagerBackgroundPainter(
-            primaryColor: colorScheme.primary.withValues(alpha: 0.02),
-            secondaryColor: colorScheme.secondary.withValues(alpha: 0.01),
-          ),
-        ),
-      ],
+
+    // Use CustomPaint for better performance
+    return CustomPaint(
+      size: size,
+      painter: _OptimizedBackgroundPainter(
+        primaryColor: colorScheme.primary,
+        secondaryColor: colorScheme.secondary,
+        tertiaryColor: colorScheme.tertiary,
+      ),
     );
   }
 
-  Widget _buildMagicalHeader(BuildContext context, {required bool showSelectionActions}) {
+  Widget _buildMagicalHeader(
+    BuildContext context, {
+    required bool showSelectionActions,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Container(
       padding: const EdgeInsets.all(AppSize.paddingLarge),
       decoration: BoxDecoration(
@@ -221,10 +171,7 @@ class _FileManagerViewState extends State<FileManagerView> {
               children: [
                 ShaderMask(
                   shaderCallback: (bounds) => LinearGradient(
-                    colors: [
-                      colorScheme.primary,
-                      colorScheme.secondary,
-                    ],
+                    colors: [colorScheme.primary, colorScheme.secondary],
                   ).createShader(bounds),
                   child: Text(
                     'File Manager',
@@ -273,7 +220,7 @@ class _FileManagerViewState extends State<FileManagerView> {
     required VoidCallback onTap,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Container(
       width: 42,
       height: 42,
@@ -298,17 +245,16 @@ class _FileManagerViewState extends State<FileManagerView> {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          child: Icon(
-            icon,
-            color: colorScheme.primary,
-            size: 20,
-          ),
+          child: Icon(icon, color: colorScheme.primary, size: 20),
         ),
       ),
     );
   }
 
-  Widget _buildMagicalTabs(BuildContext context, {required FileCategory currentCategory}) {
+  Widget _buildMagicalTabs(
+    BuildContext context, {
+    required FileCategory currentCategory,
+  }) {
     return FileTabsWidget(
       currentCategory: currentCategory,
       onTabChanged: (category) {
@@ -395,7 +341,7 @@ class _FileManagerViewState extends State<FileManagerView> {
 
   void _showMagicalErrorSnackBar(BuildContext context, String message) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Container(
@@ -429,9 +375,7 @@ class _FileManagerViewState extends State<FileManagerView> {
         ),
         backgroundColor: colorScheme.error,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(AppSize.paddingMedium),
         elevation: 6,
       ),
@@ -458,49 +402,92 @@ class _FileManagerViewState extends State<FileManagerView> {
               top: AppSize.paddingMedium,
               bottom: _isSelectionMode ? 80 : AppSize.paddingMedium,
             ),
+            addAutomaticKeepAlives: false,
+            addRepaintBoundaries: true,
+            addSemanticIndexes: false,
+            cacheExtent: 1200,
             itemCount: state.files.length,
             itemBuilder: (context, index) {
               final file = state.files[index];
               final isSelected = state.selectedFileIds.contains(file.id);
 
-              return _MagicalFileItemWidget(
-                file: file,
-                isSelected: isSelected,
-                isSelectionMode: _isSelectionMode,
-                index: index,
-                onTap: () async {
-                  HapticFeedback.lightImpact();
-                  if (_isSelectionMode) {
-                    context.read<FileManagerCubit>().toggleFileSelection(file.id);
-                  } else {
-                    // Open file
-                    final fileOperations = FileOperationsService();
-                    final success = await fileOperations.openFile(file.path);
-                    
-                    if (!success && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Cannot open ${file.name}'),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppSize.radiusSmall,
+              return RepaintBoundary(
+                child: _MagicalFileItemWidget(
+                  file: file,
+                  isSelected: isSelected,
+                  isSelectionMode: _isSelectionMode,
+                  index: index,
+                  onTap: () async {
+                    HapticFeedback.lightImpact();
+                    if (_isSelectionMode) {
+                      // In selection mode, single tap toggles selection
+                      context.read<FileManagerCubit>().toggleFileSelection(
+                        file.id,
+                      );
+                    } else {
+                      // Open file - check if it's a media file first
+                      if (_isMediaFile(file)) {
+                        // Get all media files from current list for viewer
+                        final mediaFiles = state.files
+                            .where((f) => _isMediaFile(f))
+                            .toList();
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => InAppMediaViewerScreen(
+                              file: file,
+                              allFiles: mediaFiles,
                             ),
                           ),
-                        ),
-                      );
+                        );
+                      } else {
+                        // For non-media files, try to open with system app
+                        try {
+                          final result = await OpenFilex.open(file.path);
+                          if (result.type != ResultType.done && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Cannot open ${file.name}: ${result.message}',
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    AppSize.radiusSmall,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to open ${file.name}'),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    AppSize.radiusSmall,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      }
                     }
-                  }
-                },
-                onLongPress: () {
-                  HapticFeedback.mediumImpact();
-                  if (!_isSelectionMode) {
-                    setState(() {
-                      _isSelectionMode = true;
-                    });
-                  }
-                  context.read<FileManagerCubit>().toggleFileSelection(file.id);
-                },
+                  },
+                  onLongPress: () {
+                    HapticFeedback.mediumImpact();
+                    if (!_isSelectionMode) {
+                      setState(() {
+                        _isSelectionMode = true;
+                      });
+                    }
+                    context.read<FileManagerCubit>().toggleFileSelection(file.id);
+                  },
+                ),
               );
             },
           ),
@@ -517,7 +504,10 @@ class _FileManagerViewState extends State<FileManagerView> {
     return const SizedBox.shrink();
   }
 
-  Widget _buildSelectionBottomBar(BuildContext context, FileManagerLoaded state) {
+  Widget _buildSelectionBottomBar(
+    BuildContext context,
+    FileManagerLoaded state,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -580,26 +570,30 @@ class _FileManagerViewState extends State<FileManagerView> {
                   final selectedFiles = state.files
                       .where((f) => state.selectedFileIds.contains(f.id))
                       .toList();
-                  
+
                   if (selectedFiles.isEmpty) return;
-                  
-                  final fileOperations = FileOperationsService();
-                  final success = await fileOperations.shareFiles(
-                    selectedFiles.map((f) => f.path).toList(),
-                  );
-                  
-                  if (!success && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Failed to share files'),
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppSize.radiusSmall,
+
+                  try {
+                    final xFiles = selectedFiles
+                        .map((f) => XFile(f.path))
+                        .toList();
+                    await Share.shareXFiles(xFiles);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Failed to share files: ${e.toString()}',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppSize.radiusSmall,
+                            ),
                           ),
                         ),
-                      ),
-                    );
+                      );
+                    }
                   }
                 },
               ),
@@ -635,26 +629,23 @@ class _FileManagerViewState extends State<FileManagerView> {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          child: Icon(
-            icon,
-            color: color,
-            size: 24,
-          ),
+          child: Icon(icon, color: color, size: 24),
         ),
       ),
     );
   }
 
-  void _showDeleteConfirmationDialog(BuildContext context, FileManagerLoaded state) {
+  void _showDeleteConfirmationDialog(
+    BuildContext context,
+    FileManagerLoaded state,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final selectedCount = state.selectedCount;
@@ -762,9 +753,7 @@ class _FileManagerViewState extends State<FileManagerView> {
                       ),
                       child: const Text(
                         'Delete',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -970,7 +959,9 @@ class _FileManagerViewState extends State<FileManagerView> {
                 child: InkWell(
                   onTap: () {
                     HapticFeedback.mediumImpact();
-                    context.read<FileManagerCubit>().loadFiles(FileCategory.all);
+                    context.read<FileManagerCubit>().loadFiles(
+                      FileCategory.all,
+                    );
                   },
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
@@ -1006,6 +997,51 @@ class _FileManagerViewState extends State<FileManagerView> {
       ),
     );
   }
+
+  bool _isMediaFile(dynamic file) {
+    final extension = file.extension.toLowerCase();
+
+    // Image formats
+    const imageExtensions = [
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.gif',
+      '.bmp',
+      '.webp',
+      '.svg',
+      '.ico',
+    ];
+    if (imageExtensions.contains(extension)) return true;
+
+    // Video formats
+    const videoExtensions = [
+      '.mp4',
+      '.avi',
+      '.mov',
+      '.mkv',
+      '.webm',
+      '.flv',
+      '.wmv',
+      '.m4v',
+    ];
+    if (videoExtensions.contains(extension)) return true;
+
+    // Audio formats
+    const audioExtensions = [
+      '.mp3',
+      '.wav',
+      '.flac',
+      '.aac',
+      '.ogg',
+      '.m4a',
+      '.wma',
+      '.opus',
+    ];
+    if (audioExtensions.contains(extension)) return true;
+
+    return false;
+  }
 }
 
 class _MagicalFileItemWidget extends StatefulWidget {
@@ -1036,7 +1072,12 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
+    // Precompute per-item values to avoid redundant work in build
+    final fileColor = _getFileColor(widget.file.extension, colorScheme);
+    final fileIcon = _getFileIcon(widget.file.extension);
+    final timeAgo = _getTimeAgo(widget.file.lastModified);
+
     // Different gradient patterns for variety
     final gradientColors = [
       [colorScheme.primary, colorScheme.secondary],
@@ -1044,7 +1085,7 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
       [colorScheme.tertiary, colorScheme.primary],
       [colorScheme.primary, colorScheme.tertiary],
     ];
-    
+
     final colors = gradientColors[widget.index % gradientColors.length];
 
     return MouseRegion(
@@ -1070,8 +1111,8 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
             color: widget.isSelected
                 ? colors[0].withValues(alpha: 0.4)
                 : (_isHovered
-                    ? colorScheme.outlineVariant.withValues(alpha: 0.3)
-                    : Colors.transparent),
+                      ? colorScheme.outlineVariant.withValues(alpha: 0.3)
+                      : Colors.transparent),
             width: widget.isSelected ? 2 : 1,
           ),
           boxShadow: [
@@ -1104,31 +1145,27 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
                       decoration: BoxDecoration(
                         gradient: RadialGradient(
                           colors: [
-                            _getFileColor(widget.file.extension, colorScheme)
-                                .withValues(alpha: 0.2),
-                            _getFileColor(widget.file.extension, colorScheme)
-                                .withValues(alpha: 0.05),
+                            fileColor.withValues(alpha: 0.2),
+                            fileColor.withValues(alpha: 0.05),
                             Colors.transparent,
                           ],
                         ),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: _getFileColor(widget.file.extension, colorScheme)
-                              .withValues(alpha: 0.3),
+                          color: fileColor.withValues(alpha: 0.3),
                           width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: _getFileColor(widget.file.extension, colorScheme)
-                                .withValues(alpha: 0.2),
+                            color: fileColor.withValues(alpha: 0.2),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: Icon(
-                        _getFileIcon(widget.file.extension),
-                        color: _getFileColor(widget.file.extension, colorScheme),
+                        fileIcon,
+                        color: fileColor,
                         size: 28,
                       ),
                     ),
@@ -1156,14 +1193,16 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
                             _buildInfoChip(
                               context,
                               icon: Icons.storage_rounded,
-                              text: SizeFormatter.formatBytes(widget.file.sizeInBytes),
+                              text: SizeFormatter.formatBytes(
+                                widget.file.sizeInBytes,
+                              ),
                               color: colors[0],
                             ),
                             const SizedBox(width: AppSize.paddingSmall),
                             _buildInfoChip(
                               context,
                               icon: Icons.access_time_rounded,
-                              text: _getTimeAgo(widget.file.lastModified),
+                              text: timeAgo,
                               color: colors[1],
                             ),
                           ],
@@ -1177,17 +1216,14 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
                     height: 32,
                     decoration: BoxDecoration(
                       gradient: widget.isSelected
-                          ? LinearGradient(
-                              colors: [
-                                colors[0],
-                                colors[1],
-                              ],
-                            )
+                          ? LinearGradient(colors: [colors[0], colors[1]])
                           : null,
                       border: widget.isSelected
                           ? null
                           : Border.all(
-                              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                              color: colorScheme.outlineVariant.withValues(
+                                alpha: 0.5,
+                              ),
                               width: 2,
                             ),
                       shape: BoxShape.circle,
@@ -1225,7 +1261,7 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
     required Color color,
   }) {
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSize.paddingSmall,
@@ -1234,19 +1270,12 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-          width: 0.5,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 12,
-            color: color,
-          ),
+          Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
             text,
@@ -1286,19 +1315,38 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
 
     // Images
     if ([
-      '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico',
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.gif',
+      '.bmp',
+      '.webp',
+      '.svg',
+      '.ico',
     ].contains(ext)) {
       return Icons.image_rounded;
     }
     // Videos
     else if ([
-      '.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm',
+      '.mp4',
+      '.avi',
+      '.mkv',
+      '.mov',
+      '.wmv',
+      '.flv',
+      '.webm',
     ].contains(ext)) {
       return Icons.video_file_rounded;
     }
     // Audio
     else if ([
-      '.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma', '.m4a',
+      '.mp3',
+      '.wav',
+      '.flac',
+      '.aac',
+      '.ogg',
+      '.wma',
+      '.m4a',
     ].contains(ext)) {
       return Icons.audio_file_rounded;
     }
@@ -1322,7 +1370,14 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
     }
     // Code
     else if ([
-      '.xml', '.json', '.html', '.css', '.js', '.dart', '.java', '.kt',
+      '.xml',
+      '.json',
+      '.html',
+      '.css',
+      '.js',
+      '.dart',
+      '.java',
+      '.kt',
     ].contains(ext)) {
       return Icons.code_rounded;
     } else {
@@ -1335,19 +1390,47 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
 
     // Use theme-aware colors
     if ([
-      '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico',
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.gif',
+      '.bmp',
+      '.webp',
+      '.svg',
+      '.ico',
     ].contains(ext)) {
       return colorScheme.tertiary;
     } else if ([
-      '.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm',
+      '.mp4',
+      '.avi',
+      '.mkv',
+      '.mov',
+      '.wmv',
+      '.flv',
+      '.webm',
     ].contains(ext)) {
       return colorScheme.error;
     } else if ([
-      '.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma', '.m4a',
+      '.mp3',
+      '.wav',
+      '.flac',
+      '.aac',
+      '.ogg',
+      '.wma',
+      '.m4a',
     ].contains(ext)) {
       return colorScheme.secondary;
     } else if ([
-      '.pdf', '.doc', '.docx', '.txt', '.odt', '.xls', '.xlsx', '.csv', '.ppt', '.pptx',
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.txt',
+      '.odt',
+      '.xls',
+      '.xlsx',
+      '.csv',
+      '.ppt',
+      '.pptx',
     ].contains(ext)) {
       return colorScheme.primary;
     } else if (['.zip', '.rar', '.7z', '.tar', '.gz'].contains(ext)) {
@@ -1366,42 +1449,74 @@ class _MagicalFileItemWidgetState extends State<_MagicalFileItemWidget> {
   }
 }
 
-// Custom painter for background pattern
-class _FileManagerBackgroundPainter extends CustomPainter {
+// Optimized background painter for better performance
+class _OptimizedBackgroundPainter extends CustomPainter {
   final Color primaryColor;
   final Color secondaryColor;
-  
-  _FileManagerBackgroundPainter({
+  final Color tertiaryColor;
+
+  _OptimizedBackgroundPainter({
     required this.primaryColor,
     required this.secondaryColor,
+    required this.tertiaryColor,
   });
-  
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    
-    // Draw subtle dots pattern
-    paint.color = primaryColor;
-    for (double x = 0; x < size.width; x += 50) {
-      for (double y = 0; y < size.height; y += 50) {
-        canvas.drawCircle(Offset(x, y), 1, paint);
-      }
-    }
-    
-    // Draw diagonal lines
-    paint.color = secondaryColor;
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 40);
+
+    // Top left orb
+    paint.shader = RadialGradient(
+      colors: [
+        primaryColor.withValues(alpha: 0.06),
+        primaryColor.withValues(alpha: 0.0),
+      ],
+    ).createShader(Rect.fromCircle(center: const Offset(-80, -80), radius: 100));
+    canvas.drawCircle(const Offset(-80, -80), 100, paint);
+
+    // Bottom right orb
+    paint.shader = RadialGradient(
+      colors: [
+        secondaryColor.withValues(alpha: 0.05),
+        secondaryColor.withValues(alpha: 0.0),
+      ],
+    ).createShader(Rect.fromCircle(
+      center: Offset(size.width + 100, size.height + 120),
+      radius: 140,
+    ));
+    canvas.drawCircle(Offset(size.width + 100, size.height + 120), 140, paint);
+
+    // Center accent
+    paint.shader = RadialGradient(
+      colors: [
+        tertiaryColor.withValues(alpha: 0.04),
+        tertiaryColor.withValues(alpha: 0.0),
+      ],
+    ).createShader(Rect.fromCircle(
+      center: Offset(size.width * 0.8, size.height * 0.5),
+      radius: 75,
+    ));
+    canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.5), 75, paint);
+
+    // Light pattern overlay
+    paint.shader = null;
+    paint.maskFilter = null;
+    paint.color = primaryColor.withValues(alpha: 0.02);
     paint.strokeWidth = 0.5;
     paint.style = PaintingStyle.stroke;
-    
-    for (double i = -size.height; i < size.width; i += 100) {
+
+    // Draw subtle grid pattern (less frequent for performance)
+    for (double i = 0; i < size.width; i += 80) {
       canvas.drawLine(
         Offset(i, 0),
-        Offset(i + size.height, size.height),
+        Offset(i, size.height),
         paint,
       );
     }
   }
-  
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

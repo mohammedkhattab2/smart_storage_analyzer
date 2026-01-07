@@ -5,19 +5,14 @@ class ProBadge extends StatelessWidget {
   final String? text;
   final double? size;
   final bool showIcon;
-  
-  const ProBadge({
-    super.key,
-    this.text,
-    this.size,
-    this.showIcon = true,
-  });
-  
+
+  const ProBadge({super.key, this.text, this.size, this.showIcon = true});
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: size ?? 8,
@@ -25,10 +20,7 @@ class ProBadge extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            colorScheme.primary,
-            colorScheme.secondary,
-          ],
+          colors: [colorScheme.primary, colorScheme.secondary],
         ),
         borderRadius: BorderRadius.circular(size ?? 12),
         boxShadow: [
@@ -69,28 +61,20 @@ class ProBadge extends StatelessWidget {
 class ProIndicator extends StatelessWidget {
   final double size;
   final Color? color;
-  
-  const ProIndicator({
-    super.key,
-    this.size = 16,
-    this.color,
-  });
-  
+
+  const ProIndicator({super.key, this.size = 16, this.color});
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: color ?? colorScheme.primary,
         shape: BoxShape.circle,
       ),
-      child: Icon(
-        Icons.star_rounded,
-        size: size,
-        color: colorScheme.onPrimary,
-      ),
+      child: Icon(Icons.star_rounded, size: size, color: colorScheme.onPrimary),
     );
   }
 }

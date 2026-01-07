@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class PageIndicatorWidget extends StatelessWidget {
   final int currentPage;
@@ -56,7 +56,9 @@ class PageIndicatorWidget extends StatelessWidget {
                   : null,
               border: isActive
                   ? Border.all(
-                      color: colorScheme.onPrimary.withValues(alpha: isDark ? 0.2 : 0.3),
+                      color: colorScheme.onPrimary.withValues(
+                        alpha: isDark ? 0.2 : 0.3,
+                      ),
                       width: 1.5,
                     )
                   : null,

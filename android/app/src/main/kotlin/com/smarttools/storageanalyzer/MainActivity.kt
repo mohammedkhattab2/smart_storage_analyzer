@@ -18,13 +18,12 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import androidx.work.*
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.*
 
 class MainActivity: FlutterActivity() {
     companion object {
-        // Primary channel for storage operations
-        private const val STORAGE_CHANNEL = "com.smarttools.imagecompressor/native"
-        // Legacy channel for other operations
-        private const val LEGACY_CHANNEL = "com.smartstorage/native"
+        // Unified channel for all native operations
+        private const val MAIN_CHANNEL = "com.smarttools.storageanalyzer/native"
         
         // File size threshold for large files (50MB)
         private const val LARGE_FILE_THRESHOLD = 50 * 1024 * 1024L
@@ -36,6 +35,8 @@ class MainActivity: FlutterActivity() {
     
     private lateinit var storageAnalyzer: StorageAnalyzer
     private lateinit var fileOperations: FileOperations
+    private lateinit var optimizedFileScanner: OptimizedFileScanner
+    private val mainScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -43,11 +44,13 @@ class MainActivity: FlutterActivity() {
         // Initialize storage analyzer and file operations
         storageAnalyzer = StorageAnalyzer(this)
         fileOperations = FileOperations(this)
+        optimizedFileScanner = OptimizedFileScanner(this)
         
-        // Storage channel handler (MVVM compliant)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, STORAGE_CHANNEL).setMethodCallHandler { call, result ->
+        // Unified channel handler for all native operations
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MAIN_CHANNEL).setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
+                    // Storage operations
                     "getTotalStorage" -> {
                         result.success(getTotalStorage())
                     }
@@ -57,81 +60,125 @@ class MainActivity: FlutterActivity() {
                     "getUsedStorage" -> {
                         result.success(getUsedStorage())
                     }
+                    // Permission operations
+                    "checkUsagePermission" -> {
+                        result.success(checkUsageStatsPermission())
+                    }
+                    "requestUsagePermission" -> {
+                        requestUsageStatsPermission()
+                        result.success(true)
+                    }
+                    // Storage info operations
+                    "getStorageInfo" -> {
+                        result.success(getStorageInfo())
+                    }
+                    // File operations
+                    "getAllFiles" -> {
+                        result.success(getAllFiles())
+                    }
+                    "getFilesByCategory" -> {
+                        val category = call.argument<String>("category") ?: "all"
+                        // Use optimized scanner with coroutines
+                        mainScope.launch {
+                            try {
+                                val files = optimizedFileScanner.scanFilesByCategory(category)
+                                result.success(files)
+                            } catch (e: Exception) {
+                                result.error("SCAN_ERROR", "Failed to scan files: ${e.message}", null)
+                            }
+                        }
+                    }
+                    "deleteFiles" -> {
+                        val filePaths = call.argument<List<String>>("paths") ?: listOf()
+                        result.success(deleteFiles(filePaths))
+                    }
+                    // Analysis operations
+                    "analyzeStorage" -> {
+                        // Use coroutine for heavy analysis operation
+                        mainScope.launch {
+                            try {
+                                val analysisResult = withContext(Dispatchers.IO) {
+                                    val analysis = storageAnalyzer.analyzeStorage()
+                                    mapOf(
+                                        "totalFilesScanned" to analysis.totalFilesScanned,
+                                        "totalSpaceUsed" to analysis.totalSpaceUsed,
+                                        "totalSpaceAvailable" to analysis.totalSpaceAvailable,
+                                        "cacheFiles" to analysis.cacheFiles,
+                                        "temporaryFiles" to analysis.temporaryFiles,
+                                        "largeOldFiles" to analysis.largeOldFiles,
+                                        "duplicateFiles" to analysis.duplicateFiles,
+                                        "thumbnails" to analysis.thumbnails,
+                                        "totalCleanupPotential" to analysis.totalCleanupPotential
+                                    )
+                                }
+                                result.success(analysisResult)
+                            } catch (e: Exception) {
+                                result.error("ANALYSIS_ERROR", "Storage analysis failed: ${e.message}", null)
+                            }
+                        }
+                    }
+                    // Get category sizes for dashboard
+                    "getCategorySizes" -> {
+                        mainScope.launch {
+                            try {
+                                val categorySizes = withContext(Dispatchers.IO) {
+                                    getCategorySizes()
+                                }
+                                result.success(categorySizes)
+                            } catch (e: Exception) {
+                                result.error("CATEGORY_ERROR", "Failed to get category sizes: ${e.message}", null)
+                            }
+                        }
+                    }
+                    // File operations through native
+                    "openFile" -> {
+                        val filePath = call.argument<String>("path")
+                        if (filePath != null) {
+                            val success = fileOperations.openFile(filePath)
+                            result.success(success)
+                        } else {
+                            result.error("INVALID_ARGUMENT", "File path is required", null)
+                        }
+                    }
+                    "shareFile" -> {
+                        val filePath = call.argument<String>("path")
+                        if (filePath != null) {
+                            val success = fileOperations.shareFile(filePath)
+                            result.success(success)
+                        } else {
+                            result.error("INVALID_ARGUMENT", "File path is required", null)
+                        }
+                    }
+                    "shareFiles" -> {
+                        val filePaths = call.argument<List<String>>("paths")
+                        if (filePaths != null && filePaths.isNotEmpty()) {
+                            val success = fileOperations.shareFiles(filePaths)
+                            result.success(success)
+                        } else {
+                            result.error("INVALID_ARGUMENT", "File paths are required", null)
+                        }
+                    }
+                    // Notification operations
+                    "scheduleNotifications" -> {
+                        scheduleNotifications()
+                        result.success(true)
+                    }
+                    "cancelNotifications" -> {
+                        cancelNotifications()
+                        result.success(true)
+                    }
+                    "areNotificationsEnabled" -> {
+                        result.success(areNotificationsEnabled())
+                    }
+                    "requestNotificationPermission" -> {
+                        result.success(requestNotificationPermission())
+                    }
                     else -> {
                         result.notImplemented()
                     }
                 }
             } catch (e: Exception) {
-                result.error("STORAGE_ERROR", "Failed to get storage info: ${e.message}", null)
-            }
-        }
-
-        // Legacy channel handler (for existing features)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LEGACY_CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "checkUsagePermission" -> {
-                    result.success(checkUsageStatsPermission())
-                }
-                "requestUsagePermission" -> {
-                    requestUsageStatsPermission()
-                    result.success(true)
-                }
-                "getStorageInfo" -> {
-                    result.success(getStorageInfo())
-                }
-                "getAllFiles" -> {
-                    result.success(getAllFiles())
-                }
-                "getFilesByCategory" -> {
-                    val category = call.argument<String>("category") ?: "all"
-                    result.success(getFilesByCategory(category))
-                }
-                "deleteFiles" -> {
-                    val filePaths = call.argument<List<String>>("paths") ?: listOf()
-                    result.success(deleteFiles(filePaths))
-                }
-                "analyzeStorage" -> {
-                    val analysisResult = analyzeStorage()
-                    result.success(analysisResult)
-                }
-                "openFile" -> {
-                    val filePath = call.argument<String>("path")
-                    if (filePath != null) {
-                        val success = fileOperations.openFile(filePath)
-                        result.success(success)
-                    } else {
-                        result.error("INVALID_ARGUMENT", "File path is required", null)
-                    }
-                }
-                "shareFile" -> {
-                    val filePath = call.argument<String>("path")
-                    if (filePath != null) {
-                        val success = fileOperations.shareFile(filePath)
-                        result.success(success)
-                    } else {
-                        result.error("INVALID_ARGUMENT", "File path is required", null)
-                    }
-                }
-                "shareFiles" -> {
-                    val filePaths = call.argument<List<String>>("paths")
-                    if (filePaths != null && filePaths.isNotEmpty()) {
-                        val success = fileOperations.shareFiles(filePaths)
-                        result.success(success)
-                    } else {
-                        result.error("INVALID_ARGUMENT", "File paths are required", null)
-                    }
-                }
-                "scheduleNotifications" -> {
-                    scheduleNotifications()
-                    result.success(true)
-                }
-                "cancelNotifications" -> {
-                    cancelNotifications()
-                    result.success(true)
-                }
-                else -> {
-                    result.notImplemented()
-                }
+                result.error("PLATFORM_ERROR", "Error executing method ${call.method}: ${e.message}", null)
             }
         }
     }
@@ -215,7 +262,9 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun getAllFiles(): List<Map<String, Any>> {
-        return getFilesByCategory("all")
+        // This method is now handled by the optimized scanner
+        // Called through coroutines in the method channel handler
+        return emptyList()
     }
     
     /**
@@ -365,15 +414,29 @@ class MainActivity: FlutterActivity() {
      */
     private fun getDocumentFiles(fileMap: ConcurrentHashMap<String, Map<String, Any>>) {
         val documentExtensions = setOf(
-            ".pdf", ".doc", ".docx", ".txt", ".odt", ".xls", 
-            ".xlsx", ".ppt", ".pptx", ".csv", ".rtf"
+            // Text documents
+            ".pdf", ".doc", ".docx", ".txt", ".odt", ".rtf", ".tex", ".wpd", ".md",
+            // Spreadsheets
+            ".xls", ".xlsx", ".ods", ".csv", ".tsv",
+            // Presentations
+            ".ppt", ".pptx", ".odp", ".pps", ".ppsx",
+            // E-books
+            ".epub", ".mobi", ".azw", ".azw3", ".fb2", ".lit",
+            // Other documents
+            ".xml", ".json", ".log", ".ini", ".cfg", ".conf", ".properties",
+            ".html", ".htm", ".xhtml", ".mhtml", ".chm"
         )
         
-        val dirsToScan = getDirectoriesToScan()
+        // Scan root storage and all subdirectories
+        val rootDir = Environment.getExternalStorageDirectory()
+        scanRootForDocuments(rootDir, fileMap, documentExtensions)
+        
+        // Also scan specific directories
+        val dirsToScan = getExtendedDirectoriesToScan()
         
         for (dir in dirsToScan) {
             if (dir.exists() && dir.canRead()) {
-                scanDirectoryForFiles(dir, fileMap, documentExtensions, 0)
+                scanDirectoryForFiles(dir, fileMap, documentExtensions, 0, maxDepth = 5)
             }
         }
     }
@@ -382,12 +445,36 @@ class MainActivity: FlutterActivity() {
      * Get APK files
      */
     private fun getAppFiles(fileMap: ConcurrentHashMap<String, Map<String, Any>>) {
-        val appExtensions = setOf(".apk", ".xapk", ".aab")
-        val dirsToScan = getDirectoriesToScan()
+        val appExtensions = setOf(".apk", ".xapk", ".aab", ".apks")
+        
+        // Scan root storage comprehensively
+        val rootDir = Environment.getExternalStorageDirectory()
+        scanRootForApps(rootDir, fileMap, appExtensions)
+        
+        // Also scan specific app-related directories
+        val dirsToScan = getExtendedDirectoriesToScan()
         
         for (dir in dirsToScan) {
             if (dir.exists() && dir.canRead()) {
-                scanDirectoryForFiles(dir, fileMap, appExtensions, 0)
+                scanDirectoryForFiles(dir, fileMap, appExtensions, 0, maxDepth = 5)
+            }
+        }
+        
+        // Additional APK locations
+        val additionalDirs = listOf(
+            File(rootDir, "Apk"),
+            File(rootDir, "APKs"),
+            File(rootDir, "Apps"),
+            File(rootDir, "Applications"),
+            File(rootDir, "backup"),
+            File(rootDir, "Backups"),
+            File(rootDir, "APKPure"),
+            File(rootDir, "APKMirror")
+        )
+        
+        for (dir in additionalDirs) {
+            if (dir.exists() && dir.canRead()) {
+                scanDirectoryForFiles(dir, fileMap, appExtensions, 0, maxDepth = 3)
             }
         }
     }
@@ -396,28 +483,59 @@ class MainActivity: FlutterActivity() {
      * Get other files (non-categorized)
      */
     private fun getOtherFiles(fileMap: ConcurrentHashMap<String, Map<String, Any>>) {
-        // Define extensions for known categories to exclude
+        // Define extensions for known categories to exclude (comprehensive list)
         val knownExtensions = setOf(
             // Images
             ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".ico", ".tiff", ".heic",
+            ".heif", ".raw", ".cr2", ".nef", ".orf", ".sr2", ".psd", ".ai", ".eps",
             // Videos
             ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v", ".mpg", ".3gp",
+            ".mpeg", ".mpe", ".mpv", ".m2v", ".svi", ".3g2", ".mxf", ".roq", ".nsv", ".f4v",
+            ".f4p", ".f4a", ".f4b", ".mod", ".vob", ".ogv", ".drc", ".mng", ".qt", ".yuv",
+            ".rm", ".rmvb", ".asf", ".amv", ".m2ts", ".mts", ".m2t", ".ts", ".rec",
             // Audio
             ".mp3", ".wav", ".flac", ".aac", ".ogg", ".wma", ".m4a", ".opus", ".amr",
-            // Documents
-            ".pdf", ".doc", ".docx", ".txt", ".odt", ".xls", ".xlsx", ".ppt", ".pptx", ".csv", ".rtf",
+            ".ape", ".au", ".aiff", ".dss", ".dvf", ".m4b", ".m4p", ".mmf", ".mpc",
+            ".msv", ".nmf", ".oga", ".mogg", ".ra", ".rf64", ".sln", ".tta", ".voc",
+            ".vox", ".wv", ".8svx", ".cda",
+            // Documents (expanded)
+            ".pdf", ".doc", ".docx", ".txt", ".odt", ".xls", ".xlsx", ".ppt", ".pptx",
+            ".csv", ".rtf", ".tex", ".wpd", ".md", ".ods", ".odp", ".pps", ".ppsx",
+            ".epub", ".mobi", ".azw", ".azw3", ".fb2", ".lit", ".xml", ".json",
+            ".log", ".ini", ".cfg", ".conf", ".properties", ".html", ".htm", ".xhtml",
+            ".mhtml", ".chm", ".tsv",
             // Apps
-            ".apk", ".xapk", ".aab"
+            ".apk", ".xapk", ".aab", ".apks"
         )
         
-        val dirsToScan = listOf(
-            File(Environment.getExternalStorageDirectory(), "Download"),
-            File(Environment.getExternalStorageDirectory(), "Downloads")
-        )
+        // Scan root directory comprehensively for other files
+        val rootDir = Environment.getExternalStorageDirectory()
+        
+        // Scan root level
+        rootDir.listFiles()?.forEach { file ->
+            if (file.isFile && !file.isHidden) {
+                val extension = getExtensionFromPath(file.name)
+                if (!knownExtensions.contains(extension.lowercase()) && file.length() > 1024) {
+                    val fileInfo = mapOf(
+                        "id" to file.absolutePath.hashCode().toString(),
+                        "path" to file.absolutePath,
+                        "name" to file.name,
+                        "size" to file.length(),
+                        "lastModified" to file.lastModified(),
+                        "extension" to extension,
+                        "mimeType" to "application/octet-stream"
+                    )
+                    fileMap[file.absolutePath] = fileInfo
+                }
+            }
+        }
+        
+        // Extended directories to scan for other files
+        val dirsToScan = getExtendedDirectoriesToScan()
         
         for (dir in dirsToScan) {
             if (dir.exists() && dir.canRead()) {
-                scanDirectoryForOtherFiles(dir, fileMap, knownExtensions, 0)
+                scanDirectoryForOtherFiles(dir, fileMap, knownExtensions, 0, maxDepth = 4)
             }
         }
     }
@@ -451,17 +569,19 @@ class MainActivity: FlutterActivity() {
     }
     
     /**
-     * Scan directory for specific file types
+     * Scan directory for specific file types with configurable max depth
      */
     private fun scanDirectoryForFiles(
         directory: File,
         fileMap: ConcurrentHashMap<String, Map<String, Any>>,
         extensions: Set<String>,
-        depth: Int
+        depth: Int,
+        maxDepth: Int = 3
     ) {
-        if (depth > 3) return
+        if (depth > maxDepth) return
         
-        val skipDirs = listOf(".", "..", ".android", ".thumbnails", "Android/data", "Android/obb")
+        // More selective skip list - allow Android/media for documents/apps
+        val skipDirs = listOf(".", "..", ".thumbnails", "Android/data", "Android/obb", ".trash", ".Trash")
         if (skipDirs.any { directory.absolutePath.contains(it) }) return
         
         try {
@@ -473,6 +593,9 @@ class MainActivity: FlutterActivity() {
                     if (extensions.contains(extension.lowercase())) {
                         // Skip if already in map
                         if (fileMap.containsKey(file.absolutePath)) continue
+                        
+                        // Skip very small files (< 1KB) as they're likely system files
+                        if (file.length() < 1024) continue
                         
                         val fileInfo = mapOf(
                             "id" to file.absolutePath.hashCode().toString(),
@@ -486,7 +609,7 @@ class MainActivity: FlutterActivity() {
                         fileMap[file.absolutePath] = fileInfo
                     }
                 } else if (file.isDirectory && !file.isHidden && file.canRead()) {
-                    scanDirectoryForFiles(file, fileMap, extensions, depth + 1)
+                    scanDirectoryForFiles(file, fileMap, extensions, depth + 1, maxDepth)
                 }
             }
         } catch (e: Exception) {
@@ -501,11 +624,12 @@ class MainActivity: FlutterActivity() {
         directory: File,
         fileMap: ConcurrentHashMap<String, Map<String, Any>>,
         knownExtensions: Set<String>,
-        depth: Int
+        depth: Int,
+        maxDepth: Int = 3
     ) {
-        if (depth > 3) return
+        if (depth > maxDepth) return
         
-        val skipDirs = listOf(".", "..", ".android", ".thumbnails", "Android/data", "Android/obb")
+        val skipDirs = listOf(".", "..", ".android", ".thumbnails", "Android/data", "Android/obb", ".trash", ".Trash")
         if (skipDirs.any { directory.absolutePath.contains(it) }) return
         
         try {
@@ -518,6 +642,9 @@ class MainActivity: FlutterActivity() {
                         // Skip if already in map
                         if (fileMap.containsKey(file.absolutePath)) continue
                         
+                        // Skip very small files (< 1KB)
+                        if (file.length() < 1024) continue
+                        
                         val fileInfo = mapOf(
                             "id" to file.absolutePath.hashCode().toString(),
                             "path" to file.absolutePath,
@@ -525,12 +652,12 @@ class MainActivity: FlutterActivity() {
                             "size" to file.length(),
                             "lastModified" to file.lastModified(),
                             "extension" to extension,
-                            "mimeType" to "application/octet-stream"
+                            "mimeType" to getMimeTypeFromExtension(extension)
                         )
                         fileMap[file.absolutePath] = fileInfo
                     }
                 } else if (file.isDirectory && !file.isHidden && file.canRead()) {
-                    scanDirectoryForOtherFiles(file, fileMap, knownExtensions, depth + 1)
+                    scanDirectoryForOtherFiles(file, fileMap, knownExtensions, depth + 1, maxDepth)
                 }
             }
         } catch (e: Exception) {
@@ -564,6 +691,146 @@ class MainActivity: FlutterActivity() {
     }
     
     /**
+     * Get extended directories list for comprehensive scanning
+     */
+    private fun getExtendedDirectoriesToScan(): List<File> {
+        val dirs = mutableListOf<File>()
+        
+        val externalDir = Environment.getExternalStorageDirectory()
+        
+        // All common directories
+        dirs.addAll(getDirectoriesToScan())
+        
+        // Additional directories for documents and apps
+        dirs.add(File(externalDir, "Books"))
+        dirs.add(File(externalDir, "eBooks"))
+        dirs.add(File(externalDir, "PDFs"))
+        dirs.add(File(externalDir, "Office"))
+        dirs.add(File(externalDir, "Work"))
+        dirs.add(File(externalDir, "School"))
+        dirs.add(File(externalDir, "Study"))
+        dirs.add(File(externalDir, "Projects"))
+        dirs.add(File(externalDir, "Scans"))
+        dirs.add(File(externalDir, "Scanner"))
+        dirs.add(File(externalDir, "CamScanner"))
+        dirs.add(File(externalDir, "Adobe Scan"))
+        dirs.add(File(externalDir, "Backups"))
+        dirs.add(File(externalDir, "backup"))
+        dirs.add(File(externalDir, "Bluetooth"))
+        dirs.add(File(externalDir, "ShareIt"))
+        dirs.add(File(externalDir, "Xender"))
+        dirs.add(File(externalDir, "SHAREit"))
+        dirs.add(File(externalDir, "Nearby Share"))
+        dirs.add(File(externalDir, "Received Files"))
+        
+        // App-specific document folders
+        dirs.add(File(externalDir, "WPS Office"))
+        dirs.add(File(externalDir, "Microsoft"))
+        dirs.add(File(externalDir, "Google Drive"))
+        dirs.add(File(externalDir, "OneDrive"))
+        dirs.add(File(externalDir, "Dropbox"))
+        dirs.add(File(externalDir, "Kindle"))
+        dirs.add(File(externalDir, "Adobe"))
+        
+        // Messaging app media folders
+        dirs.add(File(externalDir, "Viber"))
+        dirs.add(File(externalDir, "Signal"))
+        dirs.add(File(externalDir, "WeChat"))
+        dirs.add(File(externalDir, "LINE"))
+        dirs.add(File(externalDir, "Discord"))
+        
+        return dirs.filter { it.exists() && it.canRead() }
+    }
+    
+    /**
+     * Scan root directory for documents with smart filtering
+     */
+    private fun scanRootForDocuments(
+        rootDir: File,
+        fileMap: ConcurrentHashMap<String, Map<String, Any>>,
+        extensions: Set<String>
+    ) {
+        // Scan root level files
+        rootDir.listFiles()?.forEach { file ->
+            if (file.isFile && !file.isHidden) {
+                val extension = getExtensionFromPath(file.name)
+                if (extensions.contains(extension.lowercase()) && file.length() > 1024) {
+                    val fileInfo = mapOf(
+                        "id" to file.absolutePath.hashCode().toString(),
+                        "path" to file.absolutePath,
+                        "name" to file.name,
+                        "size" to file.length(),
+                        "lastModified" to file.lastModified(),
+                        "extension" to extension,
+                        "mimeType" to getMimeTypeFromExtension(extension)
+                    )
+                    fileMap[file.absolutePath] = fileInfo
+                }
+            }
+        }
+        
+        // Scan subdirectories with smart filtering
+        val dirsToDeepScan = listOf("Documents", "Download", "Downloads", "Books", "PDFs", "Office")
+        rootDir.listFiles()?.forEach { dir ->
+            if (dir.isDirectory && !dir.isHidden && dir.canRead()) {
+                val dirName = dir.name
+                // Deep scan for known document directories
+                if (dirsToDeepScan.contains(dirName)) {
+                    scanDirectoryForFiles(dir, fileMap, extensions, 0, maxDepth = 5)
+                } else if (!dirName.startsWith(".") && !dirName.equals("Android", ignoreCase = true)) {
+                    // Shallow scan for other directories
+                    scanDirectoryForFiles(dir, fileMap, extensions, 0, maxDepth = 2)
+                }
+            }
+        }
+    }
+    
+    /**
+     * Scan root directory for APK files with smart filtering
+     */
+    private fun scanRootForApps(
+        rootDir: File,
+        fileMap: ConcurrentHashMap<String, Map<String, Any>>,
+        extensions: Set<String>
+    ) {
+        // Scan root level for APKs
+        rootDir.listFiles()?.forEach { file ->
+            if (file.isFile && !file.isHidden) {
+                val extension = getExtensionFromPath(file.name)
+                if (extensions.contains(extension.lowercase())) {
+                    val fileInfo = mapOf(
+                        "id" to file.absolutePath.hashCode().toString(),
+                        "path" to file.absolutePath,
+                        "name" to file.name,
+                        "size" to file.length(),
+                        "lastModified" to file.lastModified(),
+                        "extension" to extension,
+                        "mimeType" to getMimeTypeFromExtension(extension)
+                    )
+                    fileMap[file.absolutePath] = fileInfo
+                }
+            }
+        }
+        
+        // Scan subdirectories with priority for app-related folders
+        val appDirs = listOf("Download", "Downloads", "Apk", "APKs", "Apps", "backup", "Backups",
+                            "Bluetooth", "ShareIt", "Xender", "SHAREit", "Received Files")
+        
+        rootDir.listFiles()?.forEach { dir ->
+            if (dir.isDirectory && !dir.isHidden && dir.canRead()) {
+                val dirName = dir.name
+                // Deep scan for known app directories
+                if (appDirs.any { dirName.contains(it, ignoreCase = true) }) {
+                    scanDirectoryForFiles(dir, fileMap, extensions, 0, maxDepth = 4)
+                } else if (!dirName.startsWith(".")) {
+                    // Shallow scan for other directories
+                    scanDirectoryForFiles(dir, fileMap, extensions, 0, maxDepth = 1)
+                }
+            }
+        }
+    }
+    
+    /**
      * Get file extension from path
      */
     private fun getExtensionFromPath(path: String): String {
@@ -576,25 +843,72 @@ class MainActivity: FlutterActivity() {
      */
     private fun getMimeTypeFromExtension(extension: String): String {
         return when (extension.lowercase()) {
+            // Images
             ".jpg", ".jpeg" -> "image/jpeg"
             ".png" -> "image/png"
             ".gif" -> "image/gif"
             ".bmp" -> "image/bmp"
             ".webp" -> "image/webp"
+            ".svg" -> "image/svg+xml"
+            ".ico" -> "image/x-icon"
+            ".tiff", ".tif" -> "image/tiff"
+            ".heic", ".heif" -> "image/heif"
+            // Videos
             ".mp4" -> "video/mp4"
             ".avi" -> "video/x-msvideo"
             ".mkv" -> "video/x-matroska"
             ".mov" -> "video/quicktime"
+            ".wmv" -> "video/x-ms-wmv"
+            ".flv" -> "video/x-flv"
+            ".webm" -> "video/webm"
+            ".3gp" -> "video/3gpp"
+            ".mpg", ".mpeg" -> "video/mpeg"
+            // Audio
             ".mp3" -> "audio/mpeg"
             ".wav" -> "audio/wav"
             ".flac" -> "audio/flac"
             ".aac" -> "audio/aac"
+            ".ogg" -> "audio/ogg"
+            ".wma" -> "audio/x-ms-wma"
+            ".m4a" -> "audio/mp4"
+            ".opus" -> "audio/opus"
+            ".amr" -> "audio/amr"
+            // Documents
             ".pdf" -> "application/pdf"
             ".doc" -> "application/msword"
             ".docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ".xls" -> "application/vnd.ms-excel"
+            ".xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ".ppt" -> "application/vnd.ms-powerpoint"
+            ".pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
             ".txt" -> "text/plain"
+            ".csv" -> "text/csv"
+            ".xml" -> "application/xml"
+            ".json" -> "application/json"
+            ".html", ".htm" -> "text/html"
+            ".rtf" -> "application/rtf"
+            ".odt" -> "application/vnd.oasis.opendocument.text"
+            ".ods" -> "application/vnd.oasis.opendocument.spreadsheet"
+            ".odp" -> "application/vnd.oasis.opendocument.presentation"
+            // E-books
+            ".epub" -> "application/epub+zip"
+            ".mobi" -> "application/x-mobipocket-ebook"
+            ".azw", ".azw3" -> "application/vnd.amazon.ebook"
+            ".fb2" -> "application/x-fictionbook+xml"
+            // Applications
             ".apk" -> "application/vnd.android.package-archive"
+            ".xapk" -> "application/vnd.android.package-archive"
+            ".aab" -> "application/x-authorware-bin"
+            // Archives
             ".zip" -> "application/zip"
+            ".rar" -> "application/x-rar-compressed"
+            ".7z" -> "application/x-7z-compressed"
+            ".tar" -> "application/x-tar"
+            ".gz" -> "application/gzip"
+            // Other
+            ".iso" -> "application/x-iso9660-image"
+            ".exe" -> "application/x-msdownload"
+            ".dmg" -> "application/x-apple-diskimage"
             else -> "application/octet-stream"
         }
     }
@@ -652,40 +966,6 @@ class MainActivity: FlutterActivity() {
         }
     }
     
-    /**
-     * Perform deep storage analysis
-     */
-    private fun analyzeStorage(): Map<String, Any> {
-        try {
-            val analysis = storageAnalyzer.analyzeStorage()
-            
-            return mapOf(
-                "totalFilesScanned" to analysis.totalFilesScanned,
-                "totalSpaceUsed" to analysis.totalSpaceUsed,
-                "totalSpaceAvailable" to analysis.totalSpaceAvailable,
-                "cacheFiles" to analysis.cacheFiles,
-                "temporaryFiles" to analysis.temporaryFiles,
-                "largeOldFiles" to analysis.largeOldFiles,
-                "duplicateFiles" to analysis.duplicateFiles,
-                "thumbnails" to analysis.thumbnails,
-                "totalCleanupPotential" to analysis.totalCleanupPotential
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
-            // Return empty results on error
-            return mapOf(
-                "totalFilesScanned" to 0,
-                "totalSpaceUsed" to 0L,
-                "totalSpaceAvailable" to 0L,
-                "cacheFiles" to emptyList<Map<String, Any>>(),
-                "temporaryFiles" to emptyList<Map<String, Any>>(),
-                "largeOldFiles" to emptyList<Map<String, Any>>(),
-                "duplicateFiles" to emptyList<Map<String, Any>>(),
-                "thumbnails" to emptyList<Map<String, Any>>(),
-                "totalCleanupPotential" to 0L
-            )
-        }
-    }
 
     /**
      * Schedule periodic notifications using WorkManager
@@ -724,5 +1004,146 @@ class MainActivity: FlutterActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    /**
+     * Check if notifications are enabled for the app
+     */
+    private fun areNotificationsEnabled(): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+                notificationManager.areNotificationsEnabled()
+            } else {
+                // For API < 26, notifications are enabled by default
+                true
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            true // Default to enabled if we can't check
+        }
+    }
+
+    /**
+     * Request notification permission (Android 13+)
+     */
+    private fun requestNotificationPermission(): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // For Android 13+, permission must be requested through Flutter
+                // This method returns whether the permission dialog can be shown
+                if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    // Permission not granted, Flutter will handle the request
+                    false
+                } else {
+                    // Permission already granted
+                    true
+                }
+            } else {
+                // For Android < 13, notifications don't require runtime permission
+                true
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            true // Default to true for older versions
+        }
+    }
+    
+    /**
+     * Get file sizes and counts for each category
+     */
+    private fun getCategorySizes(): Map<String, Any> {
+        val categorySizes = mutableMapOf<String, Any>()
+        
+        try {
+            // Get file counts and sizes for each category
+            val categories = listOf("images", "videos", "audio", "documents", "apps", "others")
+            
+            for (category in categories) {
+                val files = when (category) {
+                    "images" -> getMediaFilesForCategory("images")
+                    "videos" -> getMediaFilesForCategory("videos")
+                    "audio" -> getMediaFilesForCategory("audio")
+                    "documents" -> getDocumentFilesForCategory()
+                    "apps" -> getAppFilesForCategory()
+                    "others" -> getOtherFilesForCategory()
+                    else -> emptyList()
+                }
+                
+                var totalSize = 0L
+                var fileCount = 0
+                
+                for (file in files) {
+                    totalSize += (file["size"] as? Long) ?: 0
+                    fileCount++
+                }
+                
+                categorySizes["${category}_size"] = totalSize
+                categorySizes["${category}_count"] = fileCount
+            }
+            
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Return empty sizes on error
+            val categories = listOf("images", "videos", "audio", "documents", "apps", "others")
+            for (category in categories) {
+                categorySizes["${category}_size"] = 0L
+                categorySizes["${category}_count"] = 0
+            }
+        }
+        
+        return categorySizes
+    }
+    
+    /**
+     * Helper method to get media files for category size calculation
+     */
+    private fun getMediaFilesForCategory(type: String): List<Map<String, Any>> {
+        val filesList = mutableListOf<Map<String, Any>>()
+        val fileMap = ConcurrentHashMap<String, Map<String, Any>>()
+        
+        getMediaFiles(type, fileMap)
+        filesList.addAll(fileMap.values)
+        
+        return filesList
+    }
+    
+    /**
+     * Helper method to get document files for category size calculation
+     */
+    private fun getDocumentFilesForCategory(): List<Map<String, Any>> {
+        val filesList = mutableListOf<Map<String, Any>>()
+        val fileMap = ConcurrentHashMap<String, Map<String, Any>>()
+        
+        getDocumentFiles(fileMap)
+        filesList.addAll(fileMap.values)
+        
+        return filesList
+    }
+    
+    /**
+     * Helper method to get app files for category size calculation
+     */
+    private fun getAppFilesForCategory(): List<Map<String, Any>> {
+        val filesList = mutableListOf<Map<String, Any>>()
+        val fileMap = ConcurrentHashMap<String, Map<String, Any>>()
+        
+        getAppFiles(fileMap)
+        filesList.addAll(fileMap.values)
+        
+        return filesList
+    }
+    
+    /**
+     * Helper method to get other files for category size calculation
+     */
+    private fun getOtherFilesForCategory(): List<Map<String, Any>> {
+        val filesList = mutableListOf<Map<String, Any>>()
+        val fileMap = ConcurrentHashMap<String, Map<String, Any>>()
+        
+        getOtherFiles(fileMap)
+        filesList.addAll(fileMap.values)
+        
+        return filesList
     }
 }

@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'dart:ui';
 
 class ChartUtils {
@@ -15,7 +15,7 @@ class ChartUtils {
   /// Gradient colors for charts
   static List<Color> get chartGradientColors => [
     Color(0xFF2196F3),
-    Color(0xFF2196F3).withValues(alpha:  0.3),
+    Color(0xFF2196F3).withValues(alpha: 0.3),
   ];
 
   /// Calculate percentage change between two values

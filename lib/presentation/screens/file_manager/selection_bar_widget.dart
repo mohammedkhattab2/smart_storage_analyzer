@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
@@ -43,7 +43,9 @@ class SelectionBarWidget extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  colorScheme.surfaceContainer.withValues(alpha: isDark ? 0.9 : 0.95),
+                  colorScheme.surfaceContainer.withValues(
+                    alpha: isDark ? 0.9 : 0.95,
+                  ),
                   colorScheme.surface.withValues(alpha: isDark ? 0.85 : 0.92),
                 ],
               ),

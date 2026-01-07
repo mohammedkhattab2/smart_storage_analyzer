@@ -6,20 +6,20 @@ import 'package:smart_storage_analyzer/domain/repositories/pro_access_repository
 /// This is the single source of truth for Pro features
 class ProAccessService {
   final ProAccessRepository _repository;
-  
+
   // Cached Pro access state
   ProAccess? _cachedProAccess;
-  
+
   ProAccessService({required ProAccessRepository repository})
-      : _repository = repository;
-  
+    : _repository = repository;
+
   /// Get current Pro access state
   Future<ProAccess> getProAccess() async {
     // Return cached value if available
     if (_cachedProAccess != null) {
       return _cachedProAccess!;
     }
-    
+
     try {
       _cachedProAccess = await _repository.getProAccess();
       Logger.debug('Pro access loaded: ${_cachedProAccess!.accessType}');
@@ -31,19 +31,19 @@ class ProAccessService {
       return _cachedProAccess!;
     }
   }
-  
+
   /// Check if user is Pro
   Future<bool> isProUser() async {
     final access = await getProAccess();
     return access.isProUser;
   }
-  
+
   /// Check if user has specific feature
   Future<bool> hasFeature(ProFeature feature) async {
     final access = await getProAccess();
     return access.hasFeature(feature);
   }
-  
+
   /// Check multiple features at once
   Future<Map<ProFeature, bool>> checkFeatures(List<ProFeature> features) async {
     final access = await getProAccess();
@@ -51,13 +51,13 @@ class ProAccessService {
       features.map((feature) => MapEntry(feature, access.hasFeature(feature))),
     );
   }
-  
+
   /// Refresh Pro access (clears cache)
   Future<void> refreshProAccess() async {
     _cachedProAccess = null;
     await getProAccess();
   }
-  
+
   /// Get Pro feature info
   static ProFeatureInfo getFeatureInfo(ProFeature feature) {
     switch (feature) {
@@ -124,7 +124,7 @@ class ProFeatureInfo {
   final String name;
   final String description;
   final String icon;
-  
+
   const ProFeatureInfo({
     required this.name,
     required this.description,

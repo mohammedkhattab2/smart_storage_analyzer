@@ -1,12 +1,11 @@
 import 'package:flutter/services.dart';
+import 'package:smart_storage_analyzer/core/constants/channel_constants.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
 
 /// Service to communicate with native Android storage APIs
 /// Follows MVVM architecture - no direct UI interaction
 class NativeStorageService {
-  static const _channel = MethodChannel(
-    'com.smarttools.imagecompressor/native',
-  );
+  static const _channel = MethodChannel(ChannelConstants.storageChannel);
 
   /// Singleton pattern for service
   static final NativeStorageService _instance =

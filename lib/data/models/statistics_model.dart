@@ -30,9 +30,11 @@ class StorageStatisticsModel extends StorageStatistics {
     required super.currentFreeSpace,
     required super.totalSpace,
     required super.period,
+    required super.categoryBreakdown,
   });
 
   factory StorageStatisticsModel.fromJson(Map<String, dynamic> json) {
+    // For now, return empty categories list since we don't have the data
     return StorageStatisticsModel(
       dataPoints: (json['dataPoints'] as List)
           .map((e) => StorageDataPointModel.fromJson(e))
@@ -40,6 +42,7 @@ class StorageStatisticsModel extends StorageStatistics {
       currentFreeSpace: (json['currentFreeSpace'] as num).toDouble(),
       totalSpace: (json['totalSpace'] as num).toDouble(),
       period: json['period'],
+      categoryBreakdown: [], // Will be populated by repository
     );
   }
 
@@ -57,6 +60,16 @@ class StorageStatisticsModel extends StorageStatistics {
       'currentFreeSpace': currentFreeSpace,
       'totalSpace': totalSpace,
       'period': period,
+      'categoryBreakdown': categoryBreakdown
+          .map(
+            (cat) => {
+              'id': cat.id,
+              'name': cat.name,
+              'sizeInBytes': cat.sizeInBytes,
+              'fileCount': cat.fileCount,
+            },
+          )
+          .toList(),
     };
   }
 }

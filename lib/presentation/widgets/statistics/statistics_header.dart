@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/constants/app_strings.dart';
@@ -62,24 +62,22 @@ class StatisticsHeader extends StatelessWidget {
                       children: [
                         // Title
                         ShaderMask(
-                          shaderCallback: (bounds) =>
-                              LinearGradient(
-                                colors: [
-                                  colorScheme.onSurface,
-                                  colorScheme.onSurface.withValues(alpha: 0.8),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ).createShader(bounds),
+                          shaderCallback: (bounds) => LinearGradient(
+                            colors: [
+                              colorScheme.onSurface,
+                              colorScheme.onSurface.withValues(alpha: 0.8),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ).createShader(bounds),
                           child: Text(
                             AppStrings.usageStatistics,
-                            style: textTheme.headlineMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -1.2,
-                                  height: 1.1,
-                                  fontSize: 32,
-                                ),
+                            style: textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -1.2,
+                              height: 1.1,
+                              fontSize: 32,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 10),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
 import 'package:smart_storage_analyzer/domain/entities/file_item.dart';
@@ -58,7 +58,7 @@ class FileItemWidget extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha:  .12),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: .12),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(

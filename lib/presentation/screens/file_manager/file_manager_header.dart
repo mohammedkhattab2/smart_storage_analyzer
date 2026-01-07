@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
@@ -21,7 +21,6 @@ class FileManagerHeader extends StatefulWidget {
 }
 
 class _FileManagerHeaderState extends State<FileManagerHeader> {
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -94,10 +93,12 @@ class _FileManagerHeaderState extends State<FileManagerHeader> {
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                colorScheme.primaryContainer
-                                    .withValues(alpha: .4),
-                                colorScheme.primaryContainer
-                                    .withValues(alpha: .2),
+                                colorScheme.primaryContainer.withValues(
+                                  alpha: .4,
+                                ),
+                                colorScheme.primaryContainer.withValues(
+                                  alpha: .2,
+                                ),
                               ],
                             ),
                             shape: BoxShape.circle,
@@ -123,7 +124,9 @@ class _FileManagerHeaderState extends State<FileManagerHeader> {
                           size: 16,
                           color: widget.showSelectionActions
                               ? colorScheme.primary
-                              : colorScheme.onSurfaceVariant.withValues(alpha: .7),
+                              : colorScheme.onSurfaceVariant.withValues(
+                                  alpha: .7,
+                                ),
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -148,10 +151,7 @@ class _FileManagerHeaderState extends State<FileManagerHeader> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(100),
                       child: BackdropFilter(
-                        filter: ImageFilter.blur(
-                          sigmaX: 10,
-                          sigmaY: 10,
-                        ),
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
@@ -166,13 +166,13 @@ class _FileManagerHeaderState extends State<FileManagerHeader> {
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
-                                color: colorScheme
-                                    .surfaceContainerHighest
+                                color: colorScheme.surfaceContainerHighest
                                     .withValues(alpha: isDark ? .3 : .5),
                                 borderRadius: BorderRadius.circular(100),
                                 border: Border.all(
-                                  color: colorScheme.outlineVariant
-                                      .withValues(alpha: .2),
+                                  color: colorScheme.outlineVariant.withValues(
+                                    alpha: .2,
+                                  ),
                                   width: 1,
                                 ),
                               ),
@@ -195,10 +195,8 @@ class _FileManagerHeaderState extends State<FileManagerHeader> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            colorScheme.primaryContainer
-                                .withValues(alpha: .5),
-                            colorScheme.primaryContainer
-                                .withValues(alpha: .3),
+                            colorScheme.primaryContainer.withValues(alpha: .5),
+                            colorScheme.primaryContainer.withValues(alpha: .3),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(14),

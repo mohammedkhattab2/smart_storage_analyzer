@@ -10,25 +10,22 @@ import 'package:smart_storage_analyzer/presentation/widgets/common/pro_badge.dar
 /// Example of a Pro feature button with soft gating
 class DeepAnalysisButton extends StatelessWidget {
   final VoidCallback? onFreeTap;
-  
-  const DeepAnalysisButton({
-    super.key,
-    this.onFreeTap,
-  });
-  
+
+  const DeepAnalysisButton({super.key, this.onFreeTap});
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return BlocBuilder<ProAccessCubit, ProAccessState>(
       builder: (context, proState) {
         final viewModel = context.read<ProAccessViewModel>();
-        
+
         return FutureBuilder<bool>(
           future: viewModel.hasFeature(ProFeature.deepAnalysis.name),
           builder: (context, snapshot) {
             final hasFeature = snapshot.data ?? false;
-            
+
             return Container(
               width: double.infinity,
               height: 56,
@@ -73,12 +70,13 @@ class DeepAnalysisButton extends StatelessWidget {
                         const SizedBox(width: AppSize.paddingMedium),
                         Text(
                           'Deep Analysis',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: hasFeature
-                                ? Colors.white
-                                : colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: hasFeature
+                                    ? Colors.white
+                                    : colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                         const SizedBox(width: AppSize.paddingSmall),
                         if (!hasFeature) const ProBadge(size: 10),
@@ -93,7 +91,7 @@ class DeepAnalysisButton extends StatelessWidget {
       },
     );
   }
-  
+
   Future<void> _handleTap(BuildContext context, bool hasFeature) async {
     if (hasFeature) {
       // Execute Pro feature
@@ -101,16 +99,13 @@ class DeepAnalysisButton extends StatelessWidget {
     } else {
       // Show Pro feature dialog
       final featureGate = context.read<ProAccessViewModel>().featureGate;
-      await featureGate.showProFeatureDialog(
-        context,
-        ProFeature.deepAnalysis,
-      );
-      
+      await featureGate.showProFeatureDialog(context, ProFeature.deepAnalysis);
+
       // Optionally run free version
       onFreeTap?.call();
     }
   }
-  
+
   void _runDeepAnalysis(BuildContext context) {
     // This would execute the actual deep analysis
     ScaffoldMessenger.of(context).showSnackBar(
@@ -126,35 +121,28 @@ class DeepAnalysisButton extends StatelessWidget {
 class ProFeatureIndicator extends StatelessWidget {
   final ProFeature feature;
   final Widget child;
-  
+
   const ProFeatureIndicator({
     super.key,
     required this.feature,
     required this.child,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
       future: context.read<ProAccessViewModel>().hasFeature(feature.name),
       builder: (context, snapshot) {
         final hasFeature = snapshot.data ?? false;
-        
+
         if (hasFeature) {
           return child;
         }
-        
+
         return Stack(
           children: [
-            Opacity(
-              opacity: 0.7,
-              child: child,
-            ),
-            const Positioned(
-              top: 4,
-              right: 4,
-              child: ProIndicator(size: 12),
-            ),
+            Opacity(opacity: 0.7, child: child),
+            const Positioned(top: 4, right: 4, child: ProIndicator(size: 12)),
           ],
         );
       },

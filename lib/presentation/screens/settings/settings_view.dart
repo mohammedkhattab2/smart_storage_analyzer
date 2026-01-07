@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
-import 'package:smart_storage_analyzer/domain/models/settings_item_model.dart';
+import 'package:smart_storage_analyzer/presentation/models/settings_item_model.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/settings/settings_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/settings/settings_state.dart';
 import 'package:smart_storage_analyzer/presentation/viewmodels/settings_viewmodel.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/settings/theme_selector.dart';
+// Removed unused import: app_routes.dart
+import 'package:smart_storage_analyzer/presentation/screens/settings/privacy_policy_screen.dart';
+import 'package:smart_storage_analyzer/presentation/screens/settings/terms_of_service_screen.dart';
+import 'package:smart_storage_analyzer/presentation/screens/settings/about_screen.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -50,7 +54,7 @@ class SettingsView extends StatelessWidget {
           children: [
             // Magical background orbs
             _buildMagicalBackground(context),
-            
+
             SafeArea(
               child: BlocConsumer<SettingsCubit, SettingsState>(
                 listener: (context, state) {
@@ -67,11 +71,34 @@ class SettingsView extends StatelessWidget {
                   if (state is SettingsLoaded) {
                     final cubit = context.read<SettingsCubit>();
                     final viewModel = SettingsViewModel(
-                      context: context,
                       settings: state.settings,
                       onToggleNotifications: cubit.toggleNotifications,
                       onToggleDarkMode: cubit.toggleDarkMode,
                       onSignOut: cubit.signOut,
+                      onNavigateToPrivacyPolicy: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const PrivacyPolicyScreen(),
+                          ),
+                        );
+                      },
+                      onNavigateToTermsOfService: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const TermsOfServiceScreen(),
+                          ),
+                        );
+                      },
+                      onNavigateToAbout: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const AboutScreen(),
+                          ),
+                        );
+                      },
+                      onRequestSignOut: () {
+                        _SettingsViewHelpers.showSignOutDialog(context, cubit);
+                      },
                     );
 
                     final sections = viewModel.getSections();
@@ -127,7 +154,7 @@ class SettingsView extends StatelessWidget {
                               ),
                               child: _buildMagicalSignOutButton(
                                 context,
-                                viewModel.showSignOutDialog,
+                                viewModel.onRequestSignOut,
                               ),
                             ),
                           ),
@@ -149,7 +176,7 @@ class SettingsView extends StatelessWidget {
   Widget _buildMagicalBackground(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final size = MediaQuery.of(context).size;
-    
+
     return Stack(
       children: [
         // Top left orb
@@ -220,7 +247,7 @@ class SettingsView extends StatelessWidget {
 
   Widget _buildMagicalLoadingWidget(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -249,15 +276,9 @@ class SettingsView extends StatelessWidget {
             children: [
               CircularProgressIndicator(
                 strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  colorScheme.primary,
-                ),
+                valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
               ),
-              Icon(
-                Icons.settings,
-                size: 32,
-                color: colorScheme.primary,
-              ),
+              Icon(Icons.settings, size: 32, color: colorScheme.primary),
             ],
           ),
         ),
@@ -276,7 +297,7 @@ class SettingsView extends StatelessWidget {
   Widget _buildMagicalHeader(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Container(
       padding: const EdgeInsets.all(AppSize.paddingLarge),
       decoration: BoxDecoration(
@@ -334,10 +355,7 @@ class SettingsView extends StatelessWidget {
                   children: [
                     ShaderMask(
                       shaderCallback: (bounds) => LinearGradient(
-                        colors: [
-                          colorScheme.primary,
-                          colorScheme.secondary,
-                        ],
+                        colors: [colorScheme.primary, colorScheme.secondary],
                       ).createShader(bounds),
                       child: Text(
                         'Settings',
@@ -371,16 +389,16 @@ class SettingsView extends StatelessWidget {
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     // Different gradient colors for each section
     final gradientColors = [
       [colorScheme.primary, colorScheme.secondary],
       [colorScheme.secondary, colorScheme.tertiary],
       [colorScheme.tertiary, colorScheme.primary],
     ];
-    
+
     final colors = gradientColors[sectionIndex % gradientColors.length];
-    
+
     return Container(
       margin: const EdgeInsets.fromLTRB(
         AppSize.paddingLarge,
@@ -398,10 +416,7 @@ class SettingsView extends StatelessWidget {
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: colors[0].withValues(alpha: 0.15),
-          width: 1,
-        ),
+        border: Border.all(color: colors[0].withValues(alpha: 0.15), width: 1),
         boxShadow: [
           BoxShadow(
             color: colors[0].withValues(alpha: 0.08),
@@ -486,13 +501,13 @@ class SettingsView extends StatelessWidget {
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     // Special handling for theme selector
     if (item.id == 'dark_mode' || item.id == 'theme_mode') {
       return Container(
         decoration: BoxDecoration(
-          border: isLast 
-              ? null 
+          border: isLast
+              ? null
               : Border(
                   bottom: BorderSide(
                     color: colorScheme.outlineVariant.withValues(alpha: 0.1),
@@ -602,8 +617,8 @@ class SettingsView extends StatelessWidget {
         color: item.onTap != null && item.type == SettingsItemType.navigation
             ? colorScheme.primary.withValues(alpha: 0.02)
             : Colors.transparent,
-        border: isLast 
-            ? null 
+        border: isLast
+            ? null
             : Border(
                 bottom: BorderSide(
                   color: colorScheme.outlineVariant.withValues(alpha: 0.1),
@@ -645,11 +660,7 @@ class SettingsView extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Icon(
-                    item.icon,
-                    color: colorScheme.primary,
-                    size: 24,
-                  ),
+                  child: Icon(item.icon, color: colorScheme.primary, size: 24),
                 ),
                 const SizedBox(width: AppSize.paddingMedium),
                 Expanded(
@@ -675,7 +686,7 @@ class SettingsView extends StatelessWidget {
     required ValueChanged<bool> onChanged,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -708,13 +719,10 @@ class SettingsView extends StatelessWidget {
     );
   }
 
-  Widget _buildMagicalSignOutButton(
-    BuildContext context,
-    VoidCallback onTap,
-  ) {
+  Widget _buildMagicalSignOutButton(BuildContext context, VoidCallback onTap) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -791,18 +799,18 @@ class SettingsView extends StatelessWidget {
 class _SettingsBackgroundPainter extends CustomPainter {
   final Color primaryColor;
   final Color secondaryColor;
-  
+
   _SettingsBackgroundPainter({
     required this.primaryColor,
     required this.secondaryColor,
   });
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5;
-    
+
     // Draw curved lines
     paint.color = primaryColor;
     final path1 = Path();
@@ -814,7 +822,7 @@ class _SettingsBackgroundPainter extends CustomPainter {
       size.height * 0.25,
     );
     canvas.drawPath(path1, paint);
-    
+
     paint.color = secondaryColor;
     final path2 = Path();
     path2.moveTo(size.width, size.height * 0.6);
@@ -826,7 +834,152 @@ class _SettingsBackgroundPainter extends CustomPainter {
     );
     canvas.drawPath(path2, paint);
   }
-  
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// Helper class for UI operations
+class _SettingsViewHelpers {
+  static void showSignOutDialog(BuildContext context, SettingsCubit cubit) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        final colorScheme = Theme.of(dialogContext).colorScheme;
+        final textTheme = Theme.of(dialogContext).textTheme;
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 340),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.shadow.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppSize.paddingLarge),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        colorScheme.error.withValues(alpha: 0.1),
+                        colorScheme.error.withValues(alpha: 0.05),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: colorScheme.error.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: colorScheme.error.withValues(alpha: 0.2),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.logout_rounded,
+                          color: colorScheme.error,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: AppSize.paddingMedium),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Sign Out',
+                              style: textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: colorScheme.error,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Are you sure you want to sign out?',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(AppSize.paddingLarge),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSize.paddingLarge,
+                            vertical: AppSize.paddingMedium,
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSize.paddingSmall),
+                      FilledButton(
+                        onPressed: () {
+                          Navigator.of(dialogContext).pop();
+                          HapticFeedback.mediumImpact();
+                          cubit.signOut();
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colorScheme.error,
+                          foregroundColor: colorScheme.onError,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSize.paddingLarge,
+                            vertical: AppSize.paddingMedium,
+                          ),
+                        ),
+                        child: Text(
+                          'Sign Out',
+                          style: textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

@@ -1,5 +1,6 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/services/permission_service.dart';
@@ -17,19 +18,35 @@ class DashboardView extends StatefulWidget {
 }
 
 class _DashboardViewState extends State<DashboardView>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   bool _isCheckingPermission = false;
   final _permissionService = PermissionService();
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    // Initialize animation controller for smooth transitions
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+    
+    _animationController.forward();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -92,13 +109,23 @@ class _DashboardViewState extends State<DashboardView>
         child: Stack(
           children: [
             // Magical background orbs
-            _buildMagicalBackground(context),
-            
+            // Optimize background with repaint boundary
+            RepaintBoundary(
+              child: _buildMagicalBackground(context),
+            ),
+
             SafeArea(
               child: BlocBuilder<DashboardCubit, DashboardState>(
+                // Only rebuild when state actually changes
+                buildWhen: (previous, current) => previous.runtimeType != current.runtimeType,
                 builder: (context, state) {
                   return RefreshIndicator(
-                    onRefresh: () => context.read<DashboardCubit>().refresh(context: context),
+                    onRefresh: () async {
+                      HapticFeedback.lightImpact();
+                      await context.read<DashboardCubit>().refresh(
+                        context: context,
+                      );
+                    },
                     color: colorScheme.primary,
                     backgroundColor: colorScheme.surfaceContainer,
                     child: SingleChildScrollView(
@@ -108,8 +135,18 @@ class _DashboardViewState extends State<DashboardView>
                       child: Column(
                         children: [
                           const SizedBox(height: AppSize.paddingSmall),
-                          const DashboardHeader(),
-                          _buildContent(context, state),
+                          const RepaintBoundary(
+                            child: DashboardHeader(),
+                          ),
+                          AnimatedBuilder(
+                            animation: _fadeAnimation,
+                            builder: (context, child) {
+                              return FadeTransition(
+                                opacity: _fadeAnimation,
+                                child: _buildContent(context, state),
+                              );
+                            },
+                          ),
                         ],
                       ),
                     ),
@@ -125,64 +162,15 @@ class _DashboardViewState extends State<DashboardView>
 
   Widget _buildMagicalBackground(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
-    return Stack(
-      children: [
-        // Top left orb
-        Positioned(
-          top: -100,
-          left: -100,
-          child: Container(
-            width: 300,
-            height: 300,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  colorScheme.primary.withValues(alpha: 0.08),
-                  colorScheme.primary.withValues(alpha: 0.0),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Bottom right orb
-        Positioned(
-          bottom: -150,
-          right: -150,
-          child: Container(
-            width: 400,
-            height: 400,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  colorScheme.secondary.withValues(alpha: 0.06),
-                  colorScheme.secondary.withValues(alpha: 0.0),
-                ],
-              ),
-            ),
-          ),
-        ),
-        // Center glow
-        Positioned(
-          top: MediaQuery.of(context).size.height * 0.3,
-          left: MediaQuery.of(context).size.width * 0.5 - 100,
-          child: Container(
-            width: 200,
-            height: 200,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  colorScheme.tertiary.withValues(alpha: 0.05),
-                  colorScheme.tertiary.withValues(alpha: 0.0),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
+
+    // Use CustomPaint for better performance
+    return CustomPaint(
+      painter: _BackgroundPainter(
+        primaryColor: colorScheme.primary,
+        secondaryColor: colorScheme.secondary,
+        tertiaryColor: colorScheme.tertiary,
+      ),
+      size: MediaQuery.of(context).size,
     );
   }
 
@@ -226,7 +214,9 @@ class _DashboardViewState extends State<DashboardView>
         padding: const EdgeInsets.all(AppSize.paddingLarge),
         child: _buildMagicalErrorWidget(
           message: state.message,
-          onRetry: () => context.read<DashboardCubit>().loadDashboardData(context: context),
+          onRetry: () => context.read<DashboardCubit>().loadDashboardData(
+            context: context,
+          ),
         ),
       );
     }
@@ -234,61 +224,9 @@ class _DashboardViewState extends State<DashboardView>
   }
 
   Widget _buildMagicalLoadingWidget() {
-    return Padding(
-      padding: const EdgeInsets.all(AppSize.paddingLarge),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Storage circle skeleton
-          Center(
-            child: SkeletonLoader(
-              width: 240,
-              height: 240,
-              borderRadius: BorderRadius.circular(120),
-            ),
-          ),
-          const SizedBox(height: AppSize.paddingXLarge),
-          // Details section skeleton
-          SkeletonLoader(
-            height: 20,
-            width: 150,
-            borderRadius: BorderRadius.circular(4),
-            margin: const EdgeInsets.only(bottom: AppSize.paddingMedium),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: SkeletonLoader(
-                  height: 60,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              const SizedBox(width: AppSize.paddingMedium),
-              Expanded(
-                child: SkeletonLoader(
-                  height: 60,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSize.paddingXLarge),
-          // Categories section skeleton
-          SkeletonLoader(
-            height: 20,
-            width: 120,
-            borderRadius: BorderRadius.circular(4),
-            margin: const EdgeInsets.only(bottom: AppSize.paddingMedium),
-          ),
-          const SkeletonGridLoader(
-            itemCount: 6,
-            crossAxisCount: 2,
-            padding: EdgeInsets.zero,
-            childAspectRatio: 1.3,
-          ),
-          const SizedBox(height: 100),
-        ],
-      ),
+    return const Padding(
+      padding: EdgeInsets.all(AppSize.paddingLarge),
+      child: _LoadingSkeletonWidget(),
     );
   }
 
@@ -374,7 +312,9 @@ class _DashboardViewState extends State<DashboardView>
                   height: 8,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(4),
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    color: colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.5,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.1),
@@ -459,7 +399,9 @@ class _DashboardViewState extends State<DashboardView>
               children: [
                 CircularProgressIndicator(
                   strokeWidth: 4,
-                  valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    colorScheme.primary,
+                  ),
                 ),
                 Icon(
                   Icons.analytics_rounded,
@@ -488,7 +430,7 @@ class _DashboardViewState extends State<DashboardView>
 
   Widget _buildMagicalProgressBar(double progress) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Container(
       width: 250,
       height: 12,
@@ -516,10 +458,7 @@ class _DashboardViewState extends State<DashboardView>
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      colorScheme.primary,
-                      colorScheme.secondary,
-                    ],
+                    colors: [colorScheme.primary, colorScheme.secondary],
                   ),
                 ),
               ),
@@ -618,7 +557,9 @@ class _DashboardViewState extends State<DashboardView>
             Container(
               padding: const EdgeInsets.all(AppSize.paddingLarge),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                color: colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.5,
+                ),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: colorScheme.outlineVariant.withValues(alpha: 0.3),
@@ -637,10 +578,7 @@ class _DashboardViewState extends State<DashboardView>
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    colorScheme.primary,
-                    colorScheme.secondary,
-                  ],
+                  colors: [colorScheme.primary, colorScheme.secondary],
                 ),
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
@@ -664,17 +602,15 @@ class _DashboardViewState extends State<DashboardView>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.settings,
-                          color: colorScheme.onPrimary,
-                        ),
+                        Icon(Icons.settings, color: colorScheme.onPrimary),
                         const SizedBox(width: AppSize.paddingSmall),
                         Text(
                           'Grant Permission',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: colorScheme.onPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
+                                color: colorScheme.onPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
                         ),
                       ],
                     ),
@@ -722,7 +658,7 @@ class _DashboardViewState extends State<DashboardView>
     required VoidCallback onRetry,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Center(
       child: Container(
         margin: const EdgeInsets.all(AppSize.paddingLarge),
@@ -752,11 +688,7 @@ class _DashboardViewState extends State<DashboardView>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: colorScheme.error,
-            ),
+            Icon(Icons.error_outline, size: 64, color: colorScheme.error),
             const SizedBox(height: AppSize.paddingLarge),
             Text(
               'Oops! Something went wrong',
@@ -796,6 +728,124 @@ class _DashboardViewState extends State<DashboardView>
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Optimized background painter for better performance
+class _BackgroundPainter extends CustomPainter {
+  final Color primaryColor;
+  final Color secondaryColor;
+  final Color tertiaryColor;
+
+  _BackgroundPainter({
+    required this.primaryColor,
+    required this.secondaryColor,
+    required this.tertiaryColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 40);
+
+    // Top left orb
+    paint.shader = RadialGradient(
+      colors: [
+        primaryColor.withValues(alpha: 0.08),
+        primaryColor.withValues(alpha: 0.0),
+      ],
+    ).createShader(Rect.fromCircle(center: const Offset(-100, -100), radius: 150));
+    canvas.drawCircle(const Offset(-100, -100), 150, paint);
+
+    // Bottom right orb
+    paint.shader = RadialGradient(
+      colors: [
+        secondaryColor.withValues(alpha: 0.06),
+        secondaryColor.withValues(alpha: 0.0),
+      ],
+    ).createShader(Rect.fromCircle(
+      center: Offset(size.width + 150, size.height + 150),
+      radius: 200,
+    ));
+    canvas.drawCircle(Offset(size.width + 150, size.height + 150), 200, paint);
+
+    // Center glow
+    paint.shader = RadialGradient(
+      colors: [
+        tertiaryColor.withValues(alpha: 0.05),
+        tertiaryColor.withValues(alpha: 0.0),
+      ],
+    ).createShader(Rect.fromCircle(
+      center: Offset(size.width * 0.5, size.height * 0.3),
+      radius: 100,
+    ));
+    canvas.drawCircle(Offset(size.width * 0.5, size.height * 0.3), 100, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Optimized loading skeleton widget
+class _LoadingSkeletonWidget extends StatelessWidget {
+  const _LoadingSkeletonWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Storage circle skeleton
+        const Center(
+          child: SkeletonLoader(
+            width: 240,
+            height: 240,
+            borderRadius: BorderRadius.all(Radius.circular(120)),
+          ),
+        ),
+        const SizedBox(height: AppSize.paddingXLarge),
+        // Details section skeleton
+        const SkeletonLoader(
+          height: 20,
+          width: 150,
+          borderRadius: BorderRadius.all(Radius.circular(4)),
+          margin: EdgeInsets.only(bottom: AppSize.paddingMedium),
+        ),
+        Row(
+          children: const [
+            Expanded(
+              child: SkeletonLoader(
+                height: 60,
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+            ),
+            SizedBox(width: AppSize.paddingMedium),
+            Expanded(
+              child: SkeletonLoader(
+                height: 60,
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSize.paddingXLarge),
+        // Categories section skeleton
+        const SkeletonLoader(
+          height: 20,
+          width: 120,
+          borderRadius: BorderRadius.all(Radius.circular(4)),
+          margin: EdgeInsets.only(bottom: AppSize.paddingMedium),
+        ),
+        const SkeletonGridLoader(
+          itemCount: 6,
+          crossAxisCount: 2,
+          padding: EdgeInsets.zero,
+          childAspectRatio: 1.3,
+        ),
+        const SizedBox(height: 100),
+      ],
     );
   }
 }

@@ -8,10 +8,7 @@ import 'package:smart_storage_analyzer/presentation/screens/cleanup_results/clea
 class CleanupResultsScreen extends StatelessWidget {
   final StorageAnalysisResults results;
 
-  const CleanupResultsScreen({
-    super.key,
-    required this.results,
-  });
+  const CleanupResultsScreen({super.key, required this.results});
 
   @override
   Widget build(BuildContext context) {

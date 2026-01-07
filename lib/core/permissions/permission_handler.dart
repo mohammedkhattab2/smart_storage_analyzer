@@ -7,7 +7,7 @@ class PermissionHandler {
     // For Android, we only need READ_EXTERNAL_STORAGE permission
     // MANAGE_EXTERNAL_STORAGE is restricted and not needed for our use case
     status = await Permission.storage.request();
-    
+
     switch (status) {
       case PermissionStatus.granted:
         return PermissionResult(
@@ -48,8 +48,4 @@ class PermissionResult {
   });
 }
 
-enum PermissionResultStatus {
-  granted,
-  denied,
-  permanentlyDenied,
-}
+enum PermissionResultStatus { granted, denied, permanentlyDenied }

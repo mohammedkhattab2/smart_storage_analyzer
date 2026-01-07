@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
@@ -7,7 +7,7 @@ class TermsOfServiceScreen extends StatelessWidget {
   const TermsOfServiceScreen({super.key});
 
   static const _sections = [
-    ('Effective Date', 'December 28, 2025', false),
+    ('Effective Date', 'January 1, 2026', false),
     (
       '1. Acceptance of Terms',
       'By downloading, installing, or using Smart Storage Analyzer ("the App"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the App.',
@@ -78,7 +78,6 @@ class TermsOfServiceScreen extends StatelessWidget {
     ),
   ];
 
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -111,7 +110,8 @@ class TermsOfServiceScreen extends StatelessWidget {
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Container(
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .6,
+                  color: colorScheme.surfaceContainer.withValues(
+                    alpha: isDark ? .3 : .6,
                   ),
                   shape: BoxShape.circle,
                   border: Border.all(
@@ -150,9 +150,11 @@ class TermsOfServiceScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [
-                      colorScheme.secondaryContainer.withValues(alpha: isDark ? .3 : .5,
+                      colorScheme.secondaryContainer.withValues(
+                        alpha: isDark ? .3 : .5,
                       ),
-                      colorScheme.tertiaryContainer.withValues(alpha: isDark ? .2 : .4,
+                      colorScheme.tertiaryContainer.withValues(
+                        alpha: isDark ? .2 : .4,
                       ),
                     ],
                     begin: Alignment.topRight,
@@ -160,8 +162,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: colorScheme.secondary.withValues(alpha: .15,
-                      ),
+                      color: colorScheme.secondary.withValues(alpha: .15),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -212,7 +213,8 @@ class TermsOfServiceScreen extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(AppSize.paddingLarge),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .8,
+          color: colorScheme.surfaceContainer.withValues(
+            alpha: isDark ? .3 : .8,
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
@@ -236,8 +238,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: colorScheme.secondary.withValues(alpha: .1,
-                      ),
+                      color: colorScheme.secondary.withValues(alpha: .1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -254,10 +255,8 @@ class TermsOfServiceScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          colorScheme.primaryContainer.withValues(alpha: .5,
-                          ),
-                          colorScheme.secondaryContainer.withValues(alpha: .5,
-                          ),
+                          colorScheme.primaryContainer.withValues(alpha: .5),
+                          colorScheme.secondaryContainer.withValues(alpha: .5),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,

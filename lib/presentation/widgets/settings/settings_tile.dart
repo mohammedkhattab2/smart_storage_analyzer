@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
@@ -52,8 +52,8 @@ class _SettingsTileState extends State<SettingsTile> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: colorScheme.primary.withValues(alpha: 
-                _isHovered ? 0.08 : 0,
+              color: colorScheme.primary.withValues(
+                alpha: _isHovered ? 0.08 : 0,
               ),
               blurRadius: _isHovered ? 8 : 0,
               offset: Offset(0, _isHovered ? 4 : 0),
@@ -70,9 +70,7 @@ class _SettingsTileState extends State<SettingsTile> {
             child: Material(
               color: _isHovered
                   ? colorScheme.surfaceContainer.withValues(alpha: 0.8)
-                  : colorScheme.surface.withValues(alpha: 
-                      isDark ? 0.6 : 0.9,
-                    ),
+                  : colorScheme.surface.withValues(alpha: isDark ? 0.6 : 0.9),
               borderRadius: BorderRadius.circular(16),
               child: InkWell(
                 onTap: widget.onTap != null
@@ -112,10 +110,25 @@ class _SettingsTileState extends State<SettingsTile> {
                               _isHovered
                                   ? colorScheme.primary.withValues(alpha: 0.08)
                                   : Color.fromARGB(
-                                      (colorScheme.surfaceContainerHighest.a * 255).round().clamp(0, 255),
-                                      (colorScheme.surfaceContainerHighest.r * 255 * 0.95).round().clamp(0, 255),
-                                      (colorScheme.surfaceContainerHighest.g * 255 * 0.95).round().clamp(0, 255),
-                                      (colorScheme.surfaceContainerHighest.b * 255 * 0.95).round().clamp(0, 255),
+                                      (colorScheme.surfaceContainerHighest.a *
+                                              255)
+                                          .round()
+                                          .clamp(0, 255),
+                                      (colorScheme.surfaceContainerHighest.r *
+                                              255 *
+                                              0.95)
+                                          .round()
+                                          .clamp(0, 255),
+                                      (colorScheme.surfaceContainerHighest.g *
+                                              255 *
+                                              0.95)
+                                          .round()
+                                          .clamp(0, 255),
+                                      (colorScheme.surfaceContainerHighest.b *
+                                              255 *
+                                              0.95)
+                                          .round()
+                                          .clamp(0, 255),
                                     ),
                             ],
                             begin: Alignment.topLeft,

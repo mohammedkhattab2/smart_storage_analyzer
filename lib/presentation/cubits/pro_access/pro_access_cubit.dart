@@ -5,15 +5,15 @@ import 'package:smart_storage_analyzer/presentation/viewmodels/pro_access_viewmo
 /// Cubit for managing Pro access state in the UI
 class ProAccessCubit extends Cubit<ProAccessState> {
   final ProAccessViewModel _viewModel;
-  
+
   ProAccessCubit({required ProAccessViewModel viewModel})
-      : _viewModel = viewModel,
-        super(ProAccessInitial());
-  
+    : _viewModel = viewModel,
+      super(ProAccessInitial());
+
   /// Load Pro access state
   Future<void> loadProAccess() async {
     emit(ProAccessLoading());
-    
+
     try {
       final proAccess = await _viewModel.getProAccess();
       emit(ProAccessLoaded(proAccess: proAccess));
@@ -21,7 +21,7 @@ class ProAccessCubit extends Cubit<ProAccessState> {
       emit(ProAccessError(message: 'Failed to load Pro access'));
     }
   }
-  
+
   /// Check if a specific feature is available
   Future<bool> checkFeature(String featureName) async {
     try {
@@ -30,25 +30,25 @@ class ProAccessCubit extends Cubit<ProAccessState> {
       return false;
     }
   }
-  
+
   /// Show Pro feature dialog
   void showProFeatureInfo() {
     if (state is ProAccessLoaded) {
-      emit(ProAccessShowingInfo(
-        proAccess: (state as ProAccessLoaded).proAccess,
-      ));
+      emit(
+        ProAccessShowingInfo(proAccess: (state as ProAccessLoaded).proAccess),
+      );
     }
   }
-  
+
   /// Dismiss Pro feature info
   void dismissProFeatureInfo() {
     if (state is ProAccessShowingInfo) {
-      emit(ProAccessLoaded(
-        proAccess: (state as ProAccessShowingInfo).proAccess,
-      ));
+      emit(
+        ProAccessLoaded(proAccess: (state as ProAccessShowingInfo).proAccess),
+      );
     }
   }
-  
+
   /// Refresh Pro access
   Future<void> refresh() async {
     await _viewModel.refreshProAccess();

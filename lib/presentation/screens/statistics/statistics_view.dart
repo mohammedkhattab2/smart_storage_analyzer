@@ -34,7 +34,7 @@ class StatisticsView extends StatelessWidget {
           children: [
             // Magical background
             _buildMagicalBackground(context),
-            
+
             SafeArea(
               child: BlocBuilder<StatisticsCubit, StatisticsState>(
                 builder: (context, state) {
@@ -67,7 +67,7 @@ class StatisticsView extends StatelessWidget {
   Widget _buildMagicalBackground(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final size = MediaQuery.of(context).size;
-    
+
     return Stack(
       children: [
         // Top orb
@@ -139,7 +139,7 @@ class StatisticsView extends StatelessWidget {
   Widget _buildMagicalHeader(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Container(
       padding: const EdgeInsets.all(AppSize.paddingLarge),
       decoration: BoxDecoration(
@@ -202,10 +202,7 @@ class StatisticsView extends StatelessWidget {
                   children: [
                     ShaderMask(
                       shaderCallback: (bounds) => LinearGradient(
-                        colors: [
-                          colorScheme.primary,
-                          colorScheme.secondary,
-                        ],
+                        colors: [colorScheme.primary, colorScheme.secondary],
                       ).createShader(bounds),
                       child: Text(
                         'Statistics',
@@ -272,7 +269,7 @@ class StatisticsView extends StatelessWidget {
   Widget _buildMagicalLoadingWidget(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -374,7 +371,7 @@ class StatisticsView extends StatelessWidget {
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Center(
       child: Container(
         margin: const EdgeInsets.all(AppSize.paddingLarge),
@@ -518,53 +515,36 @@ class StatisticsView extends StatelessWidget {
 class _StatisticsBackgroundPainter extends CustomPainter {
   final Color primaryColor;
   final Color secondaryColor;
-  
+
   _StatisticsBackgroundPainter({
     required this.primaryColor,
     required this.secondaryColor,
   });
-  
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..style = PaintingStyle.fill;
-    
+    final paint = Paint()..style = PaintingStyle.fill;
+
     // Draw grid-like pattern
     paint.color = primaryColor;
     for (double i = 0; i < size.width; i += 100) {
       paint.strokeWidth = 0.5;
       paint.style = PaintingStyle.stroke;
-      canvas.drawLine(
-        Offset(i, 0),
-        Offset(i, size.height),
-        paint,
-      );
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
     }
-    
+
     for (double i = 0; i < size.height; i += 100) {
-      canvas.drawLine(
-        Offset(0, i),
-        Offset(size.width, i),
-        paint,
-      );
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
     }
-    
+
     // Draw accent circles
     paint.style = PaintingStyle.fill;
     paint.color = secondaryColor;
-    canvas.drawCircle(
-      Offset(size.width * 0.3, size.height * 0.7),
-      50,
-      paint,
-    );
-    
-    canvas.drawCircle(
-      Offset(size.width * 0.8, size.height * 0.2),
-      30,
-      paint,
-    );
+    canvas.drawCircle(Offset(size.width * 0.3, size.height * 0.7), 50, paint);
+
+    canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.2), 30, paint);
   }
-  
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

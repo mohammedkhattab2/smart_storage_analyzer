@@ -3,34 +3,49 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:smart_storage_analyzer/core/constants/app_icons.dart';
+import 'package:smart_storage_analyzer/core/constants/channel_constants.dart';
 import 'package:smart_storage_analyzer/core/constants/file_extensions.dart';
+import 'package:smart_storage_analyzer/core/services/file_scanner_service.dart';
+import 'package:smart_storage_analyzer/core/services/isolate_helper.dart';
 import 'package:smart_storage_analyzer/core/services/native_storage_service.dart';
-import 'package:smart_storage_analyzer/core/services/permission_service.dart';
+import 'package:smart_storage_analyzer/core/services/permission_manager.dart';
 import 'package:smart_storage_analyzer/core/theme/app_color_schemes.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
 import 'package:smart_storage_analyzer/data/models/category_model.dart';
 import 'package:smart_storage_analyzer/data/models/storage_info_model.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_info.dart';
+import 'package:smart_storage_analyzer/domain/entities/storage_analysis_results.dart';
 import 'package:smart_storage_analyzer/domain/repositories/storage_repository.dart';
 
 class StorageRepositoryImpl implements StorageRepository {
-  static const platform = MethodChannel('com.smartstorage/native');
+  static const platform = MethodChannel(ChannelConstants.mainChannel);
 
   // Native storage service instance
   final NativeStorageService _nativeStorageService = NativeStorageService();
-  final _permissionService = PermissionService();
+  final _permissionManager = PermissionManager();
 
   @override
   Future<void> analyzeStorage({BuildContext? context}) async {
     try {
       Logger.info("Starting real storage analysis...");
 
-      // Request storage permission if needed
+      // Check and request storage permission if needed
       if (Platform.isAndroid) {
-        final hasPermission = await _permissionService.hasStoragePermission();
+        final hasPermission = await _permissionManager.hasPermission();
         if (!hasPermission && context != null && context.mounted) {
-          await _permissionService.requestStoragePermission(context: context);
+          final granted = await _permissionManager.requestPermission(
+            context: context,
+          );
+          if (!granted) {
+            throw StoragePermissionException(
+              message: 'Storage permission is required to analyze storage',
+            );
+          }
+        } else if (!hasPermission) {
+          throw StoragePermissionException(
+            message: 'Storage permission is required to analyze storage',
+          );
         }
       }
 
@@ -50,15 +65,28 @@ class StorageRepositoryImpl implements StorageRepository {
       Logger.info('Getting file categories...');
 
       if (Platform.isAndroid) {
-        // Check storage permission
-        final hasPermission = await _permissionService.hasStoragePermission();
+        // Check storage permission with cached state
+        final hasPermission = await _permissionManager.hasPermission();
         if (!hasPermission) {
+          Logger.warning('No storage permission - returning empty categories');
           // Return empty categories if no permission
           return _getEmptyCategories();
         }
 
-        // Scan actual files on device
-        return await _scanDeviceFiles();
+        // Use cached categories if available and recent
+        final cachedCategories = await _getCachedCategories();
+        if (cachedCategories != null) {
+          Logger.info('Using cached categories');
+          return cachedCategories;
+        }
+
+        // Scan actual files on device with optimized approach
+        final categories = await _scanDeviceFilesOptimized();
+        
+        // Cache the results
+        await _cacheCategories(categories);
+        
+        return categories;
       }
 
       // For non-Android platforms, return empty categories
@@ -68,6 +96,26 @@ class StorageRepositoryImpl implements StorageRepository {
       // Return empty categories on error
       return _getEmptyCategories();
     }
+  }
+
+  // Cache management for categories
+  List<Category>? _categoriesCache;
+  DateTime? _cacheTimestamp;
+  static const _cacheValidityDuration = Duration(minutes: 5);
+
+  Future<List<Category>?> _getCachedCategories() async {
+    if (_categoriesCache != null && _cacheTimestamp != null) {
+      final isValid = DateTime.now().difference(_cacheTimestamp!) < _cacheValidityDuration;
+      if (isValid) {
+        return _categoriesCache;
+      }
+    }
+    return null;
+  }
+
+  Future<void> _cacheCategories(List<Category> categories) async {
+    _categoriesCache = categories;
+    _cacheTimestamp = DateTime.now();
   }
 
   @override
@@ -209,13 +257,81 @@ class StorageRepositoryImpl implements StorageRepository {
     return null;
   }
 
-  /// Scans device files to get real category sizes
-  Future<List<Category>> _scanDeviceFiles() async {
-    final Map<String, CategoryData> categoryMap = {
+  /// Optimized device file scanning with native integration
+  Future<List<Category>> _scanDeviceFilesOptimized() async {
+    try {
+      Logger.info('Starting optimized category scan...');
+      
+      // Get category data directly from native for better performance
+      final Map<dynamic, dynamic> categoryData = await platform.invokeMethod(
+        'getCategorySizes',
+      );
+      
+      // Process the native data in isolate
+      return await IsolateHelper.runWithProgress<List<Category>, Map<dynamic, dynamic>>(
+        computation: _processNativeCategoryData,
+        parameter: categoryData,
+        onProgress: (progress, message) {
+          Logger.debug('Category processing: ${(progress * 100).toInt()}% - $message');
+        },
+      );
+    } catch (e) {
+      Logger.error('Native category scan failed, using fallback', e);
+      // Fallback to empty categories on error
+      return _getEmptyCategories();
+    }
+  }
+
+  /// Process native category data in isolate
+  static Future<List<Category>> _processNativeCategoryData(
+    Map<dynamic, dynamic> nativeData,
+  ) async {
+    reportProgress(0.1, 'Processing category data...');
+    
+    final categoryMap = _createCategoryMap();
+    final categories = <Category>[];
+    
+    int processed = 0;
+    final total = categoryMap.length;
+    
+    for (final entry in categoryMap.entries) {
+      final categoryId = entry.key;
+      final categoryData = entry.value;
+      
+      // Get size and count from native data
+      final sizeInBytes = (nativeData['${categoryId}_size'] as num?)?.toDouble() ?? 0.0;
+      final fileCount = (nativeData['${categoryId}_count'] as int?) ?? 0;
+      
+      categories.add(CategoryModel(
+        id: categoryId,
+        name: categoryData.name,
+        icon: categoryData.icon,
+        color: categoryData.color,
+        sizeInBytes: sizeInBytes,
+        filesCount: fileCount,
+      ));
+      
+      processed++;
+      reportProgress(
+        0.1 + (processed / total) * 0.9,
+        'Processing ${categoryData.name} category...',
+      );
+    }
+
+    // Sort by size (largest first)
+    categories.sort((a, b) => b.sizeInBytes.compareTo(a.sizeInBytes));
+    
+    reportProgress(1.0, 'Category processing complete');
+    return categories;
+  }
+
+  /// Create category map - moved to static method for isolate access
+  static Map<String, CategoryData> _createCategoryMap() {
+    return {
       'images': CategoryData(
         name: 'Images',
         icon: AppIcons.images,
-        color: AppColorSchemes.imageCategoryLight, // Will be adjusted in presentation layer
+        color: AppColorSchemes.imageCategoryLight,
         extensions: FileExtensions.imageExtensions,
       ),
       'videos': CategoryData(
@@ -249,60 +365,7 @@ class StorageRepositoryImpl implements StorageRepository {
         extensions: [],
       ),
     };
-
-    try {
-      // Use the native Android implementation to get files by category
-      // This ensures consistency with FileManager and other views
-      for (final categoryId in categoryMap.keys) {
-        try {
-          final List<dynamic> result = await platform.invokeMethod(
-            'getFilesByCategory',
-            {'category': categoryId},
-          );
-          
-          // Calculate total size and file count
-          int totalSize = 0;
-          int fileCount = result.length;
-          
-          for (final fileData in result) {
-            final Map<String, dynamic> data = Map<String, dynamic>.from(fileData);
-            final size = (data['size'] as num?)?.toInt() ?? 0;
-            totalSize += size;
-          }
-          
-          categoryMap[categoryId]!.totalSize = totalSize;
-          categoryMap[categoryId]!.fileCount = fileCount;
-          
-          Logger.info('Category $categoryId: $fileCount files, total size: $totalSize bytes');
-        } catch (e) {
-          Logger.warning('Failed to get files for category $categoryId: $e');
-          // Keep the category with 0 size/count
-        }
-      }
-
-      // Convert to Category list
-      final categories = categoryMap.entries.map((entry) {
-        final data = entry.value;
-        return CategoryModel(
-          id: entry.key,
-          name: data.name,
-          icon: data.icon,
-          color: data.color,
-          sizeInBytes: data.totalSize.toDouble(),
-          filesCount: data.fileCount,
-        );
-      }).toList();
-
-      // Sort by size (largest first)
-      categories.sort((a, b) => b.sizeInBytes.compareTo(a.sizeInBytes));
-
-      return categories;
-    } catch (e) {
-      Logger.error('Failed to scan device files', e);
-      return _getEmptyCategories();
-    }
   }
-
 
   /// Returns empty categories with zero sizes
   List<Category> _getEmptyCategories() {
@@ -359,6 +422,88 @@ class StorageRepositoryImpl implements StorageRepository {
   }
 
   // Removed mock categories method - app now only uses real data
+
+  @override
+  Future<StorageAnalysisResults> performDeepAnalysis() async {
+    try {
+      Logger.info("Starting deep storage analysis in repository...");
+
+      // Check permission first
+      final hasPermission = await _permissionManager.hasPermission();
+      if (!hasPermission) {
+        throw StoragePermissionException(
+          message: 'Storage permission is required for deep analysis',
+        );
+      }
+
+      final startTime = DateTime.now();
+
+      if (!Platform.isAndroid) {
+        Logger.warning('Storage analysis is only supported on Android');
+        return _createEmptyAnalysisResults(startTime);
+      }
+
+      // Create cancellation token for better control
+      final cancellationToken = CancellationToken();
+
+      // Use the optimized file scanner service for deep analysis
+      final analysisData = await FileScannerService.performDeepAnalysis(
+        onProgress: (progress, message) {
+          Logger.debug('Analysis progress: ${(progress * 100).toInt()}% - $message');
+        },
+        cancellationToken: cancellationToken,
+      );
+
+      Logger.info(
+        'Got analysis results: ${analysisData.totalFilesScanned} files scanned',
+      );
+
+      // Get current categories with real data (use cached if available)
+      final detailedCategories = await getCategories();
+
+      Logger.success("Storage analysis completed");
+
+      // Clear category cache after analysis to ensure fresh data
+      _categoriesCache = null;
+      _cacheTimestamp = null;
+
+      return StorageAnalysisResults(
+        totalFilesScanned: analysisData.totalFilesScanned,
+        totalSpaceUsed: analysisData.totalSpaceUsed,
+        totalSpaceAvailable: analysisData.totalSpaceAvailable,
+        cacheFiles: analysisData.cacheFiles,
+        temporaryFiles: analysisData.temporaryFiles,
+        largeOldFiles: analysisData.largeOldFiles,
+        duplicateFiles: analysisData.duplicateFiles,
+        thumbnails: analysisData.thumbnails,
+        detailedCategories: detailedCategories,
+        totalCleanupPotential: analysisData.totalCleanupPotential,
+        analysisDate: DateTime.now(),
+        analysisDuration: DateTime.now().difference(startTime),
+      );
+    } catch (e) {
+      Logger.error('Failed to perform storage analysis', e);
+      rethrow;
+    }
+  }
+
+
+  StorageAnalysisResults _createEmptyAnalysisResults(DateTime startTime) {
+    return StorageAnalysisResults(
+      totalFilesScanned: 0,
+      totalSpaceUsed: 0,
+      totalSpaceAvailable: 0,
+      cacheFiles: [],
+      temporaryFiles: [],
+      largeOldFiles: [],
+      duplicateFiles: [],
+      thumbnails: [],
+      detailedCategories: _getEmptyCategories(),
+      totalCleanupPotential: 0,
+      analysisDate: DateTime.now(),
+      analysisDuration: DateTime.now().difference(startTime),
+    );
+  }
 }
 
 /// Helper class to store category data during scanning

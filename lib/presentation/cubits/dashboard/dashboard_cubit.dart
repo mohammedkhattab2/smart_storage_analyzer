@@ -7,16 +7,17 @@ import 'package:smart_storage_analyzer/presentation/viewmodels/dashboard_viewmod
 /// Follows MVVM pattern - delegates business logic to ViewModel
 class DashboardCubit extends Cubit<DashboardState> {
   final DashboardViewModel _viewModel;
+  bool _isRefreshing = false;
 
   DashboardCubit({required DashboardViewModel viewModel})
-      : _viewModel = viewModel,
-        super(DashboardInitial());
+    : _viewModel = viewModel,
+      super(DashboardInitial());
 
   Future<void> loadDashboardData({BuildContext? context}) async {
     emit(DashboardLoading());
     try {
       final data = await _viewModel.loadDashboardData(context: context);
-      
+
       emit(
         DashboardLoaded(
           storageInfo: data.storageInfo,
@@ -49,7 +50,7 @@ class DashboardCubit extends Cubit<DashboardState> {
     // Don't show loading state for refresh to avoid UI flicker
     try {
       final data = await _viewModel.loadDashboardData(context: context);
-      
+
       emit(
         DashboardLoaded(
           storageInfo: data.storageInfo,
@@ -63,17 +64,25 @@ class DashboardCubit extends Cubit<DashboardState> {
 
   /// Start background refresh to keep data current
   void _startBackgroundRefresh() {
+    if (_isRefreshing || isClosed) return;
+    
+    _isRefreshing = true;
     // Refresh data every 30 seconds if the dashboard is loaded
     Future.delayed(const Duration(seconds: 30), () {
-      if (state is DashboardLoaded && !isClosed) {
-        refresh().then((_) => _startBackgroundRefresh());
+      if (state is DashboardLoaded && !isClosed && _isRefreshing) {
+        refresh().then((_) {
+          if (!isClosed) {
+            _startBackgroundRefresh();
+          }
+        });
       }
     });
   }
 
   @override
   Future<void> close() {
-    // Cleanup if needed
+    _isRefreshing = false; // Stop background refresh
+    _viewModel.dispose(); // Dispose the view model
     return super.close();
   }
 }

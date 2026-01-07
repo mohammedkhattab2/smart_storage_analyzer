@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_icons.dart';
@@ -74,7 +74,9 @@ class _BottomNavBarState extends State<BottomNavBar> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    colorScheme.surfaceContainer.withValues(alpha: isDark ? .7 : .85),
+                    colorScheme.surfaceContainer.withValues(
+                      alpha: isDark ? .7 : .85,
+                    ),
                     colorScheme.surface.withValues(alpha: isDark ? .6 : .75),
                   ],
                   begin: Alignment.topCenter,
@@ -82,7 +84,9 @@ class _BottomNavBarState extends State<BottomNavBar> {
                 ),
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(
-                  color: colorScheme.outline.withValues(alpha: isDark ? .15 : .1),
+                  color: colorScheme.outline.withValues(
+                    alpha: isDark ? .15 : .1,
+                  ),
                   width: 1,
                 ),
               ),
@@ -98,8 +102,12 @@ class _BottomNavBarState extends State<BottomNavBar> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            colorScheme.primaryContainer.withValues(alpha: isDark ? .5 : .7),
-                            colorScheme.secondaryContainer.withValues(alpha: isDark ? .4 : .6),
+                            colorScheme.primaryContainer.withValues(
+                              alpha: isDark ? .5 : .7,
+                            ),
+                            colorScheme.secondaryContainer.withValues(
+                              alpha: isDark ? .4 : .6,
+                            ),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,

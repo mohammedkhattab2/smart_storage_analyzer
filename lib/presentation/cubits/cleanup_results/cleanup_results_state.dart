@@ -34,7 +34,7 @@ class CleanupResultsLoaded extends CleanupResultsState {
       selectedFiles: selectedFiles ?? this.selectedFiles,
     );
   }
-  
+
   // Calculate total selected size
   int get totalSelectedSize {
     int total = 0;
@@ -48,7 +48,7 @@ class CleanupResultsLoaded extends CleanupResultsState {
     }
     return total;
   }
-  
+
   // Get selected files count
   int get selectedFilesCount {
     int count = 0;
@@ -63,10 +63,7 @@ class CleanupInProgress extends CleanupResultsState {
   final String message;
   final double progress;
 
-  const CleanupInProgress({
-    required this.message,
-    required this.progress,
-  });
+  const CleanupInProgress({required this.message, required this.progress});
 
   @override
   List<Object> get props => [message, progress];

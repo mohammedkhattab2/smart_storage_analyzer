@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_analysis_results.dart';
+import 'package:smart_storage_analyzer/domain/entities/file_item.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/cleanup_results/cleanup_results_cubit.dart';
 
 class CleanupResultsView extends StatelessWidget {
@@ -32,13 +33,20 @@ class CleanupResultsView extends StatelessWidget {
             children: [
               // Custom App Bar
               _buildMagicalAppBar(context),
-              
+
               // Main Content
               Expanded(
                 child: BlocConsumer<CleanupResultsCubit, CleanupResultsState>(
                   listener: (context, state) {
                     if (state is CleanupCompleted) {
-                      _showMagicalCleanupCompletedDialog(context, state);
+                      // Show dialog and navigate back after it's dismissed
+                      _showMagicalCleanupCompletedDialog(context, state).then((
+                        _,
+                      ) {
+                        if (context.mounted) {
+                          context.pop();
+                        }
+                      });
                     } else if (state is CleanupError) {
                       _showMagicalErrorSnackBar(context, state.message);
                     }
@@ -48,10 +56,11 @@ class CleanupResultsView extends StatelessWidget {
                       return _buildMagicalLoadedView(context, state);
                     } else if (state is CleanupInProgress) {
                       return _buildMagicalProgressView(context, state);
+                    } else if (state is CleanupCompleted) {
+                      // Don't show loader for completed state
+                      return const SizedBox.shrink();
                     }
-                    return Center(
-                      child: _buildMagicalLoader(context),
-                    );
+                    return Center(child: _buildMagicalLoader(context));
                   },
                 ),
               ),
@@ -65,7 +74,7 @@ class CleanupResultsView extends StatelessWidget {
   Widget _buildMagicalAppBar(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Container(
       padding: const EdgeInsets.all(AppSize.paddingMedium),
       decoration: BoxDecoration(
@@ -106,10 +115,7 @@ class CleanupResultsView extends StatelessWidget {
           Expanded(
             child: ShaderMask(
               shaderCallback: (bounds) => LinearGradient(
-                colors: [
-                  colorScheme.primary,
-                  colorScheme.secondary,
-                ],
+                colors: [colorScheme.primary, colorScheme.secondary],
               ).createShader(bounds),
               child: Text(
                 'Cleanup Results',
@@ -125,13 +131,15 @@ class CleanupResultsView extends StatelessWidget {
     );
   }
 
-  Widget _buildMagicalLoadedView(BuildContext context, CleanupResultsLoaded state) {
-
+  Widget _buildMagicalLoadedView(
+    BuildContext context,
+    CleanupResultsLoaded state,
+  ) {
     return Stack(
       children: [
         // Background decoration
         _buildMagicalBackground(context),
-        
+
         Column(
           children: [
             // Summary Card
@@ -142,23 +150,35 @@ class CleanupResultsView extends StatelessWidget {
 
             const SizedBox(height: AppSize.paddingMedium),
 
-            // Categories List
+            // Categories List with performance optimization
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: AppSize.paddingMedium),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSize.paddingMedium,
+                ),
+                // Performance optimization: add caching and physics
+                addAutomaticKeepAlives: false,
+                addRepaintBoundaries: true,
+                physics: const BouncingScrollPhysics(),
                 itemCount: state.results.cleanupCategories.length,
                 itemBuilder: (context, index) {
                   final category = state.results.cleanupCategories[index];
-                  final isSelected = state.selectedCategories.contains(category.name);
-                  final selectedFiles = state.selectedFiles[category.name] ?? {};
+                  final isSelected = state.selectedCategories.contains(
+                    category.name,
+                  );
+                  final selectedFiles =
+                      state.selectedFiles[category.name] ?? {};
 
-                  return _buildMagicalCategoryCard(
-                    context,
-                    category,
-                    isSelected,
-                    selectedFiles,
-                    state,
-                    index,
+                  // Wrap in RepaintBoundary for better performance
+                  return RepaintBoundary(
+                    child: _buildMagicalCategoryCard(
+                      context,
+                      category,
+                      isSelected,
+                      selectedFiles,
+                      state,
+                      index,
+                    ),
                   );
                 },
               ),
@@ -174,7 +194,7 @@ class CleanupResultsView extends StatelessWidget {
 
   Widget _buildMagicalBackground(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Positioned.fill(
       child: CustomPaint(
         painter: _CleanupBackgroundPainter(
@@ -185,10 +205,13 @@ class CleanupResultsView extends StatelessWidget {
     );
   }
 
-  Widget _buildMagicalSummaryCard(BuildContext context, CleanupResultsLoaded state) {
+  Widget _buildMagicalSummaryCard(
+    BuildContext context,
+    CleanupResultsLoaded state,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Container(
       margin: const EdgeInsets.all(AppSize.paddingMedium),
       padding: const EdgeInsets.all(AppSize.paddingLarge),
@@ -260,10 +283,7 @@ class CleanupResultsView extends StatelessWidget {
           const SizedBox(height: AppSize.paddingSmall),
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
-              colors: [
-                colorScheme.primary,
-                colorScheme.secondary,
-              ],
+              colors: [colorScheme.primary, colorScheme.secondary],
             ).createShader(bounds),
             child: Text(
               SizeFormatter.formatBytes(state.results.totalCleanupPotential),
@@ -309,7 +329,7 @@ class CleanupResultsView extends StatelessWidget {
 
   Widget _buildMagicalActionButtons(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSize.paddingMedium),
       child: Row(
@@ -379,7 +399,8 @@ class CleanupResultsView extends StatelessWidget {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => context.read<CleanupResultsCubit>().deselectAll(),
+                  onTap: () =>
+                      context.read<CleanupResultsCubit>().deselectAll(),
                   borderRadius: BorderRadius.circular(11),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -424,7 +445,7 @@ class CleanupResultsView extends StatelessWidget {
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     // Different gradient colors for each category
     final gradientColors = [
       [colorScheme.primary, colorScheme.secondary],
@@ -433,7 +454,7 @@ class CleanupResultsView extends StatelessWidget {
       [colorScheme.error, colorScheme.secondary],
       [colorScheme.primary, colorScheme.tertiary],
     ];
-    
+
     final colors = gradientColors[index % gradientColors.length];
 
     return Container(
@@ -449,7 +470,7 @@ class CleanupResultsView extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isSelected 
+          color: isSelected
               ? colors[0].withValues(alpha: 0.3)
               : colorScheme.outlineVariant.withValues(alpha: 0.3),
           width: isSelected ? 1.5 : 1,
@@ -569,7 +590,9 @@ class CleanupResultsView extends StatelessWidget {
                 child: Checkbox(
                   value: isSelected,
                   onChanged: (_) {
-                    context.read<CleanupResultsCubit>().toggleCategorySelection(category.name);
+                    context.read<CleanupResultsCubit>().toggleCategorySelection(
+                      category.name,
+                    );
                   },
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
@@ -587,76 +610,62 @@ class CleanupResultsView extends StatelessWidget {
               ),
             ),
           ),
-          children: category.files.map((file) {
-            final isFileSelected = selectedFiles.contains(file.id);
-            return Container(
-              decoration: BoxDecoration(
-                color: colorScheme.surface.withValues(alpha: 0.5),
-                border: Border(
-                  bottom: BorderSide(
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-                    width: 0.5,
-                  ),
+          children: [
+            // Show only first 10 files initially for better performance
+            ...category.files.take(10).map((file) {
+              final isFileSelected = selectedFiles.contains(file.id);
+              return _buildFileItem(
+                context,
+                file,
+                isFileSelected,
+                category.name,
+                colorScheme,
+                textTheme,
+              );
+            }),
+            
+            // Show "Load more" button if there are more files
+            if (category.files.length > 10) ...[
+              Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withValues(alpha: 0.5),
                 ),
-              ),
-              child: ListTile(
-                dense: true,
-                contentPadding: const EdgeInsets.only(
-                  left: AppSize.paddingLarge * 2.5,
-                  right: AppSize.paddingMedium,
-                ),
-                leading: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    _getFileIcon(file.extension),
-                    size: 18,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                title: Text(
-                  file.name,
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  SizeFormatter.formatBytes(file.sizeInBytes),
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                trailing: Checkbox(
-                  value: isFileSelected,
-                  onChanged: (_) {
-                    context.read<CleanupResultsCubit>().toggleFileSelection(
-                      category.name,
-                      file.id,
+                child: TextButton.icon(
+                  onPressed: () {
+                    // Show all files dialog
+                    _showAllFilesDialog(
+                      context,
+                      category,
+                      selectedFiles,
                     );
                   },
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
+                  icon: Icon(
+                    Icons.expand_more,
+                    color: colorScheme.primary,
+                  ),
+                  label: Text(
+                    'View all ${category.files.length} files',
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
-            );
-          }).toList(),
+            ],
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildMagicalBottomBar(BuildContext context, CleanupResultsLoaded state) {
+  Widget _buildMagicalBottomBar(
+    BuildContext context,
+    CleanupResultsLoaded state,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Container(
       padding: const EdgeInsets.all(AppSize.paddingMedium),
       decoration: BoxDecoration(
@@ -724,10 +733,7 @@ class CleanupResultsView extends StatelessWidget {
                     const SizedBox(height: 2),
                     ShaderMask(
                       shaderCallback: (bounds) => LinearGradient(
-                        colors: [
-                          colorScheme.primary,
-                          colorScheme.secondary,
-                        ],
+                        colors: [colorScheme.primary, colorScheme.secondary],
                       ).createShader(bounds),
                       child: Text(
                         SizeFormatter.formatBytes(state.totalSelectedSize),
@@ -747,10 +753,7 @@ class CleanupResultsView extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: state.selectedFilesCount > 0
-                      ? [
-                          colorScheme.primary,
-                          colorScheme.secondary,
-                        ]
+                      ? [colorScheme.primary, colorScheme.secondary]
                       : [
                           colorScheme.onSurface.withValues(alpha: 0.12),
                           colorScheme.onSurface.withValues(alpha: 0.12),
@@ -809,7 +812,10 @@ class CleanupResultsView extends StatelessWidget {
     );
   }
 
-  Widget _buildMagicalProgressView(BuildContext context, CleanupInProgress state) {
+  Widget _buildMagicalProgressView(
+    BuildContext context,
+    CleanupInProgress state,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -847,8 +853,11 @@ class CleanupResultsView extends StatelessWidget {
                   child: CircularProgressIndicator(
                     value: state.progress,
                     strokeWidth: 8,
-                    backgroundColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                    backgroundColor: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      colorScheme.primary,
+                    ),
                   ),
                 ),
                 Container(
@@ -917,7 +926,7 @@ class CleanupResultsView extends StatelessWidget {
 
   Widget _buildMagicalLoader(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Container(
       width: 100,
       height: 100,
@@ -940,6 +949,172 @@ class CleanupResultsView extends StatelessWidget {
       child: CircularProgressIndicator(
         strokeWidth: 4,
         valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+      ),
+    );
+  }
+
+  Widget _buildFileItem(
+    BuildContext context,
+    FileItem file,
+    bool isFileSelected,
+    String categoryName,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.5),
+        border: Border(
+          bottom: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: ListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.only(
+          left: AppSize.paddingLarge * 2.5,
+          right: AppSize.paddingMedium,
+        ),
+        leading: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.5,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            _getFileIcon(file.extension),
+            size: 18,
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        title: Text(
+          file.name,
+          style: textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          SizeFormatter.formatBytes(file.sizeInBytes),
+          style: textTheme.bodySmall?.copyWith(
+            color: colorScheme.primary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        trailing: Checkbox(
+          value: isFileSelected,
+          onChanged: (_) {
+            context.read<CleanupResultsCubit>().toggleFileSelection(
+              categoryName,
+              file.id,
+            );
+          },
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAllFilesDialog(
+    BuildContext context,
+    CleanupCategory category,
+    Set<String> selectedFiles,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+            maxWidth: MediaQuery.of(context).size.width * 0.9,
+          ),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(AppSize.paddingMedium),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getCategoryIcon(category.icon),
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: AppSize.paddingSmall),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            category.name,
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            '${category.files.length} files',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // File list
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSize.paddingSmall,
+                  ),
+                  itemCount: category.files.length,
+                  itemBuilder: (context, index) {
+                    final file = category.files[index];
+                    final isFileSelected = selectedFiles.contains(file.id);
+                    
+                    return _buildFileItem(
+                      context,
+                      file,
+                      isFileSelected,
+                      category.name,
+                      colorScheme,
+                      textTheme,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1034,7 +1209,9 @@ class CleanupResultsView extends StatelessWidget {
                       onPressed: () => Navigator.of(dialogContext).pop(),
                       style: TextButton.styleFrom(
                         foregroundColor: colorScheme.onSurfaceVariant,
-                        padding: const EdgeInsets.symmetric(vertical: AppSize.paddingMedium),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSize.paddingMedium,
+                        ),
                       ),
                       child: const Text('Cancel'),
                     ),
@@ -1063,11 +1240,15 @@ class CleanupResultsView extends StatelessWidget {
                         child: InkWell(
                           onTap: () {
                             Navigator.of(dialogContext).pop();
-                            context.read<CleanupResultsCubit>().performCleanup(context: context);
+                            context.read<CleanupResultsCubit>().performCleanup(
+                              context: context,
+                            );
                           },
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: AppSize.paddingMedium),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSize.paddingMedium,
+                            ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -1100,11 +1281,14 @@ class CleanupResultsView extends StatelessWidget {
     );
   }
 
-  void _showMagicalCleanupCompletedDialog(BuildContext context, CleanupCompleted state) {
+  Future<void> _showMagicalCleanupCompletedDialog(
+    BuildContext context,
+    CleanupCompleted state,
+  ) async {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    showDialog(
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => Dialog(
@@ -1189,10 +1373,7 @@ class CleanupResultsView extends StatelessWidget {
               const SizedBox(height: AppSize.paddingLarge),
               ShaderMask(
                 shaderCallback: (bounds) => LinearGradient(
-                  colors: [
-                    colorScheme.primary,
-                    colorScheme.secondary,
-                  ],
+                  colors: [colorScheme.primary, colorScheme.secondary],
                 ).createShader(bounds),
                 child: Text(
                   'Cleanup Completed!',
@@ -1234,10 +1415,7 @@ class CleanupResultsView extends StatelessWidget {
                     const SizedBox(height: AppSize.paddingSmall),
                     ShaderMask(
                       shaderCallback: (bounds) => LinearGradient(
-                        colors: [
-                          colorScheme.primary,
-                          colorScheme.secondary,
-                        ],
+                        colors: [colorScheme.primary, colorScheme.secondary],
                       ).createShader(bounds),
                       child: Text(
                         '${SizeFormatter.formatBytes(state.spaceFreed)} freed',
@@ -1255,10 +1433,7 @@ class CleanupResultsView extends StatelessWidget {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      colorScheme.primary,
-                      colorScheme.secondary,
-                    ],
+                    colors: [colorScheme.primary, colorScheme.secondary],
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
@@ -1274,12 +1449,12 @@ class CleanupResultsView extends StatelessWidget {
                   child: InkWell(
                     onTap: () {
                       Navigator.of(dialogContext).pop();
-                      // Use pop() to go back properly instead of go()
-                      context.pop();
                     },
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: AppSize.paddingMedium + 4),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSize.paddingMedium + 4,
+                      ),
                       child: const Text(
                         'Done',
                         style: TextStyle(
@@ -1302,7 +1477,7 @@ class CleanupResultsView extends StatelessWidget {
 
   void _showMagicalErrorSnackBar(BuildContext context, String message) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Container(
@@ -1336,9 +1511,7 @@ class CleanupResultsView extends StatelessWidget {
         ),
         backgroundColor: colorScheme.error,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(AppSize.paddingMedium),
         elevation: 6,
       ),
@@ -1383,36 +1556,28 @@ class CleanupResultsView extends StatelessWidget {
 class _CleanupBackgroundPainter extends CustomPainter {
   final Color primaryColor;
   final Color secondaryColor;
-  
+
   _CleanupBackgroundPainter({
     required this.primaryColor,
     required this.secondaryColor,
   });
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
-    
+
     // Draw floating orbs
     paint.color = primaryColor;
-    canvas.drawCircle(
-      Offset(size.width * 0.8, size.height * 0.1),
-      80,
-      paint,
-    );
-    
+    canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.1), 80, paint);
+
     paint.color = secondaryColor;
-    canvas.drawCircle(
-      Offset(size.width * 0.2, size.height * 0.4),
-      120,
-      paint,
-    );
-    
+    canvas.drawCircle(Offset(size.width * 0.2, size.height * 0.4), 120, paint);
+
     // Draw subtle lines
     paint.color = primaryColor.withValues(alpha: 0.5);
     paint.strokeWidth = 0.5;
     paint.style = PaintingStyle.stroke;
-    
+
     final path = Path();
     path.moveTo(0, size.height * 0.3);
     path.quadraticBezierTo(
@@ -1421,10 +1586,10 @@ class _CleanupBackgroundPainter extends CustomPainter {
       size.width,
       size.height * 0.4,
     );
-    
+
     canvas.drawPath(path, paint);
   }
-  
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

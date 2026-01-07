@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
@@ -7,7 +7,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
   static const _sections = [
-    ('Last Updated', 'December 28, 2025'),
+    ('Last Updated', 'January 1, 2026'),
     (
       'Introduction',
       'Smart Storage Analyzer ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we handle your information when you use our mobile application.',
@@ -54,7 +54,6 @@ class PrivacyPolicyScreen extends StatelessWidget {
     ),
   ];
 
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -87,7 +86,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Container(
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .6,
+                  color: colorScheme.surfaceContainer.withValues(
+                    alpha: isDark ? .3 : .6,
                   ),
                   shape: BoxShape.circle,
                   border: Border.all(
@@ -126,9 +126,11 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [
-                      colorScheme.primaryContainer.withValues(alpha: isDark ? .3 : .5,
+                      colorScheme.primaryContainer.withValues(
+                        alpha: isDark ? .3 : .5,
                       ),
-                      colorScheme.secondaryContainer.withValues(alpha: isDark ? .2 : .4,
+                      colorScheme.secondaryContainer.withValues(
+                        alpha: isDark ? .2 : .4,
                       ),
                     ],
                     begin: Alignment.topLeft,
@@ -136,8 +138,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: colorScheme.primary.withValues(alpha: .15,
-                      ),
+                      color: colorScheme.primary.withValues(alpha: .15),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -167,7 +168,12 @@ class PrivacyPolicyScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(BuildContext context, String title, String content, int index) {
+  Widget _buildSection(
+    BuildContext context,
+    String title,
+    String content,
+    int index,
+  ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -181,7 +187,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(AppSize.paddingLarge),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .8,
+          color: colorScheme.surfaceContainer.withValues(
+            alpha: isDark ? .3 : .8,
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(

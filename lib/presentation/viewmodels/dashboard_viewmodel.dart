@@ -1,29 +1,27 @@
-
-import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
-import 'package:smart_storage_analyzer/core/services/permission_service.dart';
+import 'package:smart_storage_analyzer/core/services/permission_manager.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_info.dart';
-import 'package:smart_storage_analyzer/domain/usecases/analyze_storage_usecase.dart';
+import 'package:smart_storage_analyzer/domain/usecases/analyze_storage_use_case.dart';
 import 'package:smart_storage_analyzer/domain/usecases/get_categories_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/get_storage_info_usecase.dart';
 
 /// ViewModel for Dashboard screen following MVVM pattern
 /// Handles all business logic and data operations
 class DashboardViewModel {
-  final GetStorageInfoUsecase _getStorageInfoUsecase;
-  final GetCategoriesUsecase _getCategoriesUsecase;
-  final AnalyzeStorageUsecase _analyzeStorageUsecase;
-  final _permissionService = PermissionService();
+  final GetStorageInfoUseCase _getStorageInfoUsecase;
+  final GetCategoriesUseCase _getCategoriesUsecase;
+  final AnalyzeStorageUseCase _analyzeStorageUsecase;
+  final _permissionManager = PermissionManager();
 
   DashboardViewModel({
-    required GetStorageInfoUsecase getStorageInfoUsecase,
-    required GetCategoriesUsecase getCategoriesUsecase,
-    required AnalyzeStorageUsecase analyzeStorageUsecase,
-  })  : _getStorageInfoUsecase = getStorageInfoUsecase,
-        _getCategoriesUsecase = getCategoriesUsecase,
-        _analyzeStorageUsecase = analyzeStorageUsecase;
+    required GetStorageInfoUseCase getStorageInfoUsecase,
+    required GetCategoriesUseCase getCategoriesUsecase,
+    required AnalyzeStorageUseCase analyzeStorageUsecase,
+  }) : _getStorageInfoUsecase = getStorageInfoUsecase,
+       _getCategoriesUsecase = getCategoriesUsecase,
+       _analyzeStorageUsecase = analyzeStorageUsecase;
 
   /// Load dashboard data (storage info and categories)
   Future<DashboardData> loadDashboardData({BuildContext? context}) async {
@@ -49,10 +47,7 @@ class DashboardViewModel {
 
       Logger.success("Dashboard data loaded successfully");
 
-      return DashboardData(
-        storageInfo: storageInfo,
-        categories: categories,
-      );
+      return DashboardData(storageInfo: storageInfo, categories: categories);
     } catch (e) {
       Logger.error('Failed to load dashboard data', e);
       rethrow;
@@ -63,7 +58,9 @@ class DashboardViewModel {
   Future<void> analyzeStorage() async {
     try {
       Logger.info("Starting storage analysis...");
-      await _analyzeStorageUsecase.excute();
+      // The new use case returns StorageAnalysisResults, not void
+      // For now, just execute it - the results will be used in storage analysis screen
+      await _analyzeStorageUsecase.execute();
       Logger.success("Storage analysis completed");
     } catch (e) {
       Logger.error('Failed to analyze storage', e);
@@ -74,28 +71,44 @@ class DashboardViewModel {
   /// Check and request storage permission
   Future<bool> checkStoragePermission({BuildContext? context}) async {
     try {
-      // Skip permission check in debug mode
-      if (kDebugMode) {
-        Logger.info('Debug mode: Skipping permission check');
+      // First check if permission is already granted
+      final hasPermission = await _permissionManager.hasPermission();
+      if (hasPermission) {
         return true;
       }
 
-      // Use centralized permission service
-      return await _permissionService.requestStoragePermission(context: context);
+      // Check if context is still mounted before using it
+      if (context != null && context.mounted) {
+        // Request permission if not granted
+        return await _permissionManager.requestPermission(
+          context: context,
+        );
+      }
+      
+      // If no valid context, return false
+      return false;
     } catch (e) {
       Logger.warning('Permission check failed: $e');
-      return true;
+      return false;
     }
   }
 
   /// Request storage permission
   Future<bool> requestStoragePermission({BuildContext? context}) async {
     try {
-      return await _permissionService.requestStoragePermission(context: context);
+      return await _permissionManager.requestPermission(
+        context: context,
+      );
     } catch (e) {
       Logger.error('Failed to request permission', e);
       return false;
     }
+  }
+  
+  /// Dispose resources (if any future resources need cleanup)
+  void dispose() {
+    // Currently no resources to dispose, but method added for future use
+    // and consistency with other ViewModels
   }
 }
 
@@ -104,10 +117,7 @@ class DashboardData {
   final StorageInfo storageInfo;
   final List<Category> categories;
 
-  DashboardData({
-    required this.storageInfo,
-    required this.categories,
-  });
+  DashboardData({required this.storageInfo, required this.categories});
 }
 
 /// Exception for permission errors

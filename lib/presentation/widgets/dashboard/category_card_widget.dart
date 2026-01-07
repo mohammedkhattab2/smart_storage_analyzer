@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
@@ -62,7 +62,7 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
     final textTheme = Theme.of(context).textTheme;
     final isLargeCategory = widget.category.sizeInBytes > 1000000000; // 1GB
     final categoryColor = _getCategoryColor(context, widget.category);
-    
+
     final scale = _isPressed ? 0.88 : (_isHovered ? 1.03 : 1.0);
     final translateY = _isHovered ? -3.0 : 0.0;
 
@@ -159,8 +159,7 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
                           ),
                         ),
                         SizedBox(
-                          height:
-                              AppSize.paddingSmall + (_isHovered ? 2 : 0),
+                          height: AppSize.paddingSmall + (_isHovered ? 2 : 0),
                         ),
                         // Category name with better typography
                         Text(
@@ -185,7 +184,9 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
                           ),
                           decoration: BoxDecoration(
                             color: isLargeCategory
-                                ? colorScheme.errorContainer.withValues(alpha: .8)
+                                ? colorScheme.errorContainer.withValues(
+                                    alpha: .8,
+                                  )
                                 : colorScheme.surfaceContainerHighest
                                       .withValues(alpha: .7),
                             borderRadius: BorderRadius.circular(100),
@@ -214,8 +215,9 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
                         Text(
                           '${widget.category.fileCount} files',
                           style: textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant
-                                .withValues(alpha: _isHovered ? 1.0 : .6),
+                            color: colorScheme.onSurfaceVariant.withValues(
+                              alpha: _isHovered ? 1.0 : .6,
+                            ),
                             fontWeight: FontWeight.w500,
                           ),
                         ),

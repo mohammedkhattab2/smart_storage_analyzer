@@ -49,5 +49,19 @@
 		<true/>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
-	</dict>
-</plist>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>This app needs access to your photos library to analyze image files and help you manage storage space.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>This app needs permission to save photos to your library.</string>
+		<key>NSAppleMusicUsageDescription</key>
+		<string>This app needs access to your music library to analyze audio files and help you manage storage space.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>This app needs camera access to take photos.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>This app needs microphone access to record videos with sound.</string>
+		<key>NSDocumentsFolderUsageDescription</key>
+		<string>This app needs access to your documents folder to analyze files and help you manage storage space.</string>
+		<key>NSDownloadsFolderUsageDescription</key>
+		<string>This app needs access to your downloads folder to analyze files and help you manage storage space.</string>
+		</dict>
+	</plist>

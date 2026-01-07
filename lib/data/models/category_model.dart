@@ -1,4 +1,3 @@
-
 import '../../domain/entities/category.dart';
 
 class CategoryModel extends Category {
@@ -9,7 +8,5 @@ class CategoryModel extends Category {
     required super.color,
     required super.sizeInBytes,
     required int filesCount,
-  }) : super(
-         fileCount: filesCount,
-       );
+  }) : super(fileCount: filesCount);
 }

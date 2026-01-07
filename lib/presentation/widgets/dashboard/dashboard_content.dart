@@ -6,7 +6,7 @@ import 'package:smart_storage_analyzer/presentation/screens/category_details/cat
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/analyze_button.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/category_grid_widget.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/details_section.dart';
-import 'package:smart_storage_analyzer/presentation/widgets/dashboard/storage_circle_widget.dart';
+import 'package:smart_storage_analyzer/presentation/widgets/charts/storage_pie_chart.dart';
 import 'package:smart_storage_analyzer/routes/app_routes.dart';
 
 class DashboardContent extends StatelessWidget {
@@ -26,7 +26,12 @@ class DashboardContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: AppSize.paddingSmall),
-          StorageCircleWidget(storageInfo: state.storageInfo),
+          StoragePieChart(
+            usedSpaceGb: state.storageInfo.usedSpace / (1024 * 1024 * 1024),
+            freeSpaceGb:
+                (state.storageInfo.totalSpace - state.storageInfo.usedSpace) /
+                (1024 * 1024 * 1024),
+          ),
           const SizedBox(height: AppSize.paddingXLarge),
           AnalyzeButton(
             onPressed: () {

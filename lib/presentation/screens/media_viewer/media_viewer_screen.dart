@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
@@ -349,8 +349,12 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
                                         decoration: BoxDecoration(
                                           color: isActive
                                               ? Colors.white
-                                              : Colors.white.withValues(alpha: .3),
-                                          borderRadius: BorderRadius.circular(4),
+                                              : Colors.white.withValues(
+                                                  alpha: .3,
+                                                ),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -468,13 +472,6 @@ class _ImageViewer extends StatelessWidget {
                 ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
-              Text(
-                '(Preview placeholder)',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.white54),
-              ),
             ],
           ),
         ),
@@ -525,13 +522,6 @@ class _VideoPlayerState extends State<_VideoPlayer> {
                       context,
                     ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
                     textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '(Video player placeholder)',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.white54),
                   ),
                 ],
               ),

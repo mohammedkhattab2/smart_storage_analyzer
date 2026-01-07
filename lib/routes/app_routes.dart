@@ -11,7 +11,6 @@ class AppRoutes {
   static const String settings = '/settings';
 
   // === Sub Routes ===
-  static const String fileDetails = '/files/details';
   static const String categoryDetails = '/dashboard/category';
   static const String storageAnalysis = '/storage-analysis';
   static const String cleanupResults = '/cleanup-results';

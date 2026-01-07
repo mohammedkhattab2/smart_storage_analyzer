@@ -19,10 +19,7 @@ class StorageAnalysisScreen extends StatelessWidget {
             Future.delayed(const Duration(milliseconds: 300), () {
               if (context.mounted) {
                 // Navigate to cleanup results with a fade transition
-                context.push(
-                  '/cleanup-results',
-                  extra: state.results,
-                );
+                context.push('/cleanup-results', extra: state.results);
               }
             });
           } else if (state is StorageAnalysisError) {

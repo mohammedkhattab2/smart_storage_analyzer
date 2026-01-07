@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/utils/responsive.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
@@ -41,9 +41,7 @@ class CategoryGridWidget extends StatelessWidget {
             itemBuilder: (context, index) {
               return CategoryCardWidget(
                 category: categories[index],
-                onTap: () => onCategoryTap?.call(
-                  categories[index],
-                ),
+                onTap: () => onCategoryTap?.call(categories[index]),
                 index: index,
               );
             },

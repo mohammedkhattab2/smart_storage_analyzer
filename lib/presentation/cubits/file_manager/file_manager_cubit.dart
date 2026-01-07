@@ -6,7 +6,7 @@ import '../../../core/services/permission_service.dart';
 import '../../../core/utils/logger.dart';
 
 class FileManagerCubit extends Cubit<FileManagerState> {
-  final FileManagerViewmodel viewModel;
+  final FileManagerViewModel viewModel;
   final PermissionService _permissionService = PermissionService();
 
   FileManagerCubit({required this.viewModel}) : super(FileManagerInitial());

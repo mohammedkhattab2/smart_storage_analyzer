@@ -14,6 +14,11 @@ class DashboardViewModel {
   final GetCategoriesUseCase _getCategoriesUsecase;
   final AnalyzeStorageUseCase _analyzeStorageUsecase;
   final _permissionManager = PermissionManager();
+  
+  // Cache for dashboard data
+  DashboardData? _cachedData;
+  DateTime? _lastLoadTime;
+  static const Duration _cacheExpiry = Duration(minutes: 5);
 
   DashboardViewModel({
     required GetStorageInfoUseCase getStorageInfoUsecase,
@@ -24,8 +29,14 @@ class DashboardViewModel {
        _analyzeStorageUsecase = analyzeStorageUsecase;
 
   /// Load dashboard data (storage info and categories)
-  Future<DashboardData> loadDashboardData({BuildContext? context}) async {
+  Future<DashboardData> loadDashboardData({BuildContext? context, bool forceReload = false}) async {
     try {
+      // Check if we have valid cached data
+      if (!forceReload && _hasCachedData()) {
+        Logger.info("Using cached dashboard data");
+        return _cachedData!;
+      }
+      
       Logger.info("Loading dashboard data...");
 
       // Check storage permission
@@ -46,12 +57,33 @@ class DashboardViewModel {
       final categories = results[1] as List<Category>;
 
       Logger.success("Dashboard data loaded successfully");
+      
+      // Cache the data
+      final data = DashboardData(storageInfo: storageInfo, categories: categories);
+      _cachedData = data;
+      _lastLoadTime = DateTime.now();
 
-      return DashboardData(storageInfo: storageInfo, categories: categories);
+      return data;
     } catch (e) {
       Logger.error('Failed to load dashboard data', e);
       rethrow;
     }
+  }
+  
+  /// Check if cached data is still valid
+  bool _hasCachedData() {
+    if (_cachedData == null || _lastLoadTime == null) {
+      return false;
+    }
+    
+    final age = DateTime.now().difference(_lastLoadTime!);
+    return age < _cacheExpiry;
+  }
+  
+  /// Clear cached data
+  void clearCache() {
+    _cachedData = null;
+    _lastLoadTime = null;
   }
 
   /// Analyze storage

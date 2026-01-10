@@ -8,15 +8,37 @@ import 'package:smart_storage_analyzer/presentation/viewmodels/dashboard_viewmod
 class DashboardCubit extends Cubit<DashboardState> {
   final DashboardViewModel _viewModel;
   bool _isRefreshing = false;
+  bool _hasLoadedInitialData = false;
+  DateTime? _lastLoadTime;
+  static const Duration _minimumRefreshInterval = Duration(minutes: 5);
 
   DashboardCubit({required DashboardViewModel viewModel})
     : _viewModel = viewModel,
       super(DashboardInitial());
 
-  Future<void> loadDashboardData({BuildContext? context}) async {
-    emit(DashboardLoading());
+  Future<void> loadDashboardData({BuildContext? context, bool forceReload = false}) async {
+    // Skip loading if data already loaded and not forcing reload
+    if (_hasLoadedInitialData && !forceReload && state is DashboardLoaded) {
+      // Check if enough time has passed for background refresh
+      if (_lastLoadTime != null &&
+          DateTime.now().difference(_lastLoadTime!) < _minimumRefreshInterval) {
+        return;
+      }
+    }
+
+    // Don't show loading state if we already have data (just refreshing)
+    if (!_hasLoadedInitialData || forceReload) {
+      emit(DashboardLoading());
+    }
+    
     try {
-      final data = await _viewModel.loadDashboardData(context: context);
+      final data = await _viewModel.loadDashboardData(
+        context: context,
+        forceReload: forceReload
+      );
+
+      _hasLoadedInitialData = true;
+      _lastLoadTime = DateTime.now();
 
       emit(
         DashboardLoaded(
@@ -25,8 +47,10 @@ class DashboardCubit extends Cubit<DashboardState> {
         ),
       );
 
-      // Start background refresh to keep data current
-      _startBackgroundRefresh();
+      // Start background refresh to keep data current (but less frequently)
+      if (!_isRefreshing) {
+        _startBackgroundRefresh();
+      }
     } catch (e) {
       if (e is PermissionException) {
         emit(DashboardError(message: e.toString()));
@@ -49,26 +73,34 @@ class DashboardCubit extends Cubit<DashboardState> {
   Future<void> refresh({BuildContext? context}) async {
     // Don't show loading state for refresh to avoid UI flicker
     try {
-      final data = await _viewModel.loadDashboardData(context: context);
-
-      emit(
-        DashboardLoaded(
-          storageInfo: data.storageInfo,
-          categories: data.categories,
-        ),
+      final data = await _viewModel.loadDashboardData(
+        context: context,
+        forceReload: false // Don't force reload on background refresh
       );
+
+      if (state is DashboardLoaded || _hasLoadedInitialData) {
+        emit(
+          DashboardLoaded(
+            storageInfo: data.storageInfo,
+            categories: data.categories,
+          ),
+        );
+      }
     } catch (e) {
-      // Don't show error on refresh failure
+      // Don't show error on refresh failure, keep the existing data
     }
   }
+
+  /// Check if dashboard has loaded initial data
+  bool get hasLoadedData => _hasLoadedInitialData;
 
   /// Start background refresh to keep data current
   void _startBackgroundRefresh() {
     if (_isRefreshing || isClosed) return;
     
     _isRefreshing = true;
-    // Refresh data every 30 seconds if the dashboard is loaded
-    Future.delayed(const Duration(seconds: 30), () {
+    // Refresh data every 5 minutes instead of 30 seconds
+    Future.delayed(const Duration(minutes: 5), () {
       if (state is DashboardLoaded && !isClosed && _isRefreshing) {
         refresh().then((_) {
           if (!isClosed) {

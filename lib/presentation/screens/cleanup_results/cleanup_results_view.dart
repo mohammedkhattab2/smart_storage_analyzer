@@ -6,6 +6,10 @@ import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_analysis_results.dart';
 import 'package:smart_storage_analyzer/domain/entities/file_item.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/cleanup_results/cleanup_results_cubit.dart';
+import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
+import 'package:smart_storage_analyzer/domain/repositories/storage_repository.dart';
+import 'package:smart_storage_analyzer/data/repositories/storage_repository_impl.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/storage_analysis/storage_analysis_cubit.dart';
 
 class CleanupResultsView extends StatelessWidget {
   const CleanupResultsView({super.key});
@@ -15,8 +19,8 @@ class CleanupResultsView extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
-      body: Container(
+        backgroundColor: colorScheme.surface,
+        body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -44,7 +48,24 @@ class CleanupResultsView extends StatelessWidget {
                         _,
                       ) {
                         if (context.mounted) {
-                          context.pop();
+                          // Reset storage analysis state to prevent loading screen
+                          try {
+                            final storageAnalysisCubit = sl<StorageAnalysisCubit>();
+                            storageAnalysisCubit.resetState();
+                          } catch (e) {
+                            // Ignore errors - resetting state is not critical
+                          }
+                          
+                          // Go directly to dashboard since we replaced the storage analysis route
+                          context.go('/dashboard');
+                          
+                          // Clear category cache in storage repository to force fresh data
+                          try {
+                            final storageRepo = sl<StorageRepository>() as StorageRepositoryImpl;
+                            storageRepo.clearCategoriesCache();
+                          } catch (e) {
+                            // Ignore errors - cache clearing is not critical
+                          }
                         }
                       });
                     } else if (state is CleanupError) {
@@ -108,7 +129,27 @@ class CleanupResultsView extends StatelessWidget {
             ),
             child: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.pop(),
+              onPressed: () {
+                // Reset storage analysis state to prevent loading screen
+                try {
+                  final storageAnalysisCubit = sl<StorageAnalysisCubit>();
+                  storageAnalysisCubit.resetState();
+                } catch (e) {
+                  // Ignore errors - resetting state is not critical
+                }
+                
+                // Clear category cache before going back to dashboard
+                try {
+                  // Access the storage repository to clear cache
+                  final storageRepo = sl<StorageRepository>() as StorageRepositoryImpl;
+                  storageRepo.clearCategoriesCache();
+                } catch (e) {
+                  // Ignore errors - cache clearing is not critical
+                }
+                
+                // Go directly to dashboard since we replaced the storage analysis route
+                context.go('/dashboard');
+              },
             ),
           ),
           const SizedBox(width: AppSize.paddingMedium),
@@ -151,34 +192,79 @@ class CleanupResultsView extends StatelessWidget {
             const SizedBox(height: AppSize.paddingMedium),
 
             // Categories List with performance optimization
+            // Filter to only show cache, temp files, and thumbnails
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSize.paddingMedium,
-                ),
-                // Performance optimization: add caching and physics
-                addAutomaticKeepAlives: false,
-                addRepaintBoundaries: true,
-                physics: const BouncingScrollPhysics(),
-                itemCount: state.results.cleanupCategories.length,
-                itemBuilder: (context, index) {
-                  final category = state.results.cleanupCategories[index];
-                  final isSelected = state.selectedCategories.contains(
-                    category.name,
-                  );
-                  final selectedFiles =
-                      state.selectedFiles[category.name] ?? {};
-
-                  // Wrap in RepaintBoundary for better performance
-                  return RepaintBoundary(
-                    child: _buildMagicalCategoryCard(
-                      context,
-                      category,
-                      isSelected,
-                      selectedFiles,
-                      state,
-                      index,
+              child: Builder(
+                builder: (context) {
+                  // Filter categories to only include cache, temp, and thumbnails
+                  final filteredCategories = state.results.cleanupCategories
+                      .where((category) {
+                        // Only show cache, temp_files, and thumbnails categories
+                        return category.icon == 'cache' ||
+                               category.icon == 'temp_files' ||
+                               category.icon == 'thumbnails';
+                      })
+                      .toList();
+                  
+                  if (filteredCategories.isEmpty) {
+                    // Show a message if no categories to display
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 64,
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: AppSize.paddingMedium),
+                          Text(
+                            'No cache, temporary files, or thumbnails found',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: AppSize.paddingSmall),
+                          Text(
+                            'Your device is already optimized!',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSize.paddingMedium,
                     ),
+                    // Performance optimization: add caching and physics
+                    addAutomaticKeepAlives: false,
+                    addRepaintBoundaries: true,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: filteredCategories.length,
+                    itemBuilder: (context, index) {
+                      final category = filteredCategories[index];
+                      final isSelected = state.selectedCategories.contains(
+                        category.name,
+                      );
+                      final selectedFiles =
+                          state.selectedFiles[category.name] ?? {};
+
+                      // Wrap in RepaintBoundary for better performance
+                      return RepaintBoundary(
+                        child: _buildMagicalCategoryCard(
+                          context,
+                          category,
+                          isSelected,
+                          selectedFiles,
+                          state,
+                          index,
+                        ),
+                      );
+                    },
                   );
                 },
               ),

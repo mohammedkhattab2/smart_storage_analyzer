@@ -35,7 +35,9 @@ class MainActivity: FlutterActivity() {
     
     private lateinit var storageAnalyzer: StorageAnalyzer
     private lateinit var fileOperations: FileOperations
-    private lateinit var optimizedFileScanner: OptimizedFileScanner
+    private lateinit var scopedStorageFileScanner: ScopedStorageFileScanner
+    private lateinit var scopedStorageFileOperations: ScopedStorageFileOperations
+    private lateinit var documentSAFHandler: DocumentSAFHandler
     private val mainScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -44,7 +46,9 @@ class MainActivity: FlutterActivity() {
         // Initialize storage analyzer and file operations
         storageAnalyzer = StorageAnalyzer(this)
         fileOperations = FileOperations(this)
-        optimizedFileScanner = OptimizedFileScanner(this)
+        scopedStorageFileScanner = ScopedStorageFileScanner(this)
+        scopedStorageFileOperations = ScopedStorageFileOperations(this)
+        documentSAFHandler = DocumentSAFHandler(this, this)
         
         // Unified channel handler for all native operations
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MAIN_CHANNEL).setMethodCallHandler { call, result ->
@@ -78,27 +82,70 @@ class MainActivity: FlutterActivity() {
                     }
                     "getFilesByCategory" -> {
                         val category = call.argument<String>("category") ?: "all"
-                        // Use optimized scanner with coroutines
                         mainScope.launch {
                             try {
-                                val files = optimizedFileScanner.scanFilesByCategory(category)
+                                val files = when {
+                                    // For duplicates on older Android versions, use our improved detection
+                                    category == "duplicates" && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q -> {
+                                        withContext(Dispatchers.IO) {
+                                            val fileMap = ConcurrentHashMap<String, Map<String, Any>>()
+                                            getDuplicateFiles(fileMap)
+                                            android.util.Log.d("MainActivity", "Legacy duplicate scan found ${fileMap.size} duplicates")
+                                            fileMap.values.toList()
+                                        }
+                                    }
+                                    // For documents on older Android versions, use legacy scanner
+                                    category == "documents" && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q -> {
+                                        withContext(Dispatchers.IO) {
+                                            val fileMap = ConcurrentHashMap<String, Map<String, Any>>()
+                                            getDocumentFiles(fileMap)
+                                            fileMap.values.toList()
+                                        }
+                                    }
+                                    // For Android 10+, use scoped storage compliant scanner
+                                    else -> {
+                                        android.util.Log.d("MainActivity", "Using ScopedStorageFileScanner for category: $category")
+                                        scopedStorageFileScanner.scanFilesByCategory(category)
+                                    }
+                                }
+                                android.util.Log.d("MainActivity", "Returning ${files.size} files for category: $category")
                                 result.success(files)
                             } catch (e: Exception) {
+                                android.util.Log.e("MainActivity", "Failed to scan files for category $category", e)
                                 result.error("SCAN_ERROR", "Failed to scan files: ${e.message}", null)
                             }
                         }
                     }
                     "deleteFiles" -> {
                         val filePaths = call.argument<List<String>>("paths") ?: listOf()
-                        result.success(deleteFiles(filePaths))
+                        // Use scoped storage compliant delete
+                        mainScope.launch {
+                            try {
+                                val deletedCount = scopedStorageFileOperations.deleteFiles(filePaths)
+                                result.success(deletedCount)
+                            } catch (e: Exception) {
+                                result.error("DELETE_ERROR", "Failed to delete files: ${e.message}", null)
+                            }
+                        }
                     }
                     // Analysis operations
                     "analyzeStorage" -> {
+                        // Get analysis parameters from Flutter
+                        val quickScan = call.argument<Boolean>("quickScan") ?: false
+                        val skipDuplicates = call.argument<Boolean>("skipDuplicates") ?: false
+                        val skipLargeFiles = call.argument<Boolean>("skipLargeFiles") ?: false
+                        val cacheOnly = call.argument<Boolean>("cacheOnly") ?: false
+                        
                         // Use coroutine for heavy analysis operation
                         mainScope.launch {
                             try {
                                 val analysisResult = withContext(Dispatchers.IO) {
-                                    val analysis = storageAnalyzer.analyzeStorage()
+                                    val analysis = storageAnalyzer.analyzeStorage(
+                                        quickScan = quickScan,
+                                        skipDuplicates = skipDuplicates,
+                                        skipLargeFiles = skipLargeFiles,
+                                        cacheOnly = cacheOnly
+                                    )
                                     mapOf(
                                         "totalFilesScanned" to analysis.totalFilesScanned,
                                         "totalSpaceUsed" to analysis.totalSpaceUsed,
@@ -143,7 +190,8 @@ class MainActivity: FlutterActivity() {
                     "shareFile" -> {
                         val filePath = call.argument<String>("path")
                         if (filePath != null) {
-                            val success = fileOperations.shareFile(filePath)
+                            // Use content URI based sharing
+                            val success = scopedStorageFileOperations.shareFiles(listOf(filePath))
                             result.success(success)
                         } else {
                             result.error("INVALID_ARGUMENT", "File path is required", null)
@@ -152,7 +200,8 @@ class MainActivity: FlutterActivity() {
                     "shareFiles" -> {
                         val filePaths = call.argument<List<String>>("paths")
                         if (filePaths != null && filePaths.isNotEmpty()) {
-                            val success = fileOperations.shareFiles(filePaths)
+                            // Use content URI based sharing
+                            val success = scopedStorageFileOperations.shareFiles(filePaths)
                             result.success(success)
                         } else {
                             result.error("INVALID_ARGUMENT", "File paths are required", null)
@@ -172,6 +221,86 @@ class MainActivity: FlutterActivity() {
                     }
                     "requestNotificationPermission" -> {
                         result.success(requestNotificationPermission())
+                    }
+                    // SAF Document operations
+                    "selectDocumentFolder" -> {
+                        documentSAFHandler.handleMethodCall(call, result)
+                    }
+                    "scanDocuments" -> {
+                        documentSAFHandler.handleMethodCall(call, result)
+                    }
+                    "validateUri" -> {
+                        documentSAFHandler.handleMethodCall(call, result)
+                    }
+                    "releaseUriPermission" -> {
+                        documentSAFHandler.handleMethodCall(call, result)
+                    }
+                    // SAF Others operations
+                    "selectFolder", "selectOthersFolder" -> {
+                        // Both methods do the same thing - open a folder picker
+                        documentSAFHandler.handleMethodCall(call, result)
+                    }
+                    "scanOthers" -> {
+                        documentSAFHandler.handleMethodCall(call, result)
+                    }
+                    // Content URI operations for in-app file viewing
+                    "readContentUri" -> {
+                        val uriString = call.argument<String>("uri")
+                        if (uriString != null) {
+                            mainScope.launch {
+                                try {
+                                    val data = withContext(Dispatchers.IO) {
+                                        readContentUriBytes(uriString)
+                                    }
+                                    if (data != null) {
+                                        result.success(data)
+                                    } else {
+                                        result.error("READ_ERROR", "Failed to read content URI", null)
+                                    }
+                                } catch (e: Exception) {
+                                    result.error("READ_ERROR", "Error reading content URI: ${e.message}", null)
+                                }
+                            }
+                        } else {
+                            result.error("INVALID_ARGUMENT", "URI is required", null)
+                        }
+                    }
+                    "getContentUriInfo" -> {
+                        val uriString = call.argument<String>("uri")
+                        if (uriString != null) {
+                            mainScope.launch {
+                                try {
+                                    val info = withContext(Dispatchers.IO) {
+                                        getContentUriInfo(uriString)
+                                    }
+                                    result.success(info)
+                                } catch (e: Exception) {
+                                    result.error("INFO_ERROR", "Error getting content URI info: ${e.message}", null)
+                                }
+                            }
+                        } else {
+                            result.error("INVALID_ARGUMENT", "URI is required", null)
+                        }
+                    }
+                    "openContentUri" -> {
+                        val uriString = call.argument<String>("uri")
+                        val mimeType = call.argument<String>("mimeType")
+                        if (uriString != null) {
+                            val success = openContentUri(uriString, mimeType)
+                            result.success(success)
+                        } else {
+                            result.error("INVALID_ARGUMENT", "URI is required", null)
+                        }
+                    }
+                    "openDocument" -> {
+                        val uriString = call.argument<String>("uri")
+                        val mimeType = call.argument<String>("mimeType")
+                        if (uriString != null) {
+                            val success = openContentUri(uriString, mimeType)
+                            result.success(success)
+                        } else {
+                            result.error("INVALID_ARGUMENT", "URI is required", null)
+                        }
                     }
                     else -> {
                         result.notImplemented()
@@ -541,30 +670,177 @@ class MainActivity: FlutterActivity() {
     }
     
     /**
-     * Get duplicate files (basic implementation)
+     * Get duplicate files with improved content-based detection
      */
     private fun getDuplicateFiles(fileMap: ConcurrentHashMap<String, Map<String, Any>>) {
         val allFiles = ConcurrentHashMap<String, Map<String, Any>>()
         
-        // Collect all files
+        // Collect all files from all categories
+        android.util.Log.d("MainActivity", "Starting comprehensive duplicate scan...")
         getMediaFiles("all", allFiles)
         getDocumentFiles(allFiles)
         getAppFiles(allFiles)
         getOtherFiles(allFiles)
         
-        // Group by name and size
-        val groupedFiles = allFiles.values.groupBy { 
-            "${it["name"]}_${it["size"]}"
+        if (allFiles.isEmpty()) {
+            android.util.Log.d("MainActivity", "No files found for duplicate scanning")
+            return
         }
         
-        // Find duplicates
-        for ((key, files) in groupedFiles) {
-            if (files.size > 1) {
-                // Add all duplicates except the first one
-                files.drop(1).forEach { file ->
-                    fileMap[file["path"] as String] = file
+        // Filter files for duplicate checking (skip very small files)
+        val filesToCheck = allFiles.values.filter { fileInfo ->
+            val size = fileInfo["size"] as? Long ?: 0L
+            size > 1024 // Skip files smaller than 1KB
+        }
+        
+        android.util.Log.d("MainActivity", "Checking ${filesToCheck.size} files for duplicates")
+        
+        // Step 1: Group files by size (fast initial filter)
+        val sizeGroups = filesToCheck.groupBy { it["size"] as Long }
+            .filter { it.value.size > 1 }
+        
+        android.util.Log.d("MainActivity", "Found ${sizeGroups.size} size groups with potential duplicates")
+        
+        // Step 2: For files with same size, check content hash
+        for ((size, files) in sizeGroups) {
+            if (files.size < 2) continue
+            
+            // Use quick hash for initial grouping (first 4KB)
+            val quickHashGroups = mutableMapOf<String, MutableList<Map<String, Any>>>()
+            
+            for (file in files) {
+                val path = file["path"] as? String ?: continue
+                val quickHash = calculateQuickHash(File(path))
+                if (quickHash != null) {
+                    quickHashGroups.getOrPut(quickHash) { mutableListOf() }.add(file)
                 }
             }
+            
+            // For files with same quick hash, do full MD5 hash
+            for ((_, quickGroup) in quickHashGroups) {
+                if (quickGroup.size < 2) continue
+                
+                val fullHashGroups = mutableMapOf<String, MutableList<Map<String, Any>>>()
+                
+                for (file in quickGroup) {
+                    val path = file["path"] as? String ?: continue
+                    val fullHash = calculateFileHash(File(path))
+                    if (fullHash != null) {
+                        fullHashGroups.getOrPut(fullHash) { mutableListOf() }.add(file)
+                    }
+                }
+                
+                // Mark actual duplicates
+                for ((hash, duplicateGroup) in fullHashGroups) {
+                    if (duplicateGroup.size > 1) {
+                        // Sort to keep original in preferred locations
+                        duplicateGroup.sortWith(compareBy(
+                            { !(it["path"] as String).contains("/DCIM/", ignoreCase = true) },
+                            { !(it["path"] as String).contains("/Pictures/", ignoreCase = true) },
+                            { !(it["path"] as String).contains("/Download/", ignoreCase = true) },
+                            { it["lastModified"] as? Long ?: 0L } // Oldest first
+                        ))
+                        
+                        // Add all except the first as duplicates
+                        val dupes = duplicateGroup.drop(1)
+                        dupes.forEach { file ->
+                            fileMap[file["path"] as String] = file
+                        }
+                        
+                        android.util.Log.d("MainActivity",
+                            "Found ${dupes.size} duplicates of ${duplicateGroup[0]["name"]}")
+                    }
+                }
+            }
+        }
+        
+        android.util.Log.d("MainActivity", "Total duplicates found: ${fileMap.size}")
+    }
+    
+    /**
+     * Calculate quick hash of first 4KB of file for fast comparison
+     */
+    private fun calculateQuickHash(file: File): String? {
+        if (!file.exists() || !file.canRead() || file.isDirectory) return null
+        
+        return try {
+            val digest = java.security.MessageDigest.getInstance("MD5")
+            file.inputStream().use { input ->
+                val buffer = ByteArray(4096) // Only read first 4KB
+                val bytesRead = input.read(buffer)
+                if (bytesRead > 0) {
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error calculating quick hash: ${e.message}")
+            null
+        }
+    }
+    
+    /**
+     * Calculate full MD5 hash of file for accurate duplicate detection
+     */
+    private fun calculateFileHash(file: File): String? {
+        if (!file.exists() || !file.canRead() || file.isDirectory) return null
+        
+        // Skip very large files (> 500MB) for performance
+        if (file.length() > 500L * 1024 * 1024) {
+            // For large files, use combined hash of beginning, middle, and end
+            return calculateLargeFileHash(file)
+        }
+        
+        return try {
+            val digest = java.security.MessageDigest.getInstance("MD5")
+            file.inputStream().buffered(8192).use { input ->
+                val buffer = ByteArray(8192)
+                var bytesRead: Int
+                while (input.read(buffer).also { bytesRead = it } != -1) {
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error calculating file hash: ${e.message}")
+            null
+        }
+    }
+    
+    /**
+     * Calculate hash for large files by sampling different parts
+     */
+    private fun calculateLargeFileHash(file: File): String? {
+        return try {
+            val digest = java.security.MessageDigest.getInstance("MD5")
+            val fileSize = file.length()
+            
+            java.io.RandomAccessFile(file, "r").use { raf ->
+                val buffer = ByteArray(4096)
+                
+                // Read beginning
+                raf.seek(0)
+                val bytesRead1 = raf.read(buffer)
+                if (bytesRead1 > 0) digest.update(buffer, 0, bytesRead1)
+                
+                // Read middle
+                raf.seek(fileSize / 2)
+                val bytesRead2 = raf.read(buffer)
+                if (bytesRead2 > 0) digest.update(buffer, 0, bytesRead2)
+                
+                // Read end
+                raf.seek(maxOf(0, fileSize - 4096))
+                val bytesRead3 = raf.read(buffer)
+                if (bytesRead3 > 0) digest.update(buffer, 0, bytesRead3)
+                
+                // Add file size to hash
+                digest.update(fileSize.toString().toByteArray())
+            }
+            
+            digest.digest().joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error calculating large file hash: ${e.message}")
+            null
         }
     }
     
@@ -1145,5 +1421,298 @@ class MainActivity: FlutterActivity() {
         filesList.addAll(fileMap.values)
         
         return filesList
+    }
+    
+    /**
+     * Handle activity results for SAF document picker
+     */
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        // Pass activity result to DocumentSAFHandler
+        if (::documentSAFHandler.isInitialized) {
+            documentSAFHandler.handleActivityResult(requestCode, resultCode, data)
+        }
+    }
+    
+    /**
+     * Clean up resources on destroy
+     */
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::documentSAFHandler.isInitialized) {
+            documentSAFHandler.cleanup()
+        }
+        mainScope.cancel()
+    }
+    
+    /**
+     * Read bytes from a content URI
+     * Returns base64 encoded string for easy transfer to Flutter
+     */
+    private fun readContentUriBytes(uriString: String): String? {
+        return try {
+            val uri = Uri.parse(uriString)
+            val inputStream = contentResolver.openInputStream(uri)
+            inputStream?.use { stream ->
+                val bytes = stream.readBytes()
+                android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error reading content URI: $uriString", e)
+            null
+        }
+    }
+    
+    /**
+     * Get information about a content URI (name, size, mime type)
+     */
+    private fun getContentUriInfo(uriString: String): Map<String, Any>? {
+        return try {
+            val uri = Uri.parse(uriString)
+            val cursor = contentResolver.query(uri, null, null, null, null)
+            cursor?.use { c ->
+                if (c.moveToFirst()) {
+                    val nameIndex = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    val sizeIndex = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                    
+                    val name = if (nameIndex >= 0) c.getString(nameIndex) else "Unknown"
+                    val size = if (sizeIndex >= 0) c.getLong(sizeIndex) else 0L
+                    
+                    // Get MIME type
+                    val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
+                    
+                    mapOf(
+                        "name" to name,
+                        "size" to size,
+                        "mimeType" to mimeType,
+                        "uri" to uriString
+                    )
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error getting content URI info: $uriString", e)
+            null
+        }
+    }
+    
+    /**
+     * Open a content URI with appropriate app
+     * This is a fallback for when in-app viewing fails
+     */
+    private fun openContentUri(uriString: String, mimeType: String?): Boolean {
+        return try {
+            val uri = Uri.parse(uriString)
+            
+            // Get the actual MIME type - prefer the passed one, then try ContentResolver
+            val actualMimeType = mimeType ?: contentResolver.getType(uri) ?: "*/*"
+            
+            // Check if this is an audio file by extension as fallback
+            val isAudioFile = actualMimeType.startsWith("audio/") ||
+                              uriString.contains("/audio/", ignoreCase = true) ||
+                              listOf(".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus")
+                                  .any { uriString.endsWith(it, ignoreCase = true) }
+            
+            // Check if this is a document file
+            val isDocumentFile = actualMimeType.startsWith("application/") ||
+                                actualMimeType.startsWith("text/") ||
+                                listOf(".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+                                      ".txt", ".rtf", ".odt", ".ods", ".odp", ".html", ".htm",
+                                      ".xml", ".json", ".csv", ".zip", ".rar", ".7z")
+                                    .any { uriString.endsWith(it, ignoreCase = true) }
+            
+            android.util.Log.d("MainActivity", "Opening content URI: $uriString with MIME type: $actualMimeType, isAudioFile: $isAudioFile, isDocumentFile: $isDocumentFile")
+            
+            // For document files, always show chooser to let user pick the app
+            if (isDocumentFile) {
+                android.util.Log.d("MainActivity", "Document file detected, showing app chooser")
+                
+                val documentIntent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, actualMimeType)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                }
+                
+                // Always show chooser so user can pick from all available apps
+                val chooser = Intent.createChooser(documentIntent, "Open with")
+                chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                
+                return try {
+                    // Check if there are any apps that can handle this document
+                    val activities = packageManager.queryIntentActivities(documentIntent, 0)
+                    if (activities.isEmpty()) {
+                        android.util.Log.w("MainActivity", "No apps found to open document, trying with generic mime type")
+                        
+                        // Try with generic mime type as fallback
+                        val genericIntent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, "*/*")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        
+                        val genericChooser = Intent.createChooser(genericIntent, "Open with")
+                        genericChooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(genericChooser)
+                        android.util.Log.d("MainActivity", "Showed chooser with generic mime type")
+                        true
+                    } else {
+                        // Show chooser with all available apps
+                        startActivity(chooser)
+                        android.util.Log.d("MainActivity", "Showed chooser with ${activities.size} available apps")
+                        true
+                    }
+                } catch (ex: Exception) {
+                    android.util.Log.e("MainActivity", "Failed to show document chooser: ${ex.message}")
+                    
+                    // Last resort: try ACTION_SEND
+                    try {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = actualMimeType
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        
+                        val shareChooser = Intent.createChooser(shareIntent, "Open with")
+                        shareChooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(shareChooser)
+                        android.util.Log.d("MainActivity", "Fell back to ACTION_SEND chooser")
+                        true
+                    } catch (e: Exception) {
+                        android.util.Log.e("MainActivity", "All attempts to open document failed: ${e.message}")
+                        false
+                    }
+                }
+            }
+            
+            // Create intent to view the content
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                // Set data and type together for better compatibility
+                setDataAndType(uri, actualMimeType)
+                
+                // Grant read permission to the receiving app
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                
+                // Start in a new task
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                
+                // Clear the task on launch to avoid stacking
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+            
+            // For audio files, try to find and launch default music app directly
+            if (isAudioFile) {
+                android.util.Log.d("MainActivity", "Audio file detected, opening with default music app")
+                
+                return try {
+                    // First, try to find the default music app
+                    val musicIntent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "audio/*")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    
+                    // Get list of apps that can handle audio
+                    val resolveInfoList = packageManager.queryIntentActivities(musicIntent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+                    
+                    // Try to find a known music player
+                    val preferredMusicApps = listOf(
+                        "com.google.android.music",           // Google Play Music
+                        "com.google.android.apps.youtube.music", // YouTube Music
+                        "com.samsung.android.app.music",      // Samsung Music
+                        "com.sec.android.app.music",          // Samsung Music (older)
+                        "com.android.music",                  // Default Android Music
+                        "com.spotify.music",                  // Spotify
+                        "com.apple.android.music",            // Apple Music
+                        "com.amazon.mp3",                     // Amazon Music
+                    )
+                    
+                    // Find the first available preferred music app
+                    var targetPackage: String? = null
+                    for (packageName in preferredMusicApps) {
+                        if (resolveInfoList.any { info -> info.activityInfo.packageName == packageName }) {
+                            targetPackage = packageName
+                            break
+                        }
+                    }
+                    
+                    // If no preferred app found, use the first available music app
+                    if (targetPackage == null && resolveInfoList.isNotEmpty()) {
+                        targetPackage = resolveInfoList[0].activityInfo.packageName
+                    }
+                    
+                    if (targetPackage != null) {
+                        // Launch the specific music app directly
+                        musicIntent.setPackage(targetPackage)
+                        startActivity(musicIntent)
+                        android.util.Log.d("MainActivity", "Launched audio file with $targetPackage")
+                        true
+                    } else {
+                        // No music app found, use ACTION_SEND as fallback
+                        android.util.Log.w("MainActivity", "No music app found, using ACTION_SEND")
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "audio/*"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        
+                        // Try to launch directly first
+                        try {
+                            startActivity(shareIntent)
+                            true
+                        } catch (e: android.content.ActivityNotFoundException) {
+                            // If direct launch fails, use chooser
+                            val chooser = Intent.createChooser(shareIntent, "Play audio with")
+                            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(chooser)
+                            true
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MainActivity", "Failed to open audio file: ${e.message}")
+                    false
+                }
+            }
+            
+            // For non-audio files, check if any app can handle this intent
+            val activities = packageManager.queryIntentActivities(intent, 0)
+            
+            if (activities.isNotEmpty()) {
+                android.util.Log.d("MainActivity", "Found ${activities.size} apps to handle the file")
+                
+                // Show chooser for non-audio files
+                val chooserIntent = Intent.createChooser(intent, "Open with")
+                chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(chooserIntent)
+                true
+            } else {
+                // If no app found for specific mime type, try with generic mime type
+                android.util.Log.w("MainActivity", "No app found for MIME type: $actualMimeType, trying generic")
+                
+                val genericIntent = Intent(Intent.ACTION_VIEW).apply {
+                    data = uri
+                    type = "*/*"
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                
+                val genericActivities = packageManager.queryIntentActivities(genericIntent, 0)
+                if (genericActivities.isNotEmpty()) {
+                    val genericChooser = Intent.createChooser(genericIntent, "Open with")
+                    genericChooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(genericChooser)
+                    true
+                } else {
+                    android.util.Log.e("MainActivity", "No app found to open URI even with generic mime type: $uriString")
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error opening content URI: $uriString", e)
+            false
+        }
     }
 }

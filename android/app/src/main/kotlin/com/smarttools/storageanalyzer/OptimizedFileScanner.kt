@@ -435,24 +435,169 @@ class OptimizedFileScanner(private val context: Context) {
     }
     
     /**
-     * Scan duplicate files using size and name matching
+     * Scan duplicate files using content-based hashing for accuracy
      */
     private suspend fun scanDuplicates(): List<Map<String, Any>> = withContext(Dispatchers.IO) {
+        android.util.Log.d("OptimizedFileScanner", "Starting comprehensive duplicate scan...")
+        
         val allFiles = scanAllFiles()
         val duplicates = mutableListOf<Map<String, Any>>()
         
-        // Group by name and size
-        val grouped = allFiles.groupBy { "${it["name"]}_${it["size"]}" }
+        if (allFiles.isEmpty()) {
+            android.util.Log.d("OptimizedFileScanner", "No files found for duplicate scanning")
+            return@withContext emptyList()
+        }
         
-        // Find duplicates
-        grouped.forEach { (_, files) ->
-            if (files.size > 1) {
-                // Add all except the first as duplicates
-                duplicates.addAll(files.drop(1))
+        // Filter files for duplicate checking (skip very small files)
+        val filesToCheck = allFiles.filter { file ->
+            val size = file["size"] as? Long ?: 0L
+            size > 1024 // Skip files smaller than 1KB
+        }
+        
+        android.util.Log.d("OptimizedFileScanner", "Checking ${filesToCheck.size} files for duplicates")
+        
+        // Step 1: Group files by size (fast initial filter)
+        val sizeGroups = filesToCheck.groupBy { it["size"] as Long }
+            .filter { it.value.size > 1 }
+        
+        android.util.Log.d("OptimizedFileScanner", "Found ${sizeGroups.size} size groups with potential duplicates")
+        
+        // Step 2: For files with same size, check content hash
+        for ((size, files) in sizeGroups) {
+            if (files.size < 2) continue
+            
+            // Use quick hash for initial grouping (first 4KB)
+            val quickHashGroups = mutableMapOf<String, MutableList<Map<String, Any>>>()
+            
+            for (file in files) {
+                val path = file["path"] as? String ?: continue
+                val quickHash = calculateQuickHash(java.io.File(path))
+                if (quickHash != null) {
+                    quickHashGroups.getOrPut(quickHash) { mutableListOf() }.add(file)
+                }
+            }
+            
+            // For files with same quick hash, do full MD5 hash
+            for ((_, quickGroup) in quickHashGroups) {
+                if (quickGroup.size < 2) continue
+                
+                val fullHashGroups = mutableMapOf<String, MutableList<Map<String, Any>>>()
+                
+                for (file in quickGroup) {
+                    val path = file["path"] as? String ?: continue
+                    val fullHash = calculateFileHash(java.io.File(path))
+                    if (fullHash != null) {
+                        fullHashGroups.getOrPut(fullHash) { mutableListOf() }.add(file)
+                    }
+                }
+                
+                // Mark actual duplicates
+                for ((hash, duplicateGroup) in fullHashGroups) {
+                    if (duplicateGroup.size > 1) {
+                        // Sort to keep original in preferred locations
+                        duplicateGroup.sortWith(compareBy(
+                            { !(it["path"] as String).contains("/DCIM/", ignoreCase = true) },
+                            { !(it["path"] as String).contains("/Pictures/", ignoreCase = true) },
+                            { !(it["path"] as String).contains("/Download/", ignoreCase = true) },
+                            { it["lastModified"] as? Long ?: 0L } // Oldest first
+                        ))
+                        
+                        // Add all except the first as duplicates
+                        duplicates.addAll(duplicateGroup.drop(1))
+                        
+                        android.util.Log.d("OptimizedFileScanner",
+                            "Found ${duplicateGroup.size - 1} duplicates of ${duplicateGroup[0]["name"]}")
+                    }
+                }
             }
         }
         
+        android.util.Log.d("OptimizedFileScanner", "Total duplicates found: ${duplicates.size}")
         duplicates.sortedByDescending { (it["size"] as Long) }
+    }
+    
+    /**
+     * Calculate quick hash of first 4KB of file for fast comparison
+     */
+    private fun calculateQuickHash(file: java.io.File): String? {
+        if (!file.exists() || !file.canRead() || file.isDirectory) return null
+        
+        return try {
+            val digest = java.security.MessageDigest.getInstance("MD5")
+            file.inputStream().use { input ->
+                val buffer = ByteArray(4096) // Only read first 4KB
+                val bytesRead = input.read(buffer)
+                if (bytesRead > 0) {
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    /**
+     * Calculate full MD5 hash of file for accurate duplicate detection
+     */
+    private fun calculateFileHash(file: java.io.File): String? {
+        if (!file.exists() || !file.canRead() || file.isDirectory) return null
+        
+        // Skip very large files (> 500MB) for performance
+        if (file.length() > 500L * 1024 * 1024) {
+            // For large files, use combined hash of beginning, middle, and end
+            return calculateLargeFileHash(file)
+        }
+        
+        return try {
+            val digest = java.security.MessageDigest.getInstance("MD5")
+            file.inputStream().buffered(8192).use { input ->
+                val buffer = ByteArray(8192)
+                var bytesRead: Int
+                while (input.read(buffer).also { bytesRead = it } != -1) {
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    /**
+     * Calculate hash for large files by sampling different parts
+     */
+    private fun calculateLargeFileHash(file: java.io.File): String? {
+        return try {
+            val digest = java.security.MessageDigest.getInstance("MD5")
+            val fileSize = file.length()
+            
+            java.io.RandomAccessFile(file, "r").use { raf ->
+                val buffer = ByteArray(4096)
+                
+                // Read beginning
+                raf.seek(0)
+                val bytesRead1 = raf.read(buffer)
+                if (bytesRead1 > 0) digest.update(buffer, 0, bytesRead1)
+                
+                // Read middle
+                raf.seek(fileSize / 2)
+                val bytesRead2 = raf.read(buffer)
+                if (bytesRead2 > 0) digest.update(buffer, 0, bytesRead2)
+                
+                // Read end
+                raf.seek(maxOf(0, fileSize - 4096))
+                val bytesRead3 = raf.read(buffer)
+                if (bytesRead3 > 0) digest.update(buffer, 0, bytesRead3)
+                
+                // Add file size to hash
+                digest.update(fileSize.toString().toByteArray())
+            }
+            
+            digest.digest().joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            null
+        }
     }
     
     private fun getExtension(path: String): String {

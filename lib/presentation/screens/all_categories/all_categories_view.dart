@@ -8,6 +8,11 @@ import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/all_categories/all_categories_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/all_categories/all_categories_state.dart';
 import 'package:smart_storage_analyzer/presentation/screens/category_details/category_details_screen.dart';
+import 'package:smart_storage_analyzer/presentation/screens/document_scanner/document_scanner_screen.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/document_scan/document_scan_cubit.dart';
+import 'package:smart_storage_analyzer/presentation/screens/others_scanner/others_scanner_screen.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/others_scan/others_scan_cubit.dart';
+import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
 
 class AllCategoriesView extends StatelessWidget {
@@ -649,11 +654,44 @@ class AllCategoriesView extends StatelessWidget {
   }
 
   void _navigateToCategoryFiles(BuildContext context, Category category) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => CategoryDetailsScreen(category: category),
-      ),
-    );
+    // Check if this is the Documents category and route to DocumentScannerScreen
+    if (category.name.toLowerCase() == 'documents') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => BlocProvider(
+            create: (_) => sl<DocumentScanCubit>()..checkSavedFolder(),
+            child: const DocumentScannerScreen(),
+          ),
+        ),
+      ).then((_) {
+        // Refresh categories when returning from document scanner
+        if (context.mounted) {
+          context.read<AllCategoriesCubit>().refresh();
+        }
+      });
+    } else if (category.name.toLowerCase() == 'others' ||
+               category.name.toLowerCase() == 'other') {
+      // Navigate to OthersScannerScreen for Others category
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => BlocProvider(
+            create: (_) => sl<OthersScanCubit>()..checkSavedFolder(),
+            child: const OthersScannerScreen(),
+          ),
+        ),
+      ).then((_) {
+        // Refresh categories when returning from others scanner
+        if (context.mounted) {
+          context.read<AllCategoriesCubit>().refresh();
+        }
+      });
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => CategoryDetailsScreen(category: category),
+        ),
+      );
+    }
   }
 }
 

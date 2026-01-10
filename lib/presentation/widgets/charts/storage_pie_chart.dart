@@ -553,17 +553,20 @@ class _StoragePieChartState extends State<StoragePieChart>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _buildMagicalLegendItem(
-          context,
-          gradientColors: magicalGradient,
-          label: 'Used Space',
-          value: '${_formatGb(widget.usedSpaceGb)} GB',
-          percentage: usedPercentage,
-          isActive: _touchedIndex == 0,
+        Expanded(
+          child: _buildMagicalLegendItem(
+            context,
+            gradientColors: magicalGradient,
+            label: 'Used Space',
+            value: '${_formatGb(widget.usedSpaceGb)} GB',
+            percentage: usedPercentage,
+            isActive: _touchedIndex == 0,
+          ),
         ),
         Container(
           height: 50,
           width: 1,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
@@ -576,16 +579,18 @@ class _StoragePieChartState extends State<StoragePieChart>
             ),
           ),
         ),
-        _buildMagicalLegendItem(
-          context,
-          gradientColors: [
-            colorScheme.surfaceContainerHighest,
-            colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
-          ],
-          label: 'Available',
-          value: '${_formatGb(widget.freeSpaceGb)} GB',
-          percentage: freePercentage,
-          isActive: _touchedIndex == 1,
+        Expanded(
+          child: _buildMagicalLegendItem(
+            context,
+            gradientColors: [
+              colorScheme.surfaceContainerHighest,
+              colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+            ],
+            label: 'Available',
+            value: '${_formatGb(widget.freeSpaceGb)} GB',
+            percentage: freePercentage,
+            isActive: _touchedIndex == 1,
+          ),
         ),
       ],
     );
@@ -606,7 +611,7 @@ class _StoragePieChartState extends State<StoragePieChart>
       scale: isActive ? 1.1 : 1.0,
       duration: const Duration(milliseconds: 200),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isActive
@@ -624,8 +629,11 @@ class _StoragePieChartState extends State<StoragePieChart>
                 : Colors.transparent,
           ),
         ),
-        child: Row(
-          children: [
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             Container(
               width: 24,
               height: 24,
@@ -668,11 +676,12 @@ class _StoragePieChartState extends State<StoragePieChart>
                     color: isActive ? gradientColors[0] : colorScheme.onSurface,
                   ),
                 ),
+                ],
+              ),
               ],
             ),
-          ],
+          ),
         ),
-      ),
     );
   }
 

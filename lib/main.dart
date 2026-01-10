@@ -7,6 +7,15 @@ import 'package:smart_storage_analyzer/core/services/permission_manager.dart';
 import 'package:smart_storage_analyzer/core/theme/app_theme.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/theme/theme_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/theme/theme_state.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/statistics/statistics_cubit.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_cubit.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/file_manager/optimized_file_manager_cubit.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/category_details/category_details_cubit.dart';
+import 'package:smart_storage_analyzer/presentation/viewmodels/optimized_file_manager_viewmodel.dart';
+import 'package:smart_storage_analyzer/domain/usecases/get_files_usecase.dart';
+import 'package:smart_storage_analyzer/domain/usecases/delete_files_usecase.dart';
+import 'package:smart_storage_analyzer/domain/repositories/file_repository.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/storage_analysis/storage_analysis_cubit.dart';
 import 'package:smart_storage_analyzer/routes/app_pages.dart';
 
 void main() async {
@@ -41,8 +50,40 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => sl<ThemeCubit>()..loadTheme(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<ThemeCubit>(
+          create: (_) => sl<ThemeCubit>()..loadTheme(),
+        ),
+        BlocProvider<StatisticsCubit>(
+          create: (_) => sl<StatisticsCubit>(),
+          lazy: false,
+        ),
+        BlocProvider<DashboardCubit>(
+          create: (_) => sl<DashboardCubit>(),
+          lazy: false,
+        ),
+        BlocProvider<OptimizedFileManagerCubit>(
+          create: (_) {
+            final viewModel = OptimizedFileManagerViewModel(
+              getFilesUsecase: sl<GetFilesUseCase>(),
+              deleteFilesUsecase: sl<DeleteFilesUseCase>(),
+              fileRepository: sl<FileRepository>(),
+            );
+            return OptimizedFileManagerCubit(viewModel);
+          },
+          lazy: false,
+        ),
+        BlocProvider<StorageAnalysisCubit>(
+          create: (_) => sl<StorageAnalysisCubit>(),
+          lazy: true, // Only create when needed
+        ),
+        // Add CategoryDetailsCubit as a global singleton to maintain state
+        BlocProvider<CategoryDetailsCubit>(
+          create: (_) => sl<CategoryDetailsCubit>(),
+          lazy: true, // Create when first accessed
+        ),
+      ],
       child: BlocBuilder<ThemeCubit, ThemeState>(
         builder: (context, state) {
           // Update system UI based on theme

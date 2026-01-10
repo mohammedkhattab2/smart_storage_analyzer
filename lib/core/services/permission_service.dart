@@ -46,10 +46,12 @@ class PermissionService {
               context,
               title: 'Media Access Required',
               content:
-                  'This app needs access to your media files to:\n\n'
-                  '• Scan and analyze your photos, videos, and audio files\n'
-                  '• Show storage usage by file type\n'
-                  '• Help you free up space\n\n'
+                  'Smart Storage Analyzer needs access to your media files to:\n\n'
+                  '• Analyze storage usage of photos, videos, and audio\n'
+                  '• Identify large files taking up space\n'
+                  '• Find duplicate files\n'
+                  '• Help you free up storage space\n\n'
+                  'Your files remain private and are never uploaded or shared.\n\n'
                   'Would you like to grant these permissions in settings?',
             );
 
@@ -67,66 +69,42 @@ class PermissionService {
 
         return results.every((status) => status.isGranted);
       }
-      // Android 11 (API 30) and Android 12 (API 31-32)
+      // Android 11 and 12 - use same approach as Android 13
       else if (sdkInt >= 30) {
-        // Check if we need MANAGE_EXTERNAL_STORAGE permission
-        final manageStorageStatus =
-            await Permission.manageExternalStorage.status;
-
-        if (manageStorageStatus.isGranted) {
-          return true;
-        }
-
-        // Try standard storage permission first
+        // For Android 11-12, we'll use the standard storage permission
+        // combined with MediaStore APIs for file access
         final storageStatus = await Permission.storage.status;
+        
         if (storageStatus.isGranted) {
           return true;
         }
 
-        // If both are denied, request manage external storage for full access
-        if (manageStorageStatus.isDenied || storageStatus.isDenied) {
+        if (storageStatus.isPermanentlyDenied) {
           if (context != null && context.mounted) {
-            final shouldRequestManage = await _showPermissionDialog(
+            final shouldOpenSettings = await _showPermissionDialog(
               context,
-              title: 'Full File Access Required',
+              title: 'Storage Access Required',
               content:
-                  'This app needs full file access to:\n\n'
-                  '• Analyze all types of files including system cache\n'
-                  '• Detect duplicate files across all folders\n'
-                  '• Find and clean temporary files\n'
-                  '• Access thumbnails and app-specific data\n\n'
-                  'Would you like to grant full file access?',
+                  'Smart Storage Analyzer needs storage access to:\n\n'
+                  '• Analyze your device storage usage\n'
+                  '• Identify files that can be cleaned up\n'
+                  '• Show storage breakdown by file type\n'
+                  '• Help optimize your device storage\n\n'
+                  'We use standard Android storage permissions.\n'
+                  'Your data privacy is protected.\n\n'
+                  'Would you like to grant this permission in settings?',
             );
 
-            if (shouldRequestManage) {
-              // Request manage external storage permission
-              final manageResult = await Permission.manageExternalStorage
-                  .request();
-              if (manageResult.isGranted) {
-                return true;
-              }
-
-              // If still not granted, try opening settings
-              if (manageResult.isPermanentlyDenied || manageResult.isDenied) {
-                if (context.mounted) {
-                  final shouldOpenSettings = await _showPermissionDialog(
-                    context,
-                    title: 'Open Settings',
-                    content:
-                        'Please enable "All files access" for Smart Storage Analyzer in the settings.',
-                  );
-
-                  if (shouldOpenSettings) {
-                    await openAppSettings();
-                  }
-                }
-              }
+            if (shouldOpenSettings) {
+              await openAppSettings();
             }
           }
           return false;
         }
 
-        return false;
+        // Request storage permission
+        final result = await Permission.storage.request();
+        return result.isGranted;
       }
       // Android 10 and below
       else {
@@ -142,10 +120,13 @@ class PermissionService {
               context,
               title: 'Storage Permission Required',
               content:
-                  'This app needs storage permission to:\n\n'
-                  '• Scan and analyze your files\n'
-                  '• Show storage usage\n'
-                  '• Help you free up space\n\n'
+                  'Smart Storage Analyzer needs storage permission to:\n\n'
+                  '• Analyze your device storage\n'
+                  '• Show which files are using the most space\n'
+                  '• Identify files you may want to clean up\n'
+                  '• Help optimize storage usage\n\n'
+                  'We only access files to analyze storage usage.\n'
+                  'Your privacy is protected.\n\n'
                   'Would you like to grant this permission in settings?',
             );
 
@@ -357,12 +338,8 @@ class PermissionService {
 
         return statuses.every((status) => status.isGranted);
       }
-      // Android 11 and above - check manage external storage
+      // Android 11 and above - use standard storage permission
       else if (sdkInt >= 30) {
-        final manageStatus = await Permission.manageExternalStorage.status;
-        if (manageStatus.isGranted) return true;
-
-        // Fallback to standard storage permission
         final storageStatus = await Permission.storage.status;
         return storageStatus.isGranted;
       }

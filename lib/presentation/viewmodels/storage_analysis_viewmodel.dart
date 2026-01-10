@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:smart_storage_analyzer/domain/entities/storage_analysis_results.dart';
 import 'package:smart_storage_analyzer/domain/usecases/analyze_storage_use_case.dart';
 import 'package:smart_storage_analyzer/core/services/isolate_helper.dart';
@@ -43,74 +44,93 @@ class StorageAnalysisViewModel {
         throw Exception('Analysis cancelled');
       }
 
+      // Small delay to show initialization
+      await Future.delayed(const Duration(milliseconds: 300));
       onProgress(0.1, 'Checking storage permissions...');
       
-      // Execute the analysis with progress reporting
-      // Note: Since we can't directly pass progress to the use case,
-      // we simulate progress based on time estimation
-      final analysisTask = _analyzeStorageUseCase.execute();
-      
-      // Create a timer to simulate progress updates
+      // Progress steps with proper timing
       final progressSteps = [
-        (0.2, 'Scanning cache files...'),
-        (0.3, 'Scanning temporary files...'),
-        (0.4, 'Analyzing images...'),
-        (0.5, 'Analyzing videos...'),
-        (0.6, 'Analyzing documents...'),
-        (0.7, 'Finding duplicate files...'),
-        (0.8, 'Calculating large files...'),
-        (0.9, 'Finalizing analysis...'),
+        (0.2, 'Scanning cache files...', 800),
+        (0.3, 'Scanning temporary files...', 700),
+        (0.4, 'Analyzing images...', 900),
+        (0.5, 'Analyzing videos...', 1000),
+        (0.6, 'Analyzing documents...', 800),
+        (0.7, 'Finding duplicate files...', 1200),
+        (0.8, 'Calculating large files...', 900),
+        (0.9, 'Finalizing analysis...', 600),
       ];
       
+      // Start the actual analysis task
+      final analysisCompleter = Completer<StorageAnalysisResults>();
+      final analysisTask = _analyzeStorageUseCase.execute();
+      
+      // Complete when analysis is done
+      analysisTask.then((result) {
+        if (!analysisCompleter.isCompleted) {
+          analysisCompleter.complete(result);
+        }
+      }).catchError((error) {
+        if (!analysisCompleter.isCompleted) {
+          analysisCompleter.completeError(error);
+        }
+      });
+      
+      // Simulate progress updates
+      bool analysisComplete = false;
       int currentStep = 0;
-      while (!analysisTask.isCompleted && currentStep < progressSteps.length) {
+      
+      // Progress simulation with proper timing
+      while (currentStep < progressSteps.length && !analysisComplete) {
         if (cancellationToken?.isCancelled == true) {
           throw Exception('Analysis cancelled');
         }
         
-        final (progress, message) = progressSteps[currentStep];
+        final (progress, message, duration) = progressSteps[currentStep];
         onProgress(progress, message);
+        Logger.debug('Analysis progress: ${(progress * 100).toInt()}% - $message');
         currentStep++;
         
-        // Wait a bit before next progress update
-        await Future.delayed(const Duration(milliseconds: 500));
+        // Wait for the specified duration or until analysis completes
+        await Future.any([
+          Future.delayed(Duration(milliseconds: duration)),
+          analysisCompleter.future.then((_) => analysisComplete = true),
+        ]);
       }
       
-      // Wait for the actual result
-      final results = await analysisTask;
+      // If analysis is still running, show waiting state
+      if (!analysisComplete) {
+        onProgress(0.95, 'Completing analysis...');
+        Logger.debug('Waiting for analysis to complete...');
+      }
       
-      // Final progress
+      // Wait for the actual result (timeout handled by TimeoutService in Cubit)
+      final results = await analysisCompleter.future;
+      
+      // Report completion
       onProgress(1.0, 'Analysis complete!');
-      
       Logger.success(
         "StorageAnalysisViewModel: Analysis completed successfully with progress",
       );
+      
+      // Small delay to show 100% before navigation
+      await Future.delayed(const Duration(milliseconds: 500));
+      
       return results;
     } catch (e) {
       Logger.error('StorageAnalysisViewModel: Failed to perform analysis', e);
+      // Ensure we report the error state
+      if (e is! Exception || !e.toString().contains('cancelled')) {
+        onProgress(0.0, 'Analysis failed');
+      }
       rethrow;
     }
   }
 }
 
-/// Extension to check if a Future is completed
-extension FutureExtension<T> on Future<T> {
-  bool get isCompleted {
-    var completed = false;
-    then((_) => completed = true);
-    return completed;
-  }
-
-  /// Getter for cancellation status
-  bool get isCancelled => false;
-}
-
-/// Extension for CancellationToken
+/// Extension for CancellationToken proper implementation
 extension CancellationTokenExtension on CancellationToken? {
   bool get isCancelled {
-    // Simple cancellation check
-    var cancelled = false;
-    this?.onCancel = () => cancelled = true;
-    return cancelled;
+    // Use the actual isCancelled property from CancellationToken
+    return this?.isCancelled ?? false;
   }
 }

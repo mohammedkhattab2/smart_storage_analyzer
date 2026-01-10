@@ -91,14 +91,12 @@ class _OptimizedFileManagerViewState extends State<OptimizedFileManagerView> {
     if (state is FileManagerDeleting) {
       _showDeletingDialog(context, state);
     } else if (state is FileManagerError) {
-      if (Navigator.canPop(context)) {
-        Navigator.of(context).pop();
-      }
+      // Remove automatic pop - let natural navigation work
+      // Any dialog will dismiss itself
       _showErrorSnackBar(context, state.message);
     } else if (state is FileManagerLoaded) {
-      if (Navigator.canPop(context)) {
-        Navigator.of(context).pop();
-      }
+      // Remove automatic pop - let natural navigation work
+      // Dialog dismissal should be handled by the dialog itself
     }
   }
 

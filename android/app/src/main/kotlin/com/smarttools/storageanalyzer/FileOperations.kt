@@ -19,7 +19,10 @@ class FileOperations(private val context: Context) {
     fun openFile(filePath: String): Boolean {
         try {
             val file = File(filePath)
-            if (!file.exists()) return false
+            if (!file.exists()) {
+                android.util.Log.e("FileOperations", "File does not exist: $filePath")
+                return false
+            }
             
             val uri: Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 FileProvider.getUriForFile(context, AUTHORITY, file)
@@ -27,26 +30,61 @@ class FileOperations(private val context: Context) {
                 Uri.fromFile(file)
             }
             
-            val mimeType = getMimeType(file.extension)
+            val extension = file.extension
+            val mimeType = getMimeType(extension)
+            
+            android.util.Log.d("FileOperations", "Opening file: $filePath with MIME type: $mimeType")
+            
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, mimeType)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                
+                // Add extra flags for better compatibility
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                
+                // For documents, add EXTRA_ALLOW_MULTIPLE flag
+                if (isDocument(extension)) {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                }
             }
             
-            // Check if there's an app to handle this file type
-            if (intent.resolveActivity(context.packageManager) != null) {
+            return try {
+                // Try to open directly first
                 context.startActivity(intent)
-                return true
-            } else {
-                // Try with a chooser
+                android.util.Log.d("FileOperations", "Successfully opened file with default app")
+                true
+            } catch (e: android.content.ActivityNotFoundException) {
+                android.util.Log.w("FileOperations", "No default app found, showing chooser")
+                // If no default app, show chooser
                 val chooserIntent = Intent.createChooser(intent, "Open with")
                 chooserIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                context.startActivity(chooserIntent)
-                return true
+                
+                try {
+                    context.startActivity(chooserIntent)
+                    android.util.Log.d("FileOperations", "Opened file with chooser")
+                    true
+                } catch (ex: Exception) {
+                    android.util.Log.e("FileOperations", "Failed to open file even with chooser: ${ex.message}")
+                    // As last resort, try share intent
+                    shareFile(filePath)
+                }
             }
         } catch (e: Exception) {
+            android.util.Log.e("FileOperations", "Error opening file: ${e.message}")
             e.printStackTrace()
             return false
+        }
+    }
+    
+    /**
+     * Check if the file extension is a document type
+     */
+    private fun isDocument(extension: String): Boolean {
+        return when (extension.lowercase()) {
+            "pdf", "doc", "docx", "txt", "rtf", "xls", "xlsx",
+            "ppt", "pptx", "csv", "odt", "ods", "odp",
+            "html", "htm", "xml", "json" -> true
+            else -> false
         }
     }
     

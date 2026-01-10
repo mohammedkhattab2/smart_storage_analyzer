@@ -77,10 +77,8 @@ class _StorageAnalysisViewState extends State<StorageAnalysisView>
   ) {
     return Stack(
       children: [
-        // Background pattern - wrapped with RepaintBoundary
-        RepaintBoundary(
-          child: _buildBackgroundPattern(context),
-        ),
+        // Background pattern
+        _buildBackgroundPattern(context),
 
         // Main content
         Column(
@@ -131,10 +129,12 @@ class _StorageAnalysisViewState extends State<StorageAnalysisView>
     final colorScheme = Theme.of(context).colorScheme;
 
     return Positioned.fill(
-      child: CustomPaint(
-        painter: _OptimizedMagicalBackgroundPainter(
-          primaryColor: colorScheme.primary.withValues(alpha: 0.05),
-          secondaryColor: colorScheme.secondary.withValues(alpha: 0.03),
+      child: RepaintBoundary(
+        child: CustomPaint(
+          painter: _OptimizedMagicalBackgroundPainter(
+            primaryColor: colorScheme.primary.withValues(alpha: 0.05),
+            secondaryColor: colorScheme.secondary.withValues(alpha: 0.03),
+          ),
         ),
       ),
     );

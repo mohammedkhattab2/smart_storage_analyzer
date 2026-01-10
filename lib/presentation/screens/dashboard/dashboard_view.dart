@@ -9,6 +9,9 @@ import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_s
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/dashboard_content.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/dashboard_header.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/common/skeleton_loader.dart';
+import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
+import 'package:smart_storage_analyzer/domain/repositories/storage_repository.dart';
+import 'package:smart_storage_analyzer/data/repositories/storage_repository_impl.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -29,6 +32,9 @@ class _DashboardViewState extends State<DashboardView>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     
+    // Clear category cache to ensure fresh data
+    _clearCategoryCache();
+    
     // Initialize animation controller for smooth transitions
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 600),
@@ -41,6 +47,23 @@ class _DashboardViewState extends State<DashboardView>
     );
     
     _animationController.forward();
+    
+    // Force refresh after clearing cache
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<DashboardCubit>().refresh(context: context);
+      }
+    });
+  }
+  
+  void _clearCategoryCache() {
+    try {
+      // Access the storage repository to clear cache
+      final storageRepo = sl<StorageRepository>() as StorageRepositoryImpl;
+      storageRepo.clearCategoriesCache();
+    } catch (e) {
+      // Ignore errors - cache clearing is not critical
+    }
   }
 
   @override

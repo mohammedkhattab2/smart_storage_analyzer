@@ -9,10 +9,14 @@ import 'package:smart_storage_analyzer/core/services/file_scanner_service.dart';
 import 'package:smart_storage_analyzer/core/services/isolate_helper.dart';
 import 'package:smart_storage_analyzer/core/services/native_storage_service.dart';
 import 'package:smart_storage_analyzer/core/services/permission_manager.dart';
+import 'package:smart_storage_analyzer/core/services/document_scanner_service.dart';
+import 'package:smart_storage_analyzer/core/services/others_scanner_service.dart';
 import 'package:smart_storage_analyzer/core/theme/app_color_schemes.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
+import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
 import 'package:smart_storage_analyzer/data/models/category_model.dart';
 import 'package:smart_storage_analyzer/data/models/storage_info_model.dart';
+import 'package:smart_storage_analyzer/data/repositories/file_repository_impl.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_info.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_analysis_results.dart';
@@ -62,7 +66,7 @@ class StorageRepositoryImpl implements StorageRepository {
   @override
   Future<List<Category>> getCategories() async {
     try {
-      Logger.info('Getting file categories...');
+      Logger.info('Getting file categories from FileRepository...');
 
       if (Platform.isAndroid) {
         // Check storage permission with cached state
@@ -80,8 +84,8 @@ class StorageRepositoryImpl implements StorageRepository {
           return cachedCategories;
         }
 
-        // Scan actual files on device with optimized approach
-        final categories = await _scanDeviceFilesOptimized();
+        // Calculate categories from FileRepository for consistency
+        final categories = await _calculateCategoriesFromFileRepository();
         
         // Cache the results
         await _cacheCategories(categories);
@@ -102,6 +106,12 @@ class StorageRepositoryImpl implements StorageRepository {
   List<Category>? _categoriesCache;
   DateTime? _cacheTimestamp;
   static const _cacheValidityDuration = Duration(minutes: 5);
+  
+  // Public method to clear cache when needed
+  void clearCategoriesCache() {
+    _categoriesCache = null;
+    _cacheTimestamp = null;
+  }
 
   Future<List<Category>?> _getCachedCategories() async {
     if (_categoriesCache != null && _cacheTimestamp != null) {
@@ -181,8 +191,8 @@ class StorageRepositoryImpl implements StorageRepository {
             lastUpdated: DateTime.now(),
           );
         }
+        
       }
-
       // No data available - return zeros
       Logger.error('Unable to get storage info from any source');
       return StorageInfoModel(
@@ -257,73 +267,160 @@ class StorageRepositoryImpl implements StorageRepository {
     return null;
   }
 
-  /// Optimized device file scanning with native integration
-  Future<List<Category>> _scanDeviceFilesOptimized() async {
+  /// Calculate categories from FileRepository for consistency
+  /// This ensures Dashboard/All Categories show the same data as Category Details
+  Future<List<Category>> _calculateCategoriesFromFileRepository() async {
     try {
-      Logger.info('Starting optimized category scan...');
+      Logger.info('Calculating categories from FileRepository...');
       
-      // Get category data directly from native for better performance
-      final Map<dynamic, dynamic> categoryData = await platform.invokeMethod(
-        'getCategorySizes',
-      );
+      final categories = <Category>[];
+      final categoryMap = _createCategoryMap();
       
-      // Process the native data in isolate
-      return await IsolateHelper.runWithProgress<List<Category>, Map<dynamic, dynamic>>(
-        computation: _processNativeCategoryData,
-        parameter: categoryData,
-        onProgress: (progress, message) {
-          Logger.debug('Category processing: ${(progress * 100).toInt()}% - $message');
-        },
-      );
+      // Calculate each category using the same source as Category Details
+      for (final categoryEntry in categoryMap.entries) {
+        final categoryId = categoryEntry.key;
+        final categoryInfo = categoryEntry.value;
+        
+        try {
+          Logger.info('Calculating $categoryId category...');
+          
+          // Special handling for documents category - use SAF data if available
+          if (categoryId == 'documents') {
+            try {
+              // Use the singleton DocumentScannerService from service locator
+              final documentScannerService = sl<DocumentScannerService>();
+              
+              // Check if folder has been selected
+              if (documentScannerService.hasFolderAccess) {
+                Logger.info('Documents category: SAF folder access detected');
+                
+                // Scan documents using SAF
+                final safDocuments = await documentScannerService.scanDocuments(useCache: true);
+                
+                if (safDocuments.isNotEmpty) {
+                  // Calculate total size from SAF documents
+                  double totalSize = 0;
+                  for (final doc in safDocuments) {
+                    totalSize += doc.size;
+                  }
+                  
+                  categories.add(CategoryModel(
+                    id: categoryId,
+                    name: categoryInfo.name,
+                    icon: categoryInfo.icon,
+                    color: categoryInfo.color,
+                    sizeInBytes: totalSize,
+                    filesCount: safDocuments.length,
+                  ));
+                  
+                  Logger.info('Documents (SAF): ${safDocuments.length} files, ${totalSize / (1024 * 1024)} MB');
+                  continue; // Skip regular scanning for documents
+                } else {
+                  Logger.info('Documents category: SAF folder selected but no documents found');
+                }
+              } else {
+                Logger.info('Documents category: No SAF folder access');
+              }
+            } catch (e) {
+              Logger.warning('Failed to get SAF documents: $e');
+              // Fall back to regular scanning
+            }
+          }
+          
+          // Special handling for others category - use SAF data if available
+          if (categoryId == 'others') {
+            try {
+              // Use the singleton OthersScannerService from service locator
+              final othersScannerService = sl<OthersScannerService>();
+              
+              // Check if folder has been selected
+              if (othersScannerService.persistedUri != null) {
+                Logger.info('Others category: SAF folder access detected');
+                
+                // Scan others using SAF
+                final safOthers = await othersScannerService.scanOthers();
+                
+                if (safOthers.isNotEmpty) {
+                  // Calculate total size from SAF others
+                  double totalSize = 0;
+                  for (final file in safOthers) {
+                    totalSize += file.size;
+                  }
+                  
+                  categories.add(CategoryModel(
+                    id: categoryId,
+                    name: categoryInfo.name,
+                    icon: categoryInfo.icon,
+                    color: categoryInfo.color,
+                    sizeInBytes: totalSize,
+                    filesCount: safOthers.length,
+                  ));
+                  
+                  Logger.info('Others (SAF): ${safOthers.length} files, ${totalSize / (1024 * 1024)} MB');
+                  continue; // Skip regular scanning for others
+                } else {
+                  Logger.info('Others category: SAF folder selected but no files found');
+                }
+              } else {
+                Logger.info('Others category: No SAF folder access');
+              }
+            } catch (e) {
+              Logger.warning('Failed to get SAF others: $e');
+              // Fall back to regular scanning
+            }
+          }
+          
+          // Regular scanning for all other categories (and documents if SAF not available)
+          final files = await FileScannerService.scanFilesByCategory(
+            categoryId,
+            onProgress: (progress, message) {
+              Logger.debug('Calculating $categoryId: ${(progress * 100).toInt()}%');
+            },
+          );
+          
+          // Calculate total size
+          double totalSize = 0;
+          for (final file in files) {
+            totalSize += file.sizeInBytes;
+          }
+          
+          categories.add(CategoryModel(
+            id: categoryId,
+            name: categoryInfo.name,
+            icon: categoryInfo.icon,
+            color: categoryInfo.color,
+            sizeInBytes: totalSize,
+            filesCount: files.length,
+          ));
+          
+          Logger.info('$categoryId: ${files.length} files, ${totalSize / (1024 * 1024)} MB');
+          
+        } catch (e) {
+          Logger.warning('Failed to calculate $categoryId: $e');
+          // Add empty category on error
+          categories.add(CategoryModel(
+            id: categoryId,
+            name: categoryInfo.name,
+            icon: categoryInfo.icon,
+            color: categoryInfo.color,
+            sizeInBytes: 0.0,
+            filesCount: 0,
+          ));
+        }
+      }
+      
+      // Sort by size (largest first)
+      categories.sort((a, b) => b.sizeInBytes.compareTo(a.sizeInBytes));
+      
+      Logger.success('Category calculation completed');
+      return categories;
+      
     } catch (e) {
-      Logger.error('Native category scan failed, using fallback', e);
-      // Fallback to empty categories on error
+      Logger.error('Category calculation failed', e);
       return _getEmptyCategories();
     }
   }
 
-  /// Process native category data in isolate
-  static Future<List<Category>> _processNativeCategoryData(
-    Map<dynamic, dynamic> nativeData,
-  ) async {
-    reportProgress(0.1, 'Processing category data...');
-    
-    final categoryMap = _createCategoryMap();
-    final categories = <Category>[];
-    
-    int processed = 0;
-    final total = categoryMap.length;
-    
-    for (final entry in categoryMap.entries) {
-      final categoryId = entry.key;
-      final categoryData = entry.value;
-      
-      // Get size and count from native data
-      final sizeInBytes = (nativeData['${categoryId}_size'] as num?)?.toDouble() ?? 0.0;
-      final fileCount = (nativeData['${categoryId}_count'] as int?) ?? 0;
-      
-      categories.add(CategoryModel(
-        id: categoryId,
-        name: categoryData.name,
-        icon: categoryData.icon,
-        color: categoryData.color,
-        sizeInBytes: sizeInBytes,
-        filesCount: fileCount,
-      ));
-      
-      processed++;
-      reportProgress(
-        0.1 + (processed / total) * 0.9,
-        'Processing ${categoryData.name} category...',
-      );
-    }
-
-    // Sort by size (largest first)
-    categories.sort((a, b) => b.sizeInBytes.compareTo(a.sizeInBytes));
-    
-    reportProgress(1.0, 'Category processing complete');
-    return categories;
-  }
 
   /// Create category map - moved to static method for isolate access
   static Map<String, CategoryData> _createCategoryMap() {
@@ -428,6 +525,10 @@ class StorageRepositoryImpl implements StorageRepository {
     try {
       Logger.info("Starting deep storage analysis in repository...");
 
+      // Clear all file repository caches before analysis to ensure fresh data
+      FileRepositoryImpl.clearAllCaches();
+      Logger.info("Cleared file caches before deep analysis");
+
       // Check permission first
       final hasPermission = await _permissionManager.hasPermission();
       if (!hasPermission) {
@@ -504,6 +605,29 @@ class StorageRepositoryImpl implements StorageRepository {
       analysisDuration: DateTime.now().difference(startTime),
     );
   }
+
+  Future<void> deleteCategory(String categoryId) async {
+    try {
+      Logger.info('Deleting category: $categoryId');
+      
+      // Remove from cache if it exists
+      if (_categoriesCache != null) {
+        _categoriesCache = _categoriesCache!
+            .where((category) => category.id != categoryId)
+            .toList();
+      }
+      
+      // In a real app, you might want to persist this deletion
+      // For now, we're just removing it from the cached list
+      // The category will reappear after cache expiration or app restart
+      
+      Logger.success('Category deleted successfully: $categoryId');
+    } catch (e) {
+      Logger.error('Failed to delete category', e);
+      rethrow;
+    }
+  }
+  
 }
 
 /// Helper class to store category data during scanning

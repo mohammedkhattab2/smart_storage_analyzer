@@ -10,6 +10,11 @@ import 'package:smart_storage_analyzer/domain/value_objects/file_category.dart';
 
 class FileRepositoryImpl implements FileRepository {
   static const platform = MethodChannel(ChannelConstants.mainChannel);
+  // Cache for file lists to avoid repeated scans
+  static final Map<String, List<FileItem>> _fileCache = {};
+  static final Map<String, DateTime> _cacheTimestamps = {};
+  static const Duration _cacheValidDuration = Duration(minutes: 2);
+  
   @override
   Future<void> deleteFiles(List<String> fileIds) async {
     if (!Platform.isAndroid) {
@@ -26,10 +31,21 @@ class FileRepositoryImpl implements FileRepository {
       });
 
       Logger.success('Deleted $deletedCount files successfully');
+      
+      // Clear all file caches after deletion to ensure fresh data
+      clearAllCaches();
+      Logger.info('Cleared file caches after deletion');
     } catch (e) {
       Logger.error('Failed to delete files', e);
       throw Exception('Failed to delete files: $e');
     }
+  }
+  
+  /// Clear all cached file data
+  static void clearAllCaches() {
+    _fileCache.clear();
+    _cacheTimestamps.clear();
+    Logger.info('All file caches cleared');
   }
 
   @override
@@ -58,6 +74,17 @@ class FileRepositoryImpl implements FileRepository {
       return [];
     }
 
+    // Check cache first
+    final cacheKey = 'category_$category';
+    if (_fileCache.containsKey(cacheKey)) {
+      final timestamp = _cacheTimestamps[cacheKey];
+      if (timestamp != null &&
+          DateTime.now().difference(timestamp) < _cacheValidDuration) {
+        Logger.info('Returning cached files for category: $category');
+        return _fileCache[cacheKey]!;
+      }
+    }
+
     try {
       // Use the optimized file scanner service that runs in isolates
       final files = await FileScannerService.scanFilesByCategory(
@@ -70,6 +97,10 @@ class FileRepositoryImpl implements FileRepository {
       Logger.info(
         'Got ${files.length} files from optimized scanner for category: $category',
       );
+
+      // Cache the results
+      _fileCache[cacheKey] = files;
+      _cacheTimestamps[cacheKey] = DateTime.now();
 
       return files;
     } catch (e) {

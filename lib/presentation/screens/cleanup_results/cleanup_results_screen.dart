@@ -13,7 +13,16 @@ class CleanupResultsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => sl<CleanupResultsCubit>()..initialize(results),
+      create: (context) {
+        final cubit = sl<CleanupResultsCubit>();
+        // Initialize in a post frame callback to ensure the widget is mounted
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            cubit.initialize(results);
+          }
+        });
+        return cubit;
+      },
       child: const CleanupResultsView(),
     );
   }

@@ -13,17 +13,37 @@ class StorageAnalysisCubit extends Cubit<StorageAnalysisState> {
   final StorageAnalysisViewModel _viewModel;
   CancellationToken? _cancellationToken;
   StreamSubscription? _progressSubscription;
+  
+  // Cache for analysis results
+  StorageAnalysisResults? _cachedResults;
+  DateTime? _lastAnalysisTime;
+  static const Duration _cacheExpiry = Duration(hours: 1);
+  bool _isAnalyzing = false;
 
   StorageAnalysisCubit({required StorageAnalysisViewModel viewModel})
     : _viewModel = viewModel,
       super(StorageAnalysisInitial());
 
-  Future<void> startAnalysis() async {
+  Future<void> startAnalysis({bool forceRerun = false}) async {
+    // Check if analysis is already in progress
+    if (_isAnalyzing) {
+      Logger.info('Analysis already in progress, skipping duplicate request');
+      return;
+    }
+    
+    // Check if we have valid cached results
+    if (!forceRerun && _hasCachedResults()) {
+      Logger.info('Using cached analysis results');
+      emit(StorageAnalysisCompleted(results: _cachedResults!));
+      return;
+    }
+    
     // Cancel any previous analysis
     _cancelCurrentAnalysis();
     
     // Create new cancellation token
     _cancellationToken = CancellationToken();
+    _isAnalyzing = true;
     
     emit(
       StorageAnalysisInProgress(
@@ -76,6 +96,9 @@ class StorageAnalysisCubit extends Cubit<StorageAnalysisState> {
         if (_cancellationToken?.isCancelled == true) {
           emit(StorageAnalysisCancelled());
         } else if (results != null) {
+          // Cache the results
+          _cachedResults = results;
+          _lastAnalysisTime = DateTime.now();
           emit(StorageAnalysisCompleted(results: results));
         } else {
           emit(StorageAnalysisError(
@@ -104,6 +127,8 @@ class StorageAnalysisCubit extends Cubit<StorageAnalysisState> {
           );
         }
       }
+    } finally {
+      _isAnalyzing = false;
     }
   }
 
@@ -139,5 +164,30 @@ class StorageAnalysisCubit extends Cubit<StorageAnalysisState> {
   Future<void> close() {
     _cancelCurrentAnalysis();
     return super.close();
+  }
+  
+  bool _hasCachedResults() {
+    if (_cachedResults == null || _lastAnalysisTime == null) {
+      return false;
+    }
+    
+    final age = DateTime.now().difference(_lastAnalysisTime!);
+    return age < _cacheExpiry;
+  }
+  
+  void clearCache() {
+    _cachedResults = null;
+    _lastAnalysisTime = null;
+  }
+  
+  StorageAnalysisResults? getCachedResults() {
+    return _hasCachedResults() ? _cachedResults : null;
+  }
+  
+  /// Reset the state to initial
+  void resetState() {
+    _cancelCurrentAnalysis();
+    _isAnalyzing = false;
+    emit(StorageAnalysisInitial());
   }
 }

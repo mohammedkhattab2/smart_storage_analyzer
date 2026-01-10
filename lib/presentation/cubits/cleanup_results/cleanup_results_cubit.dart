@@ -15,16 +15,20 @@ class CleanupResultsCubit extends Cubit<CleanupResultsState> {
       super(CleanupResultsInitial());
 
   void initialize(StorageAnalysisResults results) {
-    emit(
-      CleanupResultsLoaded(
-        results: results,
-        selectedCategories: {},
-        selectedFiles: {},
-      ),
-    );
+    if (!isClosed) {
+      emit(
+        CleanupResultsLoaded(
+          results: results,
+          selectedCategories: {},
+          selectedFiles: {},
+        ),
+      );
+    }
   }
 
   void toggleCategorySelection(String categoryName) {
+    if (isClosed) return;
+    
     final state = this.state;
     if (state is CleanupResultsLoaded) {
       final selectedCategories = Set<String>.from(state.selectedCategories);
@@ -52,6 +56,8 @@ class CleanupResultsCubit extends Cubit<CleanupResultsState> {
   }
 
   void toggleFileSelection(String categoryName, String fileId) {
+    if (isClosed) return;
+    
     final state = this.state;
     if (state is CleanupResultsLoaded) {
       final selectedFiles = Map<String, Set<String>>.from(state.selectedFiles);
@@ -74,6 +80,8 @@ class CleanupResultsCubit extends Cubit<CleanupResultsState> {
   }
 
   void selectAll() {
+    if (isClosed) return;
+    
     final state = this.state;
     if (state is CleanupResultsLoaded) {
       final selectedCategories = <String>{};
@@ -94,6 +102,8 @@ class CleanupResultsCubit extends Cubit<CleanupResultsState> {
   }
 
   void deselectAll() {
+    if (isClosed) return;
+    
     final state = this.state;
     if (state is CleanupResultsLoaded) {
       emit(state.copyWith(selectedCategories: {}, selectedFiles: {}));
@@ -101,14 +111,18 @@ class CleanupResultsCubit extends Cubit<CleanupResultsState> {
   }
 
   Future<void> performCleanup({BuildContext? context}) async {
+    if (isClosed) return;
+    
     final state = this.state;
     if (state is CleanupResultsLoaded) {
-      emit(
-        CleanupInProgress(
-          message: 'Preparing to clean files...',
-          progress: 0.0,
-        ),
-      );
+      if (!isClosed) {
+        emit(
+          CleanupInProgress(
+            message: 'Preparing to clean files...',
+            progress: 0.0,
+          ),
+        );
+      }
 
       try {
         // Collect all selected files in background
@@ -137,11 +151,13 @@ class CleanupResultsCubit extends Cubit<CleanupResultsState> {
         });
 
         if (filesToDelete.isEmpty) {
-          emit(
-            const CleanupError(
-              message: 'No files selected for cleanup.',
-            ),
-          );
+          if (!isClosed) {
+            emit(
+              const CleanupError(
+                message: 'No files selected for cleanup.',
+              ),
+            );
+          }
           return;
         }
 
@@ -160,46 +176,58 @@ class CleanupResultsCubit extends Cubit<CleanupResultsState> {
           // ignore: use_build_context_synchronously
           context: validContext,
           onProgress: (progress, message) {
-            // Update progress state
-            emit(
-              CleanupInProgress(
-                message: message,
-                progress: progress,
-              ),
-            );
+            // Update progress state only if cubit is not closed
+            if (!isClosed) {
+              emit(
+                CleanupInProgress(
+                  message: message,
+                  progress: progress,
+                ),
+              );
+            }
           },
         );
 
         if (!success) {
-          emit(
-            const CleanupError(
-              message:
-                  'Some files could not be deleted. Please check permissions.',
-            ),
-          );
+          if (!isClosed) {
+            emit(
+              const CleanupError(
+                message:
+                    'Some files could not be deleted. Please check permissions.',
+              ),
+            );
+          }
           return;
         }
 
-        emit(
-          CleanupCompleted(
-            filesDeleted: filesToDelete.length,
-            spaceFreed: totalSize,
-          ),
-        );
+        if (!isClosed) {
+          emit(
+            CleanupCompleted(
+              filesDeleted: filesToDelete.length,
+              spaceFreed: totalSize,
+            ),
+          );
+        }
       } catch (e) {
-        emit(CleanupError(message: 'Failed to clean files: ${e.toString()}'));
+        if (!isClosed) {
+          emit(CleanupError(message: 'Failed to clean files: ${e.toString()}'));
+        }
       }
     }
   }
 
   /// Cancel ongoing cleanup operation
   void cancelCleanup() {
+    if (isClosed) return;
+    
     _viewModel.cancelDeletion();
-    emit(
-      const CleanupError(
-        message: 'Cleanup cancelled by user.',
-      ),
-    );
+    if (!isClosed) {
+      emit(
+        const CleanupError(
+          message: 'Cleanup cancelled by user.',
+        ),
+      );
+    }
   }
 
   @override

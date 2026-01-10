@@ -60,10 +60,6 @@ class AppPages {
               key: state.pageKey,
               child: DashboardScreen(),
             ),
-            routes: <RouteBase>[
-              // Category details route is now handled directly from dashboard
-              // using Navigator.push with Category object
-            ],
           ),
           GoRoute(
             path: AppRoutes.fileManager,
@@ -152,11 +148,8 @@ extension NavigationHelper on BuildContext {
   void navigateToReplace(String route) => go(route);
 
   void navigateBack() {
-    if (canPop()) {
-      pop();
-    } else {
-      go(AppRoutes.dashboard);
-    }
+    // Use natural navigation - just pop
+    pop();
   }
 
   // navigate with parameters

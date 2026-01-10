@@ -5,7 +5,7 @@ import 'package:smart_storage_analyzer/core/constants/app_icons.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/bottom_navigation/bottom_nav_item.dart';
 import 'package:smart_storage_analyzer/routes/app_routes.dart';
 
-class BottomNavBar extends StatefulWidget {
+class BottomNavBar extends StatelessWidget {
   final String currentLocation;
   final Function(String) onItemTapped;
 
@@ -16,32 +16,10 @@ class BottomNavBar extends StatefulWidget {
   });
 
   @override
-  State<BottomNavBar> createState() => _BottomNavBarState();
-}
-
-class _BottomNavBarState extends State<BottomNavBar> {
-  int _selectedIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIndex = _getSelectedIndex();
-  }
-
-  @override
-  void didUpdateWidget(BottomNavBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.currentLocation != widget.currentLocation) {
-      setState(() {
-        _selectedIndex = _getSelectedIndex();
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
+    final selectedIndex = _getSelectedIndex();
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -93,8 +71,10 @@ class _BottomNavBarState extends State<BottomNavBar> {
               child: Stack(
                 children: [
                   // Background Indicator
-                  Positioned(
-                    left: _getIndicatorPosition(_selectedIndex),
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOutCubic,
+                    left: _getIndicatorPosition(context, selectedIndex),
                     top: 10,
                     bottom: 10,
                     child: Container(
@@ -159,8 +139,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                           isSelected: _isSelected(0),
                           onTap: () {
                             HapticFeedback.lightImpact();
-                            setState(() => _selectedIndex = 0);
-                            widget.onItemTapped(AppRoutes.dashboard);
+                            onItemTapped(AppRoutes.dashboard);
                           },
                         ),
                       ),
@@ -172,8 +151,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                           isSelected: _isSelected(1),
                           onTap: () {
                             HapticFeedback.lightImpact();
-                            setState(() => _selectedIndex = 1);
-                            widget.onItemTapped(AppRoutes.fileManager);
+                            onItemTapped(AppRoutes.fileManager);
                           },
                         ),
                       ),
@@ -185,8 +163,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                           isSelected: _isSelected(2),
                           onTap: () {
                             HapticFeedback.lightImpact();
-                            setState(() => _selectedIndex = 2);
-                            widget.onItemTapped(AppRoutes.statistics);
+                            onItemTapped(AppRoutes.statistics);
                           },
                         ),
                       ),
@@ -198,8 +175,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                           isSelected: _isSelected(3),
                           onTap: () {
                             HapticFeedback.lightImpact();
-                            setState(() => _selectedIndex = 3);
-                            widget.onItemTapped(AppRoutes.settings);
+                            onItemTapped(AppRoutes.settings);
                           },
                         ),
                       ),
@@ -214,7 +190,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
     );
   }
 
-  double _getIndicatorPosition(int index) {
+  double _getIndicatorPosition(BuildContext context, int index) {
     final screenWidth = MediaQuery.of(context).size.width - 32; // Total padding
     final itemWidth = screenWidth / 4;
     final indicatorWidth = _getIndicatorWidth();
@@ -224,14 +200,20 @@ class _BottomNavBarState extends State<BottomNavBar> {
   double _getIndicatorWidth() => 52; // Optimized for icon centering
 
   bool _isSelected(int index) {
-    return _selectedIndex == index;
+    final selectedIndex = _getSelectedIndex();
+    return selectedIndex == index;
   }
 
   int _getSelectedIndex() {
-    if (widget.currentLocation.startsWith(AppRoutes.dashboard)) return 0;
-    if (widget.currentLocation.startsWith(AppRoutes.fileManager)) return 1;
-    if (widget.currentLocation.startsWith(AppRoutes.statistics)) return 2;
-    if (widget.currentLocation.startsWith(AppRoutes.settings)) return 3;
+    // Check for the main routes
+    if (currentLocation == '/files' || currentLocation.startsWith('/files')) return 1;
+    if (currentLocation == '/statistics' || currentLocation.startsWith('/statistics')) return 2;
+    if (currentLocation == '/settings' || currentLocation.startsWith('/settings')) return 3;
+    
+    // Check for dashboard
+    if (currentLocation == '/dashboard' || currentLocation.startsWith('/dashboard')) return 0;
+    
+    // Default to dashboard
     return 0;
   }
 }

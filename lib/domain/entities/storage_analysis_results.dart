@@ -66,26 +66,13 @@ class StorageAnalysisResults {
       description: 'System and app temporary files',
     ),
     CleanupCategory(
-      name: 'Duplicate Files',
-      icon: 'duplicates',
-      files: duplicateFiles,
-      totalSize: totalDuplicatesSize,
-      description: 'Files with identical content',
-    ),
-    CleanupCategory(
-      name: 'Large Old Files',
-      icon: 'old_files',
-      files: largeOldFiles,
-      totalSize: totalLargeOldSize,
-      description: 'Large files not accessed recently',
-    ),
-    CleanupCategory(
       name: 'Thumbnails',
       icon: 'thumbnails',
       files: thumbnails,
       totalSize: totalThumbnailsSize,
       description: 'Preview images for media files',
     ),
+    // Removed duplicate files and large old files from cleanup categories
   ];
 }
 

@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_storage_analyzer/data/repositories/file_repository_impl.dart';
 import 'package:smart_storage_analyzer/data/repositories/settings_repository_impl.dart';
 import 'package:smart_storage_analyzer/data/repositories/statistics_repository_impl.dart';
@@ -17,11 +18,9 @@ import 'package:smart_storage_analyzer/domain/usecases/get_storage_info_usecase.
 import 'package:smart_storage_analyzer/domain/usecases/sign_out_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/update_settings_usecase.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_cubit.dart';
-import 'package:smart_storage_analyzer/presentation/cubits/file_manager/file_manager_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/settings/settings_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/statistics/statistics_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/theme/theme_cubit.dart';
-import 'package:smart_storage_analyzer/presentation/viewmodels/file_manager_viewmodel.dart';
 import 'package:smart_storage_analyzer/presentation/viewmodels/optimized_file_manager_viewmodel.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/file_manager/optimized_file_manager_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/viewmodels/statistics_viewmodel.dart';
@@ -39,9 +38,37 @@ import 'package:smart_storage_analyzer/presentation/viewmodels/storage_analysis_
 import 'package:smart_storage_analyzer/presentation/cubits/storage_analysis/storage_analysis_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/viewmodels/cleanup_results_viewmodel.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/cleanup_results/cleanup_results_cubit.dart';
+import 'package:smart_storage_analyzer/core/services/document_scanner_service.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/document_scan/document_scan_cubit.dart';
+import 'package:smart_storage_analyzer/core/services/others_scanner_service.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/others_scan/others_scan_cubit.dart';
 
 final GetIt sl = GetIt.instance;
 Future<void> setupServiceLocator() async {
+  // Register SharedPreferences first
+  final sharedPreferences = await SharedPreferences.getInstance();
+  sl.registerLazySingleton<SharedPreferences>(() => sharedPreferences);
+  
+  // Document Scanner Service (SAF)
+  sl.registerLazySingleton<DocumentScannerService>(
+    () => DocumentScannerService(sl<SharedPreferences>()),
+  );
+  
+  // Document Scan Cubit - Factory so each screen gets a fresh instance
+  sl.registerFactory<DocumentScanCubit>(
+    () => DocumentScanCubit(documentScannerService: sl()),
+  );
+  
+  // Others Scanner Service (SAF)
+  sl.registerLazySingleton<OthersScannerService>(
+    () => OthersScannerService(sl<SharedPreferences>()),
+  );
+  
+  // Others Scan Cubit - Factory so each screen gets a fresh instance
+  sl.registerFactory<OthersScanCubit>(
+    () => OthersScanCubit(sl()),
+  );
+  
   sl.registerLazySingleton<StorageRepository>(() => StorageRepositoryImpl());
   sl.registerLazySingleton(() => GetCategoriesUseCase(sl()));
   sl.registerLazySingleton(() => GetStorageInfoUseCase(sl()));
@@ -55,8 +82,8 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
-  // Dashboard Cubit
-  sl.registerFactory(() => DashboardCubit(viewModel: sl()));
+  // Dashboard Cubit - Singleton to preserve state
+  sl.registerLazySingleton(() => DashboardCubit(viewModel: sl()));
   sl.registerLazySingleton<SettingsRepository>(() => SettingsRepositoryImpl());
   sl.registerLazySingleton(() => GetSettingsUseCase(sl()));
   sl.registerLazySingleton(() => UpdateSettingsUseCase(sl()));
@@ -87,18 +114,12 @@ Future<void> setupServiceLocator() async {
     () => StatisticsViewModel(getStatisticsUsecase: sl()),
   );
 
-  // Cubit
-  sl.registerFactory<StatisticsCubit>(() => StatisticsCubit(viewmodel: sl()));
+  // Cubit - Singleton to preserve state and cache
+  sl.registerLazySingleton<StatisticsCubit>(() => StatisticsCubit(viewmodel: sl()));
 
   sl.registerLazySingleton<FileRepository>(() => FileRepositoryImpl());
   sl.registerLazySingleton(() => GetFilesUseCase(sl()));
   sl.registerLazySingleton(() => DeleteFilesUseCase(sl()));
-  
-  // Regular file manager (kept for backward compatibility)
-  sl.registerLazySingleton(
-    () => FileManagerViewModel(getFilesUsecase: sl(), deleteFilesUsecase: sl()),
-  );
-  sl.registerFactory(() => FileManagerCubit(viewModel: sl()));
   
   // Optimized file manager (used in app routes)
   sl.registerLazySingleton(
@@ -108,13 +129,16 @@ Future<void> setupServiceLocator() async {
       fileRepository: sl(),
     ),
   );
-  sl.registerFactory(() => OptimizedFileManagerCubit(sl()));
+  sl.registerLazySingleton(() => OptimizedFileManagerCubit(sl()));
 
   // All Categories
   sl.registerLazySingleton(() => AllCategoriesViewModel());
 
   // Category Details
-  sl.registerFactory(() => CategoryDetailsCubit(getFilesUsecase: sl()));
+  sl.registerFactory(() => CategoryDetailsCubit(
+    fileRepository: sl(),
+    deleteFilesUseCase: sl(),
+  ));
 
   // Pro Access Feature
   sl.registerLazySingleton<ProAccessRepository>(
@@ -146,7 +170,7 @@ Future<void> setupServiceLocator() async {
   // Storage Analysis
   sl.registerLazySingleton(() => AnalyzeStorageUseCase(sl()));
   sl.registerLazySingleton(() => StorageAnalysisViewModel(sl()));
-  sl.registerFactory(() => StorageAnalysisCubit(viewModel: sl()));
+  sl.registerLazySingleton(() => StorageAnalysisCubit(viewModel: sl()));
 
   // Cleanup Results
   sl.registerLazySingleton(() => CleanupResultsViewModel());

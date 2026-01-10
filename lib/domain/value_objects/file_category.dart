@@ -1,3 +1,5 @@
+import '../../../core/constants/file_extensions.dart';
+
 /// File category enumeration for categorizing files based on their type
 enum FileCategory {
   all,
@@ -74,79 +76,23 @@ extension FileCategoryExtension on FileCategory {
     );
   }
 
-  /// Determine file category based on file extension
+  /// Determine file category based on file extension using comprehensive lists
   static FileCategory fromExtension(String extension) {
     final ext = extension.toLowerCase();
 
-    // Image extensions
-    const imageExts = [
-      '.jpg',
-      '.jpeg',
-      '.png',
-      '.gif',
-      '.bmp',
-      '.webp',
-      '.svg',
-      '.ico',
-      '.tiff',
-      '.heic',
-    ];
-
-    // Video extensions
-    const videoExts = [
-      '.mp4',
-      '.avi',
-      '.mkv',
-      '.mov',
-      '.wmv',
-      '.flv',
-      '.webm',
-      '.m4v',
-      '.mpg',
-      '.3gp',
-    ];
-
-    // Audio extensions
-    const audioExts = [
-      '.mp3',
-      '.wav',
-      '.flac',
-      '.aac',
-      '.ogg',
-      '.wma',
-      '.m4a',
-      '.opus',
-      '.amr',
-    ];
-
-    // Document extensions
-    const documentExts = [
-      '.pdf',
-      '.doc',
-      '.docx',
-      '.txt',
-      '.odt',
-      '.xls',
-      '.xlsx',
-      '.ppt',
-      '.pptx',
-      '.csv',
-    ];
-
-    // App extensions
-    const appExts = ['.apk', '.xapk', '.aab'];
-
-    if (imageExts.contains(ext)) {
+    // Use the comprehensive extension lists from FileExtensions class
+    if (FileExtensions.imageExtensions.contains(ext)) {
       return FileCategory.images;
-    } else if (videoExts.contains(ext)) {
+    } else if (FileExtensions.videoExtensions.contains(ext)) {
       return FileCategory.videos;
-    } else if (audioExts.contains(ext)) {
+    } else if (FileExtensions.audioExtensions.contains(ext)) {
       return FileCategory.audio;
-    } else if (documentExts.contains(ext)) {
+    } else if (FileExtensions.documentExtensions.contains(ext)) {
       return FileCategory.documents;
-    } else if (appExts.contains(ext)) {
+    } else if (FileExtensions.appExtensions.contains(ext)) {
       return FileCategory.apps;
     } else {
+      // Any file that doesn't match known extensions goes to "others"
       return FileCategory.others;
     }
   }

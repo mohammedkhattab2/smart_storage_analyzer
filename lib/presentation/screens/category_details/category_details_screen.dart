@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,13 +6,14 @@ import 'dart:ui';
 import 'dart:math' as math;
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
-import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/domain/entities/file_item.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/category_details/category_details_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/category_details/category_details_state.dart';
 import 'package:smart_storage_analyzer/presentation/screens/media_viewer/in_app_media_viewer_screen.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:smart_storage_analyzer/core/services/content_uri_service.dart';
 
 class CategoryDetailsScreen extends StatelessWidget {
   final Category category;
@@ -20,11 +22,7 @@ class CategoryDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) =>
-          sl<CategoryDetailsCubit>()..loadCategoryFiles(category),
-      child: _CategoryDetailsView(category: category),
-    );
+    return _CategoryDetailsView(category: category);
   }
 }
 
@@ -38,8 +36,15 @@ class _CategoryDetailsView extends StatefulWidget {
 }
 
 class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
-  final Set<int> _selectedFiles = {};
-  bool _selectionMode = false;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<CategoryDetailsCubit>().loadCategoryFiles(widget.category);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,9 +81,9 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
 
                   return Column(
                     children: [
-                      if (_selectionMode)
+                      if (state.isSelectionMode)
                         _buildSelectionInfoBar(
-                          state.files,
+                          state,
                           colorScheme,
                           textTheme,
                         ),
@@ -183,98 +188,140 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
       ),
       centerTitle: true,
       actions: [
-        // Selection Mode Toggle
-        Container(
-          margin: const EdgeInsets.all(8),
-          child: ClipOval(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      _selectionMode
-                          ? widget.category.color.withValues(alpha: .3)
-                          : colorScheme.surfaceContainerHighest.withValues(
-                              alpha: isDark ? .3 : .6,
-                            ),
-                      _selectionMode
-                          ? widget.category.color.withValues(alpha: .2)
-                          : colorScheme.surfaceContainer.withValues(
-                              alpha: isDark ? .2 : .4,
-                            ),
-                    ],
-                  ),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: _selectionMode
-                        ? widget.category.color.withValues(alpha: .3)
-                        : colorScheme.outline.withValues(alpha: .15),
-                    width: 1,
+        BlocBuilder<CategoryDetailsCubit, CategoryDetailsState>(
+          builder: (context, state) {
+            final isSelectionMode = state is CategoryDetailsLoaded && state.isSelectionMode;
+            final hasSelection = state is CategoryDetailsLoaded && state.hasSelection;
+
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Selection Mode Toggle
+                Container(
+                  margin: const EdgeInsets.all(8),
+                  child: ClipOval(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              isSelectionMode
+                                  ? widget.category.color.withValues(alpha: .3)
+                                  : colorScheme.surfaceContainerHighest.withValues(
+                                      alpha: isDark ? .3 : .6,
+                                    ),
+                              isSelectionMode
+                                  ? widget.category.color.withValues(alpha: .2)
+                                  : colorScheme.surfaceContainer.withValues(
+                                      alpha: isDark ? .2 : .4,
+                                    ),
+                            ],
+                          ),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelectionMode
+                                ? widget.category.color.withValues(alpha: .3)
+                                : colorScheme.outline.withValues(alpha: .15),
+                            width: 1,
+                          ),
+                        ),
+                        child: IconButton(
+                          onPressed: () {
+                            context.read<CategoryDetailsCubit>().toggleSelectionMode();
+                            HapticFeedback.lightImpact();
+                          },
+                          icon: Icon(
+                            isSelectionMode ? Icons.done : Icons.checklist,
+                            size: 18,
+                            color: isSelectionMode
+                                ? widget.category.color
+                                : colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                child: IconButton(
-                  onPressed: _toggleSelectionMode,
-                  icon: Icon(
-                    _selectionMode ? Icons.done : Icons.checklist,
-                    size: 18,
-                    color: _selectionMode
-                        ? widget.category.color
-                        : colorScheme.onSurface,
+                // Share Selected Button
+                if (isSelectionMode && hasSelection)
+                  Container(
+                    margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+                    child: ClipOval(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                colorScheme.primaryContainer.withValues(alpha: .4),
+                                colorScheme.primaryContainer.withValues(alpha: .3),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: widget.category.color.withValues(alpha: .3),
+                              width: 1,
+                            ),
+                          ),
+                          child: IconButton(
+                            onPressed: () => _shareSelectedFiles(context),
+                            icon: Icon(
+                              Icons.share,
+                              size: 18,
+                              color: widget.category.color,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-          ),
+                // Delete Selected Button
+                if (isSelectionMode && hasSelection)
+                  Container(
+                    margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+                    child: ClipOval(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                colorScheme.errorContainer.withValues(alpha: .4),
+                                colorScheme.errorContainer.withValues(alpha: .3),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: colorScheme.error.withValues(alpha: .3),
+                              width: 1,
+                            ),
+                          ),
+                          child: IconButton(
+                            onPressed: () => _deleteSelectedFiles(context),
+                            icon: Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
-        // Share Selected Button
-        if (_selectionMode && _selectedFiles.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
-            child: ClipOval(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        colorScheme.primaryContainer.withValues(alpha: .4),
-                        colorScheme.primaryContainer.withValues(alpha: .3),
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: widget.category.color.withValues(alpha: .3),
-                      width: 1,
-                    ),
-                  ),
-                  child: IconButton(
-                    onPressed: () => _shareSelectedFiles(context),
-                    icon: Icon(
-                      Icons.share,
-                      size: 18,
-                      color: widget.category.color,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }
 
   Widget _buildSelectionInfoBar(
-    List<FileItem> files,
+    CategoryDetailsLoaded state,
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
-    final selectedSize = _selectedFiles.fold<int>(
-      0,
-      (sum, index) =>
-          sum + (index < files.length ? files[index].sizeInBytes : 0),
-    );
-
     return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: AppSize.paddingMedium,
@@ -300,15 +347,15 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '${_selectedFiles.length} selected',
+                '${state.selectedCount} selected',
                 style: textTheme.bodyMedium?.copyWith(
                   color: widget.category.color,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              if (selectedSize > 0)
+              if (state.selectedSize > 0)
                 Text(
-                  SizeFormatter.formatBytes(selectedSize),
+                  SizeFormatter.formatBytes(state.selectedSize),
                   style: textTheme.bodySmall?.copyWith(
                     color: widget.category.color.withValues(alpha: .8),
                   ),
@@ -317,19 +364,10 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
           ),
           TextButton(
             onPressed: () {
-              setState(() {
-                if (_selectedFiles.length == files.length) {
-                  _selectedFiles.clear();
-                } else {
-                  _selectedFiles.clear();
-                  for (int i = 0; i < files.length; i++) {
-                    _selectedFiles.add(i);
-                  }
-                }
-              });
+              context.read<CategoryDetailsCubit>().toggleAllFiles();
             },
             child: Text(
-              _selectedFiles.length == files.length
+              state.selectedFileIds.length == state.files.length
                   ? 'Deselect All'
                   : 'Select All',
               style: TextStyle(
@@ -647,45 +685,91 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
     ColorScheme colorScheme,
     bool isDark,
   ) {
-    return RefreshIndicator(
-      color: widget.category.color,
-      backgroundColor: colorScheme.surface,
-      strokeWidth: 3,
-      displacement: 80,
-      onRefresh: () async {
-        await context.read<CategoryDetailsCubit>().refresh(widget.category);
+    final cubit = context.read<CategoryDetailsCubit>();
+    
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollInfo) {
+        // Load more files when user scrolls near the bottom
+        if (scrollInfo is ScrollEndNotification &&
+            scrollInfo.metrics.pixels >=
+                scrollInfo.metrics.maxScrollExtent - 200) {
+          // Load more files if not already loading
+          cubit.loadMoreFiles();
+        }
+        return false;
       },
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSize.paddingMedium,
-          vertical: AppSize.paddingMedium,
-        ),
-        itemCount: state.files.length,
-        itemBuilder: (context, index) {
-          final file = state.files[index];
-          return _MagicalFileListItem(
+      child: RefreshIndicator(
+        color: widget.category.color,
+        backgroundColor: colorScheme.surface,
+        strokeWidth: 3,
+        displacement: 80,
+        onRefresh: () async {
+          await cubit.refresh(widget.category);
+        },
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSize.paddingMedium,
+            vertical: AppSize.paddingMedium,
+          ),
+          itemCount: state.files.length + 1, // +1 for loading indicator
+          itemBuilder: (context, index) {
+            // Show loading indicator at the bottom if loading more
+            if (index == state.files.length) {
+              return BlocBuilder<CategoryDetailsCubit, CategoryDetailsState>(
+                builder: (context, currentState) {
+                  // Check if we're loading more files
+                  if (currentState is CategoryDetailsLoaded &&
+                      cubit.isLoadingMore) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: widget.category.color,
+                        ),
+                      ),
+                    );
+                  }
+                  // Return empty container if not loading or no more data
+                  return const SizedBox.shrink();
+                },
+              );
+            }
+            final file = state.files[index];
+            
+            // Debug category info
+            developer.log('[LIST] Creating item for: ${file.name}', name: 'CategoryDetails');
+            developer.log('[LIST] Category name: ${widget.category.name}', name: 'CategoryDetails');
+            developer.log('[LIST] File extension: ${file.extension}', name: 'CategoryDetails');
+            
+            return _MagicalFileListItem(
             file: file,
             category: widget.category,
             index: index,
             isDark: isDark,
-            isSelected: _selectedFiles.contains(index),
-            selectionMode: _selectionMode,
+            isSelected: state.isFileSelected(file.id),
+            selectionMode: state.isSelectionMode,
             onTap: () async {
-              if (_selectionMode) {
-                setState(() {
-                  if (_selectedFiles.contains(index)) {
-                    _selectedFiles.remove(index);
-                  } else {
-                    _selectedFiles.add(index);
-                  }
-                });
+              developer.log('[TAP HANDLER] onTap called for: ${file.name}', name: 'CategoryDetails');
+              developer.log('[TAP HANDLER] Selection mode: ${state.isSelectionMode}', name: 'CategoryDetails');
+              
+              if (state.isSelectionMode) {
+                developer.log('[TAP HANDLER] In selection mode, selecting file', name: 'CategoryDetails');
+                context.read<CategoryDetailsCubit>().selectFile(file.id);
               } else {
-                // Open file in in-app viewer
-                final mediaFiles = state.files
-                    .where((f) => _isMediaFile(f))
-                    .toList();
-
+                // Debug logging
+                developer.log('[TAP HANDLER] Not in selection mode, determining action', name: 'CategoryDetails');
+                developer.log('[TAP HANDLER] File: ${file.name}', name: 'CategoryDetails');
+                developer.log('[TAP HANDLER] Extension: ${file.extension}', name: 'CategoryDetails');
+                developer.log('[TAP HANDLER] Category: ${widget.category.name}', name: 'CategoryDetails');
+                developer.log('[TAP HANDLER] Is media file check: ${_isMediaFile(file)}', name: 'CategoryDetails');
+                
+                // Open file based on type
                 if (_isMediaFile(file)) {
+                  developer.log('[TAP HANDLER] Opening as media file in viewer', name: 'CategoryDetails');
+                  // Images, videos and audio open in in-app viewer
+                  final mediaFiles = state.files
+                      .where((f) => _isMediaFile(f))
+                      .toList();
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -696,58 +780,25 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                     ),
                   );
                 } else {
-                  // For non-media files, show a dialog with options
-                  showDialog(
-                    context: context,
-                    builder: (dialogContext) => AlertDialog(
-                      title: Text(file.name),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('File type: ${file.extension}'),
-                          Text(
-                            'Size: ${SizeFormatter.formatBytes(file.sizeInBytes)}',
-                          ),
-                          const SizedBox(height: 16),
-                          const Text('This file type cannot be viewed in-app.'),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(dialogContext),
-                          child: const Text('Close'),
-                        ),
-                      ],
-                    ),
-                  );
+                  developer.log('[TAP HANDLER] Opening document dialog for: ${file.name}', name: 'CategoryDetails');
+                  // Documents - show dialog with button to open (like audio does)
+                  _showDocumentOpenDialog(context, file);
                 }
               }
             },
             onLongPress: () {
-              if (!_selectionMode) {
-                _toggleSelectionMode();
-                setState(() {
-                  _selectedFiles.add(index);
-                });
+              if (!state.isSelectionMode) {
+                context.read<CategoryDetailsCubit>().toggleSelectionMode();
+                context.read<CategoryDetailsCubit>().selectFile(file.id);
               }
             },
-            onShare: () => _shareFile(file),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 
-  void _toggleSelectionMode() {
-    setState(() {
-      _selectionMode = !_selectionMode;
-      if (!_selectionMode) {
-        _selectedFiles.clear();
-      }
-    });
-    HapticFeedback.lightImpact();
-  }
 
   void _shareFile(FileItem file) async {
     try {
@@ -769,43 +820,170 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
   }
 
   void _shareSelectedFiles(BuildContext context) async {
-    if (_selectedFiles.isEmpty) return;
-
-    final state = context.read<CategoryDetailsCubit>().state;
-    if (state is! CategoryDetailsLoaded) return;
-
-    final selectedFiles = _selectedFiles
-        .where((index) => index < state.files.length)
-        .map((index) => XFile(state.files[index].path))
-        .toList();
-
+    final selectedFiles = context.read<CategoryDetailsCubit>().getSelectedFiles();
     if (selectedFiles.isEmpty) return;
 
+    final xFiles = selectedFiles.map((file) => XFile(file.path)).toList();
+
     try {
-      await Share.shareXFiles(selectedFiles);
+      await Share.shareXFiles(xFiles);
+      
+      // Exit selection mode after sharing
+      if (context.mounted) {
+        context.read<CategoryDetailsCubit>().clearSelection();
+      }
     } catch (e) {
-      if (mounted) {
-        _showShareSnackBar('Failed to share files: ${e.toString()}');
+      if (context.mounted) {
+        _showSnackBar(
+          'Failed to share files: ${e.toString()}',
+          isError: true,
+        );
       }
     }
   }
 
-  void _showShareSnackBar(String message) {
+  void _deleteSelectedFiles(BuildContext context) async {
+    final cubit = context.read<CategoryDetailsCubit>();
+    final selectedFiles = cubit.getSelectedFiles();
+    if (selectedFiles.isEmpty) return;
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('Delete Selected Files'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to delete ${selectedFiles.length} files?'),
+            const SizedBox(height: 12),
+            Text(
+              'Total size: ${SizeFormatter.formatBytes(
+                selectedFiles.fold<int>(
+                  0,
+                  (sum, file) => sum + file.sizeInBytes,
+                ),
+              )}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'This action cannot be undone.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Show loading snackbar
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Text('Deleting ${selectedFiles.length} files...'),
+          ],
+        ),
+        backgroundColor: widget.category.color,
+        duration: const Duration(seconds: 30),
+        ),
+      );
+    }
+
+    try {
+      await cubit.deleteSelectedFiles();
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        _showSnackBar('${selectedFiles.length} files deleted successfully');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        _showSnackBar(
+          'Failed to delete files: ${e.toString()}',
+          isError: true,
+        );
+      }
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
+        backgroundColor: isError
+            ? Theme.of(context).colorScheme.error
+            : widget.category.color,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        backgroundColor: widget.category.color.withValues(alpha: .9),
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSize.radiusSmall),
         ),
       ),
     );
   }
 
+  String? _getMimeTypeForDocument(String extension) {
+    final ext = extension.toLowerCase();
+    final mimeTypes = {
+      '.pdf': 'application/pdf',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.ppt': 'application/vnd.ms-powerpoint',
+      '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      '.txt': 'text/plain',
+      '.rtf': 'application/rtf',
+      '.odt': 'application/vnd.oasis.opendocument.text',
+      '.ods': 'application/vnd.oasis.opendocument.spreadsheet',
+      '.odp': 'application/vnd.oasis.opendocument.presentation',
+      '.html': 'text/html',
+      '.htm': 'text/html',
+      '.xml': 'application/xml',
+      '.json': 'application/json',
+      '.csv': 'text/csv',
+      '.zip': 'application/zip',
+      '.rar': 'application/x-rar-compressed',
+      '.7z': 'application/x-7z-compressed',
+      '.tar': 'application/x-tar',
+      '.gz': 'application/gzip',
+    };
+    return mimeTypes[ext];
+  }
+  
   bool _isMediaFile(FileItem file) {
     final extension = file.extension.toLowerCase();
 
@@ -847,6 +1025,33 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
     ];
     if (audioExtensions.contains(extension)) return true;
 
+    // Explicitly exclude documents to ensure they open with external apps
+    const documentExtensions = [
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+      '.txt',
+      '.rtf',
+      '.odt',
+      '.ods',
+      '.odp',
+      '.html',
+      '.htm',
+      '.xml',
+      '.json',
+      '.csv',
+      '.zip',
+      '.rar',
+      '.7z',
+      '.tar',
+      '.gz',
+    ];
+    if (documentExtensions.contains(extension)) return false;
+
     return false;
   }
 
@@ -871,6 +1076,250 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
         return Icons.folder_open_rounded;
     }
   }
+
+  void _showDocumentOpenDialog(BuildContext context, FileItem file) {
+    developer.log('[DIALOG] _showDocumentOpenDialog called for: ${file.name}', name: 'CategoryDetails');
+    
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    
+    developer.log('[DIALOG] About to show dialog...', name: 'CategoryDetails');
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        elevation: 8,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
+              colors: [
+                widget.category.color.withValues(alpha: 0.05),
+                colorScheme.surface,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Document icon
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      widget.category.color.withValues(alpha: 0.2),
+                      widget.category.color.withValues(alpha: 0.1),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(
+                    color: widget.category.color.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  _getDocumentIcon(file.extension),
+                  size: 40,
+                  color: widget.category.color,
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // File name
+              Text(
+                file.name,
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+              
+              // File info
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${SizeFormatter.formatBytes(file.sizeInBytes)} • ${file.extension.toUpperCase().replaceFirst('.', '')}',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Action buttons - wrap in Flexible to prevent overflow
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                children: [
+                  // Cancel button
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  
+                  // Open button
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(dialogContext);
+                      
+                      // Show loading indicator
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Text('Opening ${file.name}...'),
+                            ],
+                          ),
+                          backgroundColor: widget.category.color,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                      
+                      try {
+                        bool opened = false;
+                        
+                        // Check if it's a content URI
+                        if (ContentUriService.isContentUri(file.path)) {
+                          developer.log('[Document Dialog] Opening content URI: ${file.path}', name: 'CategoryDetails');
+                          // Get appropriate mime type
+                          final mimeType = _getMimeTypeForDocument(file.extension);
+                          opened = await ContentUriService.openContentUri(
+                            file.path,
+                            mimeType: mimeType,
+                          );
+                          developer.log('[Document Dialog] ContentUriService result: $opened', name: 'CategoryDetails');
+                        } else {
+                          developer.log('[Document Dialog] Opening regular file: ${file.path}', name: 'CategoryDetails');
+                          // For regular files, use OpenFilex
+                          final result = await OpenFilex.open(file.path);
+                          opened = result.type == ResultType.done;
+                          developer.log('[Document Dialog] OpenFilex result: ${result.type}', name: 'CategoryDetails');
+                        }
+                        
+                        if (!opened && context.mounted) {
+                          // If opening fails, try share as fallback
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('Could not open file. Sharing instead...'),
+                              backgroundColor: colorScheme.tertiary,
+                            ),
+                          );
+                          await Share.shareXFiles(
+                            [XFile(file.path)],
+                            subject: file.name,
+                          );
+                        } else if (context.mounted) {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        }
+                      } catch (e) {
+                        developer.log('[Document Dialog] Error opening file: $e', name: 'CategoryDetails');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error opening file: ${e.toString()}'),
+                              backgroundColor: colorScheme.error,
+                              action: SnackBarAction(
+                                label: 'Share',
+                                textColor: Colors.white,
+                                onPressed: () => _shareFile(file),
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: widget.category.color,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Open in Phone App'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  IconData _getDocumentIcon(String extension) {
+    final ext = extension.toLowerCase();
+    
+    // Document types
+    if (ext == '.pdf') return Icons.picture_as_pdf;
+    if (ext == '.doc' || ext == '.docx') return Icons.description;
+    if (ext == '.xls' || ext == '.xlsx') return Icons.table_chart;
+    if (ext == '.ppt' || ext == '.pptx') return Icons.slideshow;
+    if (ext == '.txt' || ext == '.rtf') return Icons.text_snippet;
+    if (ext == '.html' || ext == '.htm') return Icons.web;
+    if (ext == '.xml' || ext == '.json') return Icons.code;
+    if (ext == '.csv') return Icons.table_rows;
+    if (ext == '.zip' || ext == '.rar' || ext == '.7z' || ext == '.tar' || ext == '.gz') {
+      return Icons.folder_zip;
+    }
+    
+    // Default document icon
+    return Icons.insert_drive_file;
+  }
 }
 
 // Enhanced file list item with magical visuals
@@ -883,7 +1332,6 @@ class _MagicalFileListItem extends StatefulWidget {
   final bool isSelected;
   final bool selectionMode;
   final VoidCallback? onLongPress;
-  final VoidCallback? onShare;
 
   const _MagicalFileListItem({
     required this.file,
@@ -894,7 +1342,6 @@ class _MagicalFileListItem extends StatefulWidget {
     required this.isSelected,
     required this.selectionMode,
     this.onLongPress,
-    this.onShare,
   });
 
   @override
@@ -962,6 +1409,7 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
               onTapUp: (_) => setState(() => _isPressed = false),
               onTapCancel: () => setState(() => _isPressed = false),
               onTap: () {
+                developer.log('[ITEM] InkWell onTap triggered for: ${widget.file.name}', name: 'CategoryDetails');
                 HapticFeedback.lightImpact();
                 widget.onTap();
               },
@@ -1093,44 +1541,6 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
                                 ? widget.category.color
                                 : colorScheme.onSurfaceVariant,
                             size: 24,
-                          ),
-                        ),
-                      ),
-                    // Share button
-                    if (widget.onShare != null && !widget.selectionMode)
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: colorScheme.surface.withValues(alpha: .9),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: colorScheme.outline.withValues(alpha: .2),
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: colorScheme.shadow.withValues(alpha: .1),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: widget.onShare,
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                child: Icon(
-                                  Icons.share,
-                                  size: 18,
-                                  color: widget.category.color,
-                                ),
-                              ),
-                            ),
                           ),
                         ),
                       ),

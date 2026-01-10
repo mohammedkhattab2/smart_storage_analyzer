@@ -13,6 +13,7 @@ class SettingsViewModel {
   final Function() onNavigateToPrivacyPolicy;
   final Function() onNavigateToTermsOfService;
   final Function() onNavigateToAbout;
+  final Function() onNavigateToGithubPrivacy; // Navigate to GitHub privacy
   final Function() onRequestSignOut; // Request sign out confirmation
 
   SettingsViewModel({
@@ -23,6 +24,7 @@ class SettingsViewModel {
     required this.onNavigateToPrivacyPolicy,
     required this.onNavigateToTermsOfService,
     required this.onNavigateToAbout,
+    required this.onNavigateToGithubPrivacy,
     required this.onRequestSignOut,
   });
 
@@ -58,6 +60,13 @@ class SettingsViewModel {
             title: AppStrings.privacyPolicy,
             type: SettingsItemType.navigation,
             onTap: onNavigateToPrivacyPolicy,
+          ),
+          SettingsItemModel(
+            id: 'github_privacy',
+            icon: Icons.code_rounded,
+            title: 'URL Privacy Policy',
+            type: SettingsItemType.navigation,
+            onTap: onNavigateToGithubPrivacy,
           ),
           SettingsItemModel(
             id: 'terms_of_service',

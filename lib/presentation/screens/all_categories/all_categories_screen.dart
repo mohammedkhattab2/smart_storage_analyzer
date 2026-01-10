@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
+import 'package:smart_storage_analyzer/domain/usecases/get_categories_usecase.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/all_categories/all_categories_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/screens/all_categories/all_categories_view.dart';
 
@@ -14,7 +15,10 @@ class AllCategoriesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) =>
-          AllCategoriesCubit(viewModel: sl())..loadCategories(categories),
+          AllCategoriesCubit(
+            viewModel: sl(),
+            getCategoriesUseCase: sl<GetCategoriesUseCase>(),
+          )..loadCategories(categories),
       child: const AllCategoriesView(),
     );
   }

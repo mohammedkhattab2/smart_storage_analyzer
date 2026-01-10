@@ -120,16 +120,18 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
                   filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                   child: Padding(
                     padding: EdgeInsets.all(
-                      AppSize.paddingMedium + (_isHovered ? 2 : 0),
+                      AppSize.paddingMedium,
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                         // Icon with glassmorphic effect
                         Container(
-                          width: _isHovered ? 52 : 48,
-                          height: _isHovered ? 52 : 48,
+                          width: 48,
+                          height: 48,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topLeft,
@@ -154,12 +156,12 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
                           ),
                           child: Icon(
                             widget.category.icon,
-                            size: _isHovered ? 26 : 24,
+                            size: 24,
                             color: categoryColor,
                           ),
                         ),
                         SizedBox(
-                          height: AppSize.paddingSmall + (_isHovered ? 2 : 0),
+                          height: AppSize.paddingSmall,
                         ),
                         // Category name with better typography
                         Text(
@@ -175,12 +177,12 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
                             letterSpacing: _isHovered ? 0.2 : 0.1,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
                         // Size badge with iOS-style pill shape
                         Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: _isHovered ? 10 : 8,
-                            vertical: _isHovered ? 4 : 3,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
                           ),
                           decoration: BoxDecoration(
                             color: isLargeCategory
@@ -210,7 +212,7 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         // File count
                         Text(
                           '${widget.category.fileCount} files',
@@ -221,7 +223,8 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

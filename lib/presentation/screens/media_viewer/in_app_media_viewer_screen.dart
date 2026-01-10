@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +11,7 @@ import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
 import 'package:smart_storage_analyzer/domain/entities/file_item.dart';
 import 'package:open_filex/open_filex.dart';
+import '../../../core/services/content_uri_service.dart';
 
 class InAppMediaViewerScreen extends StatefulWidget {
   final FileItem file;
@@ -467,7 +469,13 @@ class _InAppMediaViewerScreenState extends State<InAppMediaViewerScreen> {
       '.flac',
       '.aac',
       '.ogg',
+      '.opus',
       '.m4a',
+      '.wma',
+      '.amr',
+      '.3gpp',
+      '.3gp',
+      '.webm', // WebM can contain audio only
     ].contains(extension);
   }
 
@@ -547,35 +555,144 @@ class _MediaContentWidgetState extends State<_MediaContentWidget> {
   }
 
   Future<void> _initializeVideo() async {
-    _videoController = VideoPlayerController.file(File(widget.file.path));
-    await _videoController!.initialize();
+    try {
+      // Check if path is a content URI or regular file path
+      if (ContentUriService.isContentUri(widget.file.path)) {
+        // For content URIs on Android, use networkUrl which can handle content URIs
+        final uri = Uri.parse(widget.file.path);
+        _videoController = VideoPlayerController.networkUrl(uri);
+      } else {
+        // For regular file paths
+        _videoController = VideoPlayerController.file(File(widget.file.path));
+      }
+      
+      await _videoController!.initialize();
 
-    _chewieController = ChewieController(
-      videoPlayerController: _videoController!,
-      autoPlay: true,
-      looping: false,
-      aspectRatio: _videoController!.value.aspectRatio,
-      errorBuilder: (context, errorMessage) {
-        return Center(
-          child: Text(
-            errorMessage,
-            style: const TextStyle(color: Colors.white),
-          ),
+      _chewieController = ChewieController(
+        videoPlayerController: _videoController!,
+        autoPlay: true,
+        looping: false,
+        aspectRatio: _videoController!.value.aspectRatio,
+        errorBuilder: (context, errorMessage) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  'Error playing video',
+                  style: const TextStyle(color: Colors.white, fontSize: 18),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  errorMessage,
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    // Try opening with external app
+                    Navigator.pop(context);
+                    _openFileExternally();
+                  },
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Open with External App'),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to load video: ${e.toString()}';
+      });
+    }
+  }
+
+  Future<void> _openFileExternally() async {
+    try {
+      if (ContentUriService.isContentUri(widget.file.path)) {
+        // Use ContentUriService to open content URIs
+        final success = await ContentUriService.openContentUri(
+          widget.file.path,
+          mimeType: _getMimeType(widget.file.extension),
         );
-      },
-    );
-
-    setState(() {
-      _isLoading = false;
-    });
+        if (!success) {
+          // Fallback to share if opening fails
+          await Share.shareXFiles([XFile(widget.file.path)], subject: widget.file.name);
+        }
+      } else {
+        await OpenFilex.open(widget.file.path);
+      }
+    } catch (e) {
+      // Handle error silently
+      developer.log('Error opening file externally: $e', name: 'MediaViewer');
+    }
+  }
+  
+  String? _getMimeType(String extension) {
+    final ext = extension.toLowerCase();
+    final mimeTypes = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.bmp': 'image/bmp',
+      '.mp4': 'video/mp4',
+      '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime',
+      '.mkv': 'video/x-matroska',
+      '.webm': 'video/webm',
+      '.3gp': 'video/3gpp',
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav',
+      '.flac': 'audio/flac',
+      '.aac': 'audio/aac',
+      '.ogg': 'audio/ogg',
+      '.m4a': 'audio/mp4',
+    };
+    return mimeTypes[ext];
   }
 
   Future<void> _initializeAudio() async {
-    _audioPlayer = AudioPlayer();
-    await _audioPlayer!.setSourceDeviceFile(widget.file.path);
-    setState(() {
-      _isLoading = false;
-    });
+    // Check if this is a content URI for audio - audioplayers doesn't support them
+    if (ContentUriService.isContentUri(widget.file.path)) {
+      developer.log('Audio file is a content URI - audioplayers does not support content URIs', name: 'MediaViewer');
+      // Don't even try to initialize, go straight to showing the external app option
+      setState(() {
+        _isLoading = false;
+        _audioPlayer = null; // Mark as not initialized
+      });
+      return;
+    }
+    
+    // For regular file paths, try to initialize
+    try {
+      _audioPlayer = AudioPlayer();
+      
+      developer.log('Initializing audio for device file: ${widget.file.path}', name: 'MediaViewer');
+      await _audioPlayer!.setSourceDeviceFile(widget.file.path);
+      developer.log('Audio loaded successfully from device file', name: 'MediaViewer');
+      
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      developer.log('Error initializing audio: $e', name: 'MediaViewer');
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Unable to play this audio file.\n\nTry opening with an external app.';
+      });
+    }
   }
 
   @override
@@ -591,12 +708,24 @@ class _MediaContentWidgetState extends State<_MediaContentWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const Icon(Icons.error_outline, size: 64, color: Colors.orange),
             const SizedBox(height: 16),
-            Text(
-              _errorMessage!,
-              style: const TextStyle(color: Colors.white),
-              textAlign: TextAlign.center,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                _errorMessage!,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _openFileExternally,
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Open with External App'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
             ),
           ],
         ),
@@ -617,29 +746,96 @@ class _MediaContentWidgetState extends State<_MediaContentWidget> {
   }
 
   Widget _buildImageViewer() {
-    return PhotoView(
-      imageProvider: FileImage(File(widget.file.path)),
-      minScale: PhotoViewComputedScale.contained,
-      maxScale: PhotoViewComputedScale.covered * 3,
-      heroAttributes: PhotoViewHeroAttributes(tag: widget.file.path),
-      errorBuilder: (context, error, stackTrace) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.broken_image, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                'Failed to load image',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(color: Colors.white),
+    // For content URIs, we need to load the image differently
+    if (ContentUriService.isContentUri(widget.file.path)) {
+      return FutureBuilder<Uint8List?>(
+        future: _loadImageFromContentUri(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            );
+          }
+          
+          if (snapshot.hasError || snapshot.data == null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.broken_image, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Failed to load image',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      _openFileExternally();
+                    },
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('Open with External App'),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      },
-    );
+            );
+          }
+          
+          return PhotoView(
+            imageProvider: MemoryImage(snapshot.data!),
+            minScale: PhotoViewComputedScale.contained,
+            maxScale: PhotoViewComputedScale.covered * 3,
+            heroAttributes: PhotoViewHeroAttributes(tag: widget.file.path),
+          );
+        },
+      );
+    } else {
+      // For regular file paths
+      return PhotoView(
+        imageProvider: FileImage(File(widget.file.path)),
+        minScale: PhotoViewComputedScale.contained,
+        maxScale: PhotoViewComputedScale.covered * 3,
+        heroAttributes: PhotoViewHeroAttributes(tag: widget.file.path),
+        errorBuilder: (context, error, stackTrace) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.broken_image, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  'Failed to load image',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    _openFileExternally();
+                  },
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Open with External App'),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+  }
+  
+  Future<Uint8List?> _loadImageFromContentUri() async {
+    try {
+      // Use ContentUriService to load bytes from content URI
+      if (ContentUriService.isContentUri(widget.file.path)) {
+        return await ContentUriService.readContentUriBytes(widget.file.path);
+      }
+      return null;
+    } catch (e) {
+      developer.log('Error loading image from content URI: $e', name: 'MediaViewer');
+      return null;
+    }
   }
 
   Widget _buildVideoPlayer() {
@@ -653,6 +849,77 @@ class _MediaContentWidgetState extends State<_MediaContentWidget> {
   }
 
   Widget _buildAudioPlayer() {
+    // Check if audio player is initialized (content URIs won't initialize)
+    if (_audioPlayer == null) {
+      // Show a nice UI for audio files that can't be played in-app
+      return Center(
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.audio_file_rounded,
+                size: 120,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                widget.file.name,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                SizeFormatter.formatBytes(widget.file.sizeInBytes),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white70),
+              ),
+              const SizedBox(height: 32),
+              // Info message
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange.shade300, size: 20),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        'Audio preview not available.\nTap below to play in your music app.',
+                        style: TextStyle(color: Colors.orange.shade100, fontSize: 14),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Primary action button
+              ElevatedButton.icon(
+                onPressed: _openFileExternally,
+                icon: const Icon(Icons.play_circle_outline),
+                label: const Text('Play in Music App'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  backgroundColor: Theme.of(context).primaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
+    // If audio player is initialized (regular files), show player controls
     return Center(
       child: Container(
         padding: const EdgeInsets.all(32),
@@ -678,6 +945,16 @@ class _MediaContentWidgetState extends State<_MediaContentWidget> {
             ),
             const SizedBox(height: 32),
             _AudioControlsWidget(audioPlayer: _audioPlayer!),
+            const SizedBox(height: 24),
+            // Add external app option
+            TextButton.icon(
+              onPressed: _openFileExternally,
+              icon: const Icon(Icons.open_in_new, color: Colors.white70),
+              label: const Text(
+                'Open with External App',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
           ],
         ),
       ),
@@ -742,7 +1019,13 @@ class _MediaContentWidgetState extends State<_MediaContentWidget> {
       '.flac',
       '.aac',
       '.ogg',
+      '.opus',
       '.m4a',
+      '.wma',
+      '.amr',
+      '.3gpp',
+      '.3gp',
+      '.webm', // WebM can contain audio only
     ].contains(extension);
   }
 }

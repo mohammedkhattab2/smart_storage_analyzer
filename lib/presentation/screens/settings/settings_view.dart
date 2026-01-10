@@ -11,6 +11,7 @@ import 'package:smart_storage_analyzer/presentation/widgets/settings/theme_selec
 import 'package:smart_storage_analyzer/presentation/screens/settings/privacy_policy_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/settings/terms_of_service_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/settings/about_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -95,6 +96,20 @@ class SettingsView extends StatelessWidget {
                             builder: (context) => const AboutScreen(),
                           ),
                         );
+                      },
+                      onNavigateToGithubPrivacy: () async {
+                        final url = Uri.parse('https://mohammedkhattab2.github.io/smart-storage-analyzer-privacy/');
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        } else {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Could not open GitHub privacy policy'),
+                              ),
+                            );
+                          }
+                        }
                       },
                       onRequestSignOut: () {
                         _SettingsViewHelpers.showSignOutDialog(context, cubit);

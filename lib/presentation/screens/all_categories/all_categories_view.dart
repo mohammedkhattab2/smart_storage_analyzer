@@ -14,6 +14,7 @@ import 'package:smart_storage_analyzer/presentation/screens/others_scanner/other
 import 'package:smart_storage_analyzer/presentation/cubits/others_scan/others_scan_cubit.dart';
 import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
+import 'package:smart_storage_analyzer/presentation/mappers/category_ui_mapper.dart';
 
 class AllCategoriesView extends StatelessWidget {
   const AllCategoriesView({super.key});
@@ -794,7 +795,7 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.category.color.withValues(
+                    color: CategoryUIMapper.getColor(widget.category.id).withValues(
                       alpha: _isHovered ? .2 : .1,
                     ),
                     blurRadius: _isHovered ? 30 : 20,
@@ -803,7 +804,7 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
                   ),
                   if (_isHovered)
                     BoxShadow(
-                      color: widget.category.color.withValues(alpha: .1),
+                      color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .1),
                       blurRadius: 50,
                       offset: const Offset(0, 15),
                       spreadRadius: -10,
@@ -819,8 +820,8 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
                     child: InkWell(
                       onTap: widget.onTap,
                       borderRadius: BorderRadius.circular(28),
-                      splashColor: widget.category.color.withValues(alpha: .08),
-                      highlightColor: widget.category.color.withValues(
+                      splashColor: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .08),
+                      highlightColor: CategoryUIMapper.getColor(widget.category.id).withValues(
                         alpha: .05,
                       ),
                       child: Container(
@@ -828,7 +829,7 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              widget.category.color.withValues(
+                              CategoryUIMapper.getColor(widget.category.id).withValues(
                                 alpha: isDark ? .08 : .12,
                               ),
                               colorScheme.surfaceContainer.withValues(
@@ -845,7 +846,7 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
                           borderRadius: BorderRadius.circular(28),
                           border: Border.all(
                             color: _isHovered
-                                ? widget.category.color.withValues(alpha: .25)
+                                ? CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .25)
                                 : colorScheme.outline.withValues(alpha: .1),
                             width: _isHovered ? 2 : 1.5,
                           ),
@@ -868,30 +869,24 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
                                             LinearGradient(
                                               colors: _isHovered
                                                   ? [
-                                                      widget.category.color,
-                                                      widget.category.color
+                                                      CategoryUIMapper.getColor(widget.category.id),
+                                                      CategoryUIMapper.getColor(widget.category.id)
                                                           .withValues(
                                                             red: math.min(
                                                               1.0,
-                                                              widget
-                                                                      .category
-                                                                      .color
+                                                              CategoryUIMapper.getColor(widget.category.id)
                                                                       .r *
                                                                   1.2,
                                                             ),
                                                             green: math.min(
                                                               1.0,
-                                                              widget
-                                                                      .category
-                                                                      .color
+                                                              CategoryUIMapper.getColor(widget.category.id)
                                                                       .g *
                                                                   1.2,
                                                             ),
                                                             blue: math.min(
                                                               1.0,
-                                                              widget
-                                                                      .category
-                                                                      .color
+                                                              CategoryUIMapper.getColor(widget.category.id)
                                                                       .b *
                                                                   1.2,
                                                             ),
@@ -963,9 +958,9 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    widget.category.color.withValues(alpha: .3),
-                    widget.category.color.withValues(alpha: .1),
-                    widget.category.color.withValues(alpha: 0),
+                    CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .3),
+                    CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .1),
+                    CategoryUIMapper.getColor(widget.category.id).withValues(alpha: 0),
                   ],
                 ),
               ),
@@ -977,30 +972,30 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    widget.category.color.withValues(alpha: .2),
-                    widget.category.color.withValues(alpha: .1),
+                    CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .2),
+                    CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .1),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: widget.category.color.withValues(
+                  color: CategoryUIMapper.getColor(widget.category.id).withValues(
                     alpha: _isHovered ? .4 : .3,
                   ),
                   width: 2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.category.color.withValues(alpha: .4),
+                    color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .4),
                     blurRadius: 15,
                     spreadRadius: -2,
                   ),
                 ],
               ),
               child: Icon(
-                widget.category.icon,
-                color: widget.category.color,
+                CategoryUIMapper.getIcon(widget.category.id),
+                color: CategoryUIMapper.getColor(widget.category.id),
                 size: _isHovered ? 32 : 28,
               ),
             ),
@@ -1055,8 +1050,8 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
         ShaderMask(
           shaderCallback: (bounds) => LinearGradient(
             colors: [
-              widget.category.color,
-              widget.category.color.withValues(alpha: .8),
+              CategoryUIMapper.getColor(widget.category.id),
+              CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .8),
             ],
           ).createShader(bounds),
           child: Text(
@@ -1078,18 +1073,18 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                widget.category.color,
-                widget.category.color.withValues(
-                  red: widget.category.color.r * 0.8,
-                  green: widget.category.color.g * 0.8,
-                  blue: widget.category.color.b * 0.8,
+                CategoryUIMapper.getColor(widget.category.id),
+                CategoryUIMapper.getColor(widget.category.id).withValues(
+                  red: CategoryUIMapper.getColor(widget.category.id).r * 0.8,
+                  green: CategoryUIMapper.getColor(widget.category.id).g * 0.8,
+                  blue: CategoryUIMapper.getColor(widget.category.id).b * 0.8,
                 ),
               ],
             ),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: widget.category.color.withValues(alpha: .3),
+                color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .3),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -1136,16 +1131,16 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  widget.category.color,
-                  widget.category.color.withValues(
-                    red: widget.category.color.r * 0.85,
-                    green: widget.category.color.g * 0.85,
-                    blue: widget.category.color.b * 0.85,
+                  CategoryUIMapper.getColor(widget.category.id),
+                  CategoryUIMapper.getColor(widget.category.id).withValues(
+                    red: CategoryUIMapper.getColor(widget.category.id).r * 0.85,
+                    green: CategoryUIMapper.getColor(widget.category.id).g * 0.85,
+                    blue: CategoryUIMapper.getColor(widget.category.id).b * 0.85,
                   ),
-                  widget.category.color.withValues(
-                    red: widget.category.color.r * 0.7,
-                    green: widget.category.color.g * 0.7,
-                    blue: widget.category.color.b * 0.7,
+                  CategoryUIMapper.getColor(widget.category.id).withValues(
+                    red: CategoryUIMapper.getColor(widget.category.id).r * 0.7,
+                    green: CategoryUIMapper.getColor(widget.category.id).g * 0.7,
+                    blue: CategoryUIMapper.getColor(widget.category.id).b * 0.7,
                   ),
                 ],
                 begin: Alignment.centerLeft,
@@ -1155,7 +1150,7 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
               borderRadius: BorderRadius.circular(7),
               boxShadow: [
                 BoxShadow(
-                  color: widget.category.color.withValues(alpha: .4),
+                  color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .4),
                   blurRadius: 12,
                   offset: const Offset(0, 2),
                 ),
@@ -1196,8 +1191,8 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
               colors: [
-                widget.category.color,
-                widget.category.color.withValues(alpha: .7),
+                CategoryUIMapper.getColor(widget.category.id),
+                CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .7),
               ],
             ).createShader(bounds),
             child: Text(
@@ -1214,20 +1209,20 @@ class _MagicalCategoryCardState extends State<_MagicalCategoryCard>
             decoration: BoxDecoration(
               gradient: RadialGradient(
                 colors: [
-                  widget.category.color.withValues(alpha: .2),
-                  widget.category.color.withValues(alpha: .05),
+                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .2),
+                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .05),
                 ],
               ),
               shape: BoxShape.circle,
               border: Border.all(
-                color: widget.category.color.withValues(alpha: .3),
+                color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .3),
                 width: 1,
               ),
             ),
             child: Icon(
               Icons.arrow_forward_rounded,
               size: 18,
-              color: widget.category.color,
+              color: CategoryUIMapper.getColor(widget.category.id),
             ),
           ),
         ],

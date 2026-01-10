@@ -4,6 +4,7 @@ import 'package:smart_storage_analyzer/domain/usecases/sign_out_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/update_settings_usecase.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/settings/settings_state.dart';
 import 'package:smart_storage_analyzer/core/services/notification_service.dart';
+import 'package:smart_storage_analyzer/core/utils/logger.dart';
 
 class SettingsCubit extends Cubit<SettingsState> {
   final GetSettingsUseCase getSettingsUsecase;
@@ -17,11 +18,14 @@ class SettingsCubit extends Cubit<SettingsState> {
   }) : super(SettingsInitial());
 
   Future<void> loadSettings() async {
+    Logger.info('[SettingsCubit] Loading settings');
     emit(SettingsLoading());
     try {
       final settings = await getSettingsUsecase.execute();
+      Logger.success('[SettingsCubit] Settings loaded successfully');
       emit(SettingsLoaded(settings: settings));
     } catch (e) {
+      Logger.error('[SettingsCubit] Failed to load settings', e);
       emit(SettingsError(message: "Failed to load settings"));
     }
   }

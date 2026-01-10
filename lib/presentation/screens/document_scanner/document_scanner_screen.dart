@@ -1,10 +1,10 @@
-import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/document_scan/document_scan_cubit.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
+import 'package:smart_storage_analyzer/core/utils/logger.dart';
 
 class DocumentScannerScreen extends StatefulWidget {
   const DocumentScannerScreen({super.key});
@@ -733,7 +733,7 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     
-    developer.log('[DOC SCANNER] Opening dialog for: ${doc.name}', name: 'DocumentScanner');
+    Logger.debug('Opening dialog for: ${doc.name}');
     
     showDialog(
       context: context,
@@ -878,7 +878,7 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
                       
                       // Open the document using method channel
                       try {
-                        developer.log('[DOC SCANNER] Attempting to open document: ${doc.uri}', name: 'DocumentScanner');
+                        Logger.debug('Attempting to open document: ${doc.uri}');
                         
                         // Use the method channel to open the SAF document
                         const platform = MethodChannel('com.smarttools.storageanalyzer/native');
@@ -887,7 +887,7 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
                           'mimeType': doc.mimeType,
                         });
                         
-                        developer.log('[DOC SCANNER] Open result: $result', name: 'DocumentScanner');
+                        Logger.debug('Open result: $result');
                         
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -901,7 +901,7 @@ class _DocumentScannerScreenState extends State<DocumentScannerScreen> {
                           }
                         }
                       } catch (e) {
-                        developer.log('[DOC SCANNER] Error opening document: $e', name: 'DocumentScanner');
+                        Logger.error('Error opening document', e);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();
                           ScaffoldMessenger.of(context).showSnackBar(

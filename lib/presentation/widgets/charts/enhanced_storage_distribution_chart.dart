@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
 import 'package:smart_storage_analyzer/core/theme/app_color_schemes.dart';
+import 'package:smart_storage_analyzer/presentation/mappers/category_ui_mapper.dart';
 
 /// Enhanced storage distribution chart showing all categories and free space
 class EnhancedStorageDistributionChart extends StatefulWidget {
@@ -118,7 +119,7 @@ class _EnhancedStorageDistributionChartState
         value: category.sizeInBytes.toDouble(),
         percentage: percentage,
         color: _getCategoryColor(context, category.name),
-        icon: category.icon,
+        icon: CategoryUIMapper.getIcon(category.id),
         isCategory: true,
       ));
     }

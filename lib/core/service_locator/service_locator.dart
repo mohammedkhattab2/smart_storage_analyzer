@@ -88,7 +88,8 @@ Future<void> setupServiceLocator() async {
   sl.registerLazySingleton(() => GetSettingsUseCase(sl()));
   sl.registerLazySingleton(() => UpdateSettingsUseCase(sl()));
   sl.registerLazySingleton(() => SignOutUseCase(sl()));
-  sl.registerFactory(
+  // Changed from Factory to LazySingleton to preserve settings state
+  sl.registerLazySingleton(
     () => SettingsCubit(
       getSettingsUsecase: sl(),
       updateSettingsUsecase: sl(),

@@ -1,8 +1,6 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:smart_storage_analyzer/core/constants/app_icons.dart';
 import 'package:smart_storage_analyzer/core/constants/channel_constants.dart';
 import 'package:smart_storage_analyzer/core/constants/file_extensions.dart';
 import 'package:smart_storage_analyzer/core/services/file_scanner_service.dart';
@@ -11,7 +9,6 @@ import 'package:smart_storage_analyzer/core/services/native_storage_service.dart
 import 'package:smart_storage_analyzer/core/services/permission_manager.dart';
 import 'package:smart_storage_analyzer/core/services/document_scanner_service.dart';
 import 'package:smart_storage_analyzer/core/services/others_scanner_service.dart';
-import 'package:smart_storage_analyzer/core/theme/app_color_schemes.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
 import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
 import 'package:smart_storage_analyzer/data/models/category_model.dart';
@@ -30,23 +27,14 @@ class StorageRepositoryImpl implements StorageRepository {
   final _permissionManager = PermissionManager();
 
   @override
-  Future<void> analyzeStorage({BuildContext? context}) async {
+  Future<void> analyzeStorage() async {
     try {
       Logger.info("Starting real storage analysis...");
 
-      // Check and request storage permission if needed
+      // Check storage permission if needed
       if (Platform.isAndroid) {
         final hasPermission = await _permissionManager.hasPermission();
-        if (!hasPermission && context != null && context.mounted) {
-          final granted = await _permissionManager.requestPermission(
-            context: context,
-          );
-          if (!granted) {
-            throw StoragePermissionException(
-              message: 'Storage permission is required to analyze storage',
-            );
-          }
-        } else if (!hasPermission) {
+        if (!hasPermission) {
           throw StoragePermissionException(
             message: 'Storage permission is required to analyze storage',
           );
@@ -307,8 +295,6 @@ class StorageRepositoryImpl implements StorageRepository {
                   categories.add(CategoryModel(
                     id: categoryId,
                     name: categoryInfo.name,
-                    icon: categoryInfo.icon,
-                    color: categoryInfo.color,
                     sizeInBytes: totalSize,
                     filesCount: safDocuments.length,
                   ));
@@ -350,8 +336,6 @@ class StorageRepositoryImpl implements StorageRepository {
                   categories.add(CategoryModel(
                     id: categoryId,
                     name: categoryInfo.name,
-                    icon: categoryInfo.icon,
-                    color: categoryInfo.color,
                     sizeInBytes: totalSize,
                     filesCount: safOthers.length,
                   ));
@@ -387,8 +371,6 @@ class StorageRepositoryImpl implements StorageRepository {
           categories.add(CategoryModel(
             id: categoryId,
             name: categoryInfo.name,
-            icon: categoryInfo.icon,
-            color: categoryInfo.color,
             sizeInBytes: totalSize,
             filesCount: files.length,
           ));
@@ -401,8 +383,6 @@ class StorageRepositoryImpl implements StorageRepository {
           categories.add(CategoryModel(
             id: categoryId,
             name: categoryInfo.name,
-            icon: categoryInfo.icon,
-            color: categoryInfo.color,
             sizeInBytes: 0.0,
             filesCount: 0,
           ));
@@ -427,38 +407,26 @@ class StorageRepositoryImpl implements StorageRepository {
     return {
       'images': CategoryData(
         name: 'Images',
-        icon: AppIcons.images,
-        color: AppColorSchemes.imageCategoryLight,
         extensions: FileExtensions.imageExtensions,
       ),
       'videos': CategoryData(
         name: 'Videos',
-        icon: AppIcons.videos,
-        color: AppColorSchemes.videoCategoryLight,
         extensions: FileExtensions.videoExtensions,
       ),
       'audio': CategoryData(
         name: 'Audio',
-        icon: AppIcons.audio,
-        color: AppColorSchemes.audioCategoryLight,
         extensions: FileExtensions.audioExtensions,
       ),
       'documents': CategoryData(
         name: 'Documents',
-        icon: AppIcons.documents,
-        color: AppColorSchemes.documentCategoryLight,
         extensions: FileExtensions.documentExtensions,
       ),
       'apps': CategoryData(
         name: 'Apps',
-        icon: AppIcons.apps,
-        color: AppColorSchemes.appsCategoryLight,
         extensions: FileExtensions.appExtensions,
       ),
       'others': CategoryData(
         name: 'Others',
-        icon: AppIcons.others,
-        color: AppColorSchemes.othersCategoryLight,
         extensions: [],
       ),
     };
@@ -470,48 +438,36 @@ class StorageRepositoryImpl implements StorageRepository {
       CategoryModel(
         id: 'images',
         name: 'Images',
-        icon: AppIcons.images,
-        color: AppColorSchemes.imageCategoryLight,
         sizeInBytes: 0.0,
         filesCount: 0,
       ),
       CategoryModel(
         id: 'videos',
         name: 'Videos',
-        icon: AppIcons.videos,
-        color: AppColorSchemes.videoCategoryLight,
         sizeInBytes: 0.0,
         filesCount: 0,
       ),
       CategoryModel(
         id: 'audio',
         name: 'Audio',
-        icon: AppIcons.audio,
-        color: AppColorSchemes.audioCategoryLight,
         sizeInBytes: 0.0,
         filesCount: 0,
       ),
       CategoryModel(
         id: 'documents',
         name: 'Documents',
-        icon: AppIcons.documents,
-        color: AppColorSchemes.documentCategoryLight,
         sizeInBytes: 0.0,
         filesCount: 0,
       ),
       CategoryModel(
         id: 'apps',
         name: 'Apps',
-        icon: AppIcons.apps,
-        color: AppColorSchemes.appsCategoryLight,
         sizeInBytes: 0.0,
         filesCount: 0,
       ),
       CategoryModel(
         id: 'others',
         name: 'Others',
-        icon: AppIcons.others,
-        color: AppColorSchemes.othersCategoryLight,
         sizeInBytes: 0.0,
         filesCount: 0,
       ),
@@ -633,16 +589,12 @@ class StorageRepositoryImpl implements StorageRepository {
 /// Helper class to store category data during scanning
 class CategoryData {
   final String name;
-  final IconData icon;
-  final Color color;
   final List<String> extensions;
   int totalSize = 0;
   int fileCount = 0;
 
   CategoryData({
     required this.name,
-    required this.icon,
-    required this.color,
     required this.extensions,
   });
 }

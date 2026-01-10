@@ -162,36 +162,39 @@ class _ThemedStatisticsViewState extends State<ThemedStatisticsView>
               children: [
                 // Header
                 _buildHeader(context),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSize.paddingLarge),
                 
                 // Main storage overview with glass effect
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSize.paddingMedium),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSize.paddingLarge),
                   child: _buildStorageOverviewCard(context, state, usedStorage, usedPercentage),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSize.paddingLarge),
                 
                 // Enhanced storage distribution chart
-                EnhancedStorageDistributionChart(
-                  totalSpace: state.statistics.totalSpace.toDouble(),
-                  freeSpace: state.statistics.currentFreeSpace.toDouble(),
-                  categories: state.statistics.categoryBreakdown,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSize.paddingLarge),
+                  child: EnhancedStorageDistributionChart(
+                    totalSpace: state.statistics.totalSpace.toDouble(),
+                    freeSpace: state.statistics.currentFreeSpace.toDouble(),
+                    categories: state.statistics.categoryBreakdown,
+                  ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSize.paddingLarge),
                 
                 // Quick stats cards
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSize.paddingMedium),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSize.paddingLarge),
                   child: _buildQuickStats(context, state),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSize.paddingLarge),
                 
                 // Category breakdown
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSize.paddingMedium),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSize.paddingLarge),
                   child: _buildCategoryBreakdown(context, state, usedStorage),
                 ),
-                const SizedBox(height: 100),
+                const SizedBox(height: AppSize.paddingXLarge * 2),
               ],
             ),
           ),
@@ -205,7 +208,10 @@ class _ThemedStatisticsViewState extends State<ThemedStatisticsView>
     final colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.all(AppSize.paddingMedium),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSize.paddingLarge,
+        vertical: AppSize.paddingMedium,
+      ),
       child: Row(
         children: [
           Container(

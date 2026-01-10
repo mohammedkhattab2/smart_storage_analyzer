@@ -27,16 +27,18 @@ class StorageAnalysisCubit extends Cubit<StorageAnalysisState> {
   Future<void> startAnalysis({bool forceRerun = false}) async {
     // Check if analysis is already in progress
     if (_isAnalyzing) {
-      Logger.info('Analysis already in progress, skipping duplicate request');
+      Logger.info('[StorageAnalysisCubit] Analysis already in progress, skipping duplicate request');
       return;
     }
     
     // Check if we have valid cached results
     if (!forceRerun && _hasCachedResults()) {
-      Logger.info('Using cached analysis results');
+      Logger.info('[StorageAnalysisCubit] Using cached analysis results (cached at: $_lastAnalysisTime)');
       emit(StorageAnalysisCompleted(results: _cachedResults!));
       return;
     }
+    
+    Logger.info('[StorageAnalysisCubit] Starting fresh analysis (forceRerun: $forceRerun, hasCached: ${_hasCachedResults()})');
     
     // Cancel any previous analysis
     _cancelCurrentAnalysis();

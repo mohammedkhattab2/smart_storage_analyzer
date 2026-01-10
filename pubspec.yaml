@@ -114,12 +114,12 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/app_icon.png"
+  image_path: "assets/app_image.png"
   
   # Android specific settings
   android_min_sdk: 21
   android_adaptive_icon_background: "#ffffff"
-  android_adaptive_icon_foreground: "assets/app_icon.png"
+  android_adaptive_icon_foreground: "assets/app_image.png"
   
   # iOS specific settings
   remove_alpha_ios: true
@@ -128,43 +128,43 @@ flutter_launcher_icons:
   # Web favicon
   web:
     generate: true
-    image_path: "assets/app_icon.png"
+    image_path: "assets/app_image.png"
     background_color: "#ffffff"
     theme_color: "#000000"
   
   # Windows icon
   windows:
     generate: true
-    image_path: "assets/app_icon.png"
+    image_path: "assets/app_image.png"
     icon_size: 256
   
   # macOS icon
   macos:
     generate: true
-    image_path: "assets/app_icon.png"
+    image_path: "assets/app_image.png"
 
 # Flutter Native Splash configuration
 flutter_native_splash:
   # Main splash image
-  image: "assets/splash_screen.png"
+  image: "assets/app_image.png"
   
-  # Background color - SSA base color
+  # Background color - Match our magical splash screen background
   # Note: flutter_native_splash doesn't support gradients directly
-  color: "#0B1F3A"
+  color: "#0F1419"
   
   # Dark mode configuration (same as light mode)
-  color_dark: "#0B1F3A"
+  color_dark: "#0F1419"
   
   # Android 12+ specific configuration
   android_12:
     # The splash screen image for Android 12+
-    image: assets/splash_screen.png
+    image: assets/app_image.png
     
-    # Background color for Android 12+
-    color: "#0B1F3A"
+    # Background color for Android 12+ - Match magical splash
+    color: "#0F1419"
     
     # Dark mode for Android 12+
-    color_dark: "#0B1F3A"
+    color_dark: "#0F1419"
     
   # iOS specific configuration
   ios: true

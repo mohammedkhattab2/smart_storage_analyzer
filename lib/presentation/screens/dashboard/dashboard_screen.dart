@@ -24,7 +24,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         final dashboardCubit = context.read<DashboardCubit>();
         // Use the new hasLoadedData flag to prevent unnecessary reloads
         if (!dashboardCubit.hasLoadedData) {
-          dashboardCubit.loadDashboardData(context: context);
+          // Don't auto-request permission on initial load
+          dashboardCubit.loadDashboardData(
+            context: context,
+            autoRequestPermission: false,
+          );
         }
       }
     });

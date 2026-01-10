@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/statistics/statistics_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/statistics/statistics_state.dart';
 import 'package:smart_storage_analyzer/presentation/screens/statistics/themed_statistics_view.dart';
+import 'package:smart_storage_analyzer/core/utils/logger.dart';
 
 /// Optimized statistics screen with beautiful themed design
 class OptimizedStatisticsScreen extends StatefulWidget {
@@ -19,7 +20,10 @@ class _OptimizedStatisticsScreenState extends State<OptimizedStatisticsScreen> {
     // Load statistics only if not already loaded
     final statisticsCubit = context.read<StatisticsCubit>();
     if (statisticsCubit.state is! StatisticsLoaded) {
+      Logger.info('[StatisticsScreen] Loading statistics - state is ${statisticsCubit.state.runtimeType}');
       statisticsCubit.loadStatistics();
+    } else {
+      Logger.debug('[StatisticsScreen] Skipping load - already loaded');
     }
   }
 

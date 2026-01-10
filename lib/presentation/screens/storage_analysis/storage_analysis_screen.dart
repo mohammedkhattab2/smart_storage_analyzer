@@ -16,10 +16,11 @@ class _StorageAnalysisScreenState extends State<StorageAnalysisScreen> {
   void initState() {
     super.initState();
     // Use the global singleton and start analysis
-    // Force a fresh analysis to get latest cache files
+    // Only force rerun if user explicitly requested it (e.g., from analyze button)
+    // Otherwise, use cached results if available (1-hour cache)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<StorageAnalysisCubit>().startAnalysis(forceRerun: true);
+        context.read<StorageAnalysisCubit>().startAnalysis(forceRerun: false);
       }
     });
   }

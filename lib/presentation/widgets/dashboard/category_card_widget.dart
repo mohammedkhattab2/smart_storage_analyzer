@@ -2,9 +2,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
-import 'package:smart_storage_analyzer/core/theme/app_color_schemes.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
+import 'package:smart_storage_analyzer/presentation/mappers/category_ui_mapper.dart';
 
 class CategoryCardWidget extends StatefulWidget {
   final Category category;
@@ -61,7 +61,8 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isLargeCategory = widget.category.sizeInBytes > 1000000000; // 1GB
-    final categoryColor = _getCategoryColor(context, widget.category);
+    final categoryColor = CategoryUIMapper.getColor(widget.category.id);
+    final categoryIcon = CategoryUIMapper.getIcon(widget.category.id);
 
     final scale = _isPressed ? 0.88 : (_isHovered ? 1.03 : 1.0);
     final translateY = _isHovered ? -3.0 : 0.0;
@@ -155,7 +156,7 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
                             ],
                           ),
                           child: Icon(
-                            widget.category.icon,
+                            categoryIcon,
                             size: 24,
                             color: categoryColor,
                           ),
@@ -234,32 +235,5 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
         ),
       ),
     );
-  }
-
-  Color _getCategoryColor(BuildContext context, Category category) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    // Use the category extensions from AppColorSchemes
-    switch (category.name.toLowerCase()) {
-      case 'images':
-      case 'image':
-        return colorScheme.imageCategory;
-      case 'videos':
-      case 'video':
-        return colorScheme.videoCategory;
-      case 'audio':
-      case 'music':
-        return colorScheme.audioCategory;
-      case 'documents':
-      case 'document':
-        return colorScheme.documentCategory;
-      case 'apps':
-      case 'applications':
-        return colorScheme.appsCategory;
-      case 'others':
-      case 'other':
-      default:
-        return colorScheme.othersCategory;
-    }
   }
 }

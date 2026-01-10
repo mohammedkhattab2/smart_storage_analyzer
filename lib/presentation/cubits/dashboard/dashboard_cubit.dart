@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_state.dart';
 import 'package:smart_storage_analyzer/presentation/viewmodels/dashboard_viewmodel.dart';
+import 'package:smart_storage_analyzer/core/utils/logger.dart';
+import 'package:smart_storage_analyzer/domain/models/permission_request.dart';
+import 'package:smart_storage_analyzer/core/services/permission_manager.dart';
 
 /// Cubit for managing Dashboard UI state
 /// Follows MVVM pattern - delegates business logic to ViewModel
@@ -16,15 +19,18 @@ class DashboardCubit extends Cubit<DashboardState> {
     : _viewModel = viewModel,
       super(DashboardInitial());
 
-  Future<void> loadDashboardData({BuildContext? context, bool forceReload = false}) async {
+  Future<void> loadDashboardData({BuildContext? context, bool forceReload = false, bool autoRequestPermission = false}) async {
     // Skip loading if data already loaded and not forcing reload
     if (_hasLoadedInitialData && !forceReload && state is DashboardLoaded) {
       // Check if enough time has passed for background refresh
       if (_lastLoadTime != null &&
           DateTime.now().difference(_lastLoadTime!) < _minimumRefreshInterval) {
+        Logger.debug('[DashboardCubit] Skipping load - data cached and fresh (last load: $_lastLoadTime)');
         return;
       }
     }
+
+    Logger.info('[DashboardCubit] Loading dashboard data (forceReload: $forceReload, hasLoadedInitial: $_hasLoadedInitialData)');
 
     // Don't show loading state if we already have data (just refreshing)
     if (!_hasLoadedInitialData || forceReload) {
@@ -33,8 +39,14 @@ class DashboardCubit extends Cubit<DashboardState> {
     
     try {
       final data = await _viewModel.loadDashboardData(
-        context: context,
-        forceReload: forceReload
+        forceReload: forceReload,
+        autoRequestPermission: autoRequestPermission,
+        onPermissionRequest: autoRequestPermission && context != null ? (request) {
+          // Handle permission request in UI layer
+          if (context.mounted) {
+            _handlePermissionRequest(context, request);
+          }
+        } : null,
       );
 
       _hasLoadedInitialData = true;
@@ -74,8 +86,8 @@ class DashboardCubit extends Cubit<DashboardState> {
     // Don't show loading state for refresh to avoid UI flicker
     try {
       final data = await _viewModel.loadDashboardData(
-        context: context,
-        forceReload: false // Don't force reload on background refresh
+        forceReload: false, // Don't force reload on background refresh
+        autoRequestPermission: false, // Never auto-request permission on refresh
       );
 
       if (state is DashboardLoaded || _hasLoadedInitialData) {
@@ -109,6 +121,13 @@ class DashboardCubit extends Cubit<DashboardState> {
         });
       }
     });
+  }
+
+  /// Handle permission request from ViewModel
+  void _handlePermissionRequest(BuildContext context, PermissionRequest request) {
+    // Request permission through the UI layer
+    final permissionManager = PermissionManager();
+    permissionManager.requestPermission(context: context);
   }
 
   @override

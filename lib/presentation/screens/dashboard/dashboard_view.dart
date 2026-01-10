@@ -95,7 +95,11 @@ class _DashboardViewState extends State<DashboardView>
       // Only reload if we're in error state (permission was denied before)
       if (currentState is DashboardError &&
           currentState.message.toLowerCase().contains('permission')) {
-        context.read<DashboardCubit>().loadDashboardData(context: context);
+        // Don't auto-request permission here, just reload data
+        context.read<DashboardCubit>().loadDashboardData(
+          context: context,
+          autoRequestPermission: false,
+        );
       }
     }
 
@@ -103,9 +107,12 @@ class _DashboardViewState extends State<DashboardView>
   }
 
   Future<void> _handlePermissionRequest() async {
-    // The dashboard cubit will handle the permission request with the new PermissionService
+    // Request permission only when user explicitly clicks the button
     if (mounted) {
-      context.read<DashboardCubit>().loadDashboardData(context: context);
+      context.read<DashboardCubit>().loadDashboardData(
+        context: context,
+        autoRequestPermission: true, // Explicitly request permission
+      );
     }
   }
 

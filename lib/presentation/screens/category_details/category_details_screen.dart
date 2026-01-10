@@ -14,6 +14,7 @@ import 'package:smart_storage_analyzer/presentation/screens/media_viewer/in_app_
 import 'package:share_plus/share_plus.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:smart_storage_analyzer/core/services/content_uri_service.dart';
+import 'package:smart_storage_analyzer/presentation/mappers/category_ui_mapper.dart';
 
 class CategoryDetailsScreen extends StatelessWidget {
   final Category category;
@@ -146,11 +147,11 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
               colors: [
-                widget.category.color,
-                widget.category.color.withValues(
-                  red: math.min(1.0, widget.category.color.r * 1.2),
-                  green: math.min(1.0, widget.category.color.g * 1.2),
-                  blue: math.min(1.0, widget.category.color.b * 1.2),
+                CategoryUIMapper.getColor(widget.category.id),
+                CategoryUIMapper.getColor(widget.category.id).withValues(
+                  red: math.min(1.0, CategoryUIMapper.getColor(widget.category.id).r * 1.2),
+                  green: math.min(1.0, CategoryUIMapper.getColor(widget.category.id).g * 1.2),
+                  blue: math.min(1.0, CategoryUIMapper.getColor(widget.category.id).b * 1.2),
                 ),
               ],
               begin: Alignment.topLeft,
@@ -207,12 +208,12 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                           gradient: LinearGradient(
                             colors: [
                               isSelectionMode
-                                  ? widget.category.color.withValues(alpha: .3)
+                                  ? CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .3)
                                   : colorScheme.surfaceContainerHighest.withValues(
                                       alpha: isDark ? .3 : .6,
                                     ),
                               isSelectionMode
-                                  ? widget.category.color.withValues(alpha: .2)
+                                  ? CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .2)
                                   : colorScheme.surfaceContainer.withValues(
                                       alpha: isDark ? .2 : .4,
                                     ),
@@ -221,7 +222,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: isSelectionMode
-                                ? widget.category.color.withValues(alpha: .3)
+                                ? CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .3)
                                 : colorScheme.outline.withValues(alpha: .15),
                             width: 1,
                           ),
@@ -235,7 +236,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                             isSelectionMode ? Icons.done : Icons.checklist,
                             size: 18,
                             color: isSelectionMode
-                                ? widget.category.color
+                                ? CategoryUIMapper.getColor(widget.category.id)
                                 : colorScheme.onSurface,
                           ),
                         ),
@@ -260,7 +261,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                             ),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: widget.category.color.withValues(alpha: .3),
+                              color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .3),
                               width: 1,
                             ),
                           ),
@@ -269,7 +270,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                             icon: Icon(
                               Icons.share,
                               size: 18,
-                              color: widget.category.color,
+                              color: CategoryUIMapper.getColor(widget.category.id),
                             ),
                           ),
                         ),
@@ -332,10 +333,10 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
         vertical: AppSize.paddingSmall,
       ),
       decoration: BoxDecoration(
-        color: widget.category.color.withValues(alpha: .2),
+        color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: widget.category.color.withValues(alpha: .3),
+          color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .3),
           width: 1,
         ),
       ),
@@ -349,7 +350,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
               Text(
                 '${state.selectedCount} selected',
                 style: textTheme.bodyMedium?.copyWith(
-                  color: widget.category.color,
+                  color: CategoryUIMapper.getColor(widget.category.id),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -357,7 +358,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                 Text(
                   SizeFormatter.formatBytes(state.selectedSize),
                   style: textTheme.bodySmall?.copyWith(
-                    color: widget.category.color.withValues(alpha: .8),
+                    color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .8),
                   ),
                 ),
             ],
@@ -371,7 +372,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                   ? 'Deselect All'
                   : 'Select All',
               style: TextStyle(
-                color: widget.category.color,
+                color: CategoryUIMapper.getColor(widget.category.id),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -391,7 +392,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
               center: const Alignment(0.5, -0.5),
               radius: 1.5,
               colors: [
-                widget.category.color.withValues(alpha: isDark ? .08 : .15),
+                CategoryUIMapper.getColor(widget.category.id).withValues(alpha: isDark ? .08 : .15),
                 colorScheme.surface,
                 colorScheme.surfaceContainer.withValues(
                   alpha: isDark ? .3 : .5,
@@ -413,8 +414,8 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  widget.category.color.withValues(alpha: .1),
-                  widget.category.color.withValues(alpha: 0),
+                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .1),
+                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha: 0),
                 ],
               ),
             ),
@@ -442,7 +443,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
         CustomPaint(
           size: Size.infinite,
           painter: _CategoryBackgroundPainter(
-            color: widget.category.color.withValues(alpha: .03),
+            color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .03),
             secondaryColor: colorScheme.primary.withValues(alpha: .02),
           ),
         ),
@@ -462,8 +463,8 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  widget.category.color.withValues(alpha: .15),
-                  widget.category.color.withValues(alpha: 0),
+                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .15),
+                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha: 0),
                 ],
               ),
             ),
@@ -475,11 +476,11 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [
-                      widget.category.color,
-                      widget.category.color.withValues(
-                        red: math.min(1.0, widget.category.color.r * 0.8),
-                        green: math.min(1.0, widget.category.color.g * 0.8),
-                        blue: math.min(1.0, widget.category.color.b * 0.8),
+                      CategoryUIMapper.getColor(widget.category.id),
+                      CategoryUIMapper.getColor(widget.category.id).withValues(
+                        red: math.min(1.0, CategoryUIMapper.getColor(widget.category.id).r * 0.8),
+                        green: math.min(1.0, CategoryUIMapper.getColor(widget.category.id).g * 0.8),
+                        blue: math.min(1.0, CategoryUIMapper.getColor(widget.category.id).b * 0.8),
                       ),
                     ],
                     begin: Alignment.topLeft,
@@ -487,7 +488,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: widget.category.color.withValues(alpha: .5),
+                      color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .5),
                       blurRadius: 30,
                       spreadRadius: 5,
                     ),
@@ -623,8 +624,8 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  widget.category.color.withValues(alpha: .1),
-                  widget.category.color.withValues(alpha: .05),
+                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .1),
+                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .05),
                   Colors.transparent,
                 ],
                 stops: const [0.0, 0.5, 1.0],
@@ -643,14 +644,14 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                     ],
                   ),
                   border: Border.all(
-                    color: widget.category.color.withValues(alpha: .2),
+                    color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .2),
                     width: 2,
                   ),
                 ),
                 child: Icon(
                   _getCategoryIcon(widget.category.name),
                   size: 48,
-                  color: widget.category.color.withValues(alpha: .5),
+                  color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .5),
                 ),
               ),
             ),
@@ -699,7 +700,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
         return false;
       },
       child: RefreshIndicator(
-        color: widget.category.color,
+        color: CategoryUIMapper.getColor(widget.category.id),
         backgroundColor: colorScheme.surface,
         strokeWidth: 3,
         displacement: 80,
@@ -724,7 +725,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                       padding: const EdgeInsets.all(16.0),
                       child: Center(
                         child: CircularProgressIndicator(
-                          color: widget.category.color,
+                          color: CategoryUIMapper.getColor(widget.category.id),
                         ),
                       ),
                     );
@@ -916,7 +917,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
             Text('Deleting ${selectedFiles.length} files...'),
           ],
         ),
-        backgroundColor: widget.category.color,
+        backgroundColor: CategoryUIMapper.getColor(widget.category.id),
         duration: const Duration(seconds: 30),
         ),
       );
@@ -946,7 +947,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
         content: Text(message),
         backgroundColor: isError
             ? Theme.of(context).colorScheme.error
-            : widget.category.color,
+            : CategoryUIMapper.getColor(widget.category.id),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSize.radiusSmall),
@@ -1100,7 +1101,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
             borderRadius: BorderRadius.circular(24),
             gradient: LinearGradient(
               colors: [
-                widget.category.color.withValues(alpha: 0.05),
+                CategoryUIMapper.getColor(widget.category.id).withValues(alpha: 0.05),
                 colorScheme.surface,
               ],
               begin: Alignment.topLeft,
@@ -1118,21 +1119,21 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [
-                      widget.category.color.withValues(alpha: 0.2),
-                      widget.category.color.withValues(alpha: 0.1),
+                      CategoryUIMapper.getColor(widget.category.id).withValues(alpha: 0.2),
+                      CategoryUIMapper.getColor(widget.category.id).withValues(alpha: 0.1),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   border: Border.all(
-                    color: widget.category.color.withValues(alpha: 0.3),
+                    color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: 0.3),
                     width: 2,
                   ),
                 ),
                 child: Icon(
                   _getDocumentIcon(file.extension),
                   size: 40,
-                  color: widget.category.color,
+                  color: CategoryUIMapper.getColor(widget.category.id),
                 ),
               ),
               const SizedBox(height: 20),
@@ -1218,7 +1219,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                               Text('Opening ${file.name}...'),
                             ],
                           ),
-                          backgroundColor: widget.category.color,
+                          backgroundColor: CategoryUIMapper.getColor(widget.category.id),
                           duration: const Duration(seconds: 2),
                         ),
                       );
@@ -1279,7 +1280,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.category.color,
+                      backgroundColor: CategoryUIMapper.getColor(widget.category.id),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
@@ -1380,10 +1381,10 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
             borderRadius: BorderRadius.circular(20),
             gradient: LinearGradient(
               colors: [
-                widget.category.color.withValues(
+                CategoryUIMapper.getColor(widget.category.id).withValues(
                   alpha: widget.isDark ? .08 : .12,
                 ),
-                widget.category.color.withValues(
+                CategoryUIMapper.getColor(widget.category.id).withValues(
                   alpha: widget.isDark ? .04 : .08,
                 ),
                 colorScheme.surfaceContainer.withValues(alpha: .5),
@@ -1394,7 +1395,7 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
             ),
             boxShadow: [
               BoxShadow(
-                color: widget.category.color.withValues(alpha: .1),
+                color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .1),
                 blurRadius: 20,
                 offset: const Offset(0, 4),
                 spreadRadius: -5,
@@ -1415,8 +1416,8 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
               },
               onLongPress: widget.onLongPress,
               borderRadius: BorderRadius.circular(20),
-              splashColor: widget.category.color.withValues(alpha: .1),
-              highlightColor: widget.category.color.withValues(alpha: .05),
+              splashColor: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .1),
+              highlightColor: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .05),
               child: Container(
                 padding: const EdgeInsets.all(AppSize.paddingMedium),
                 child: Stack(
@@ -1430,22 +1431,22 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                widget.category.color.withValues(alpha: .2),
-                                widget.category.color.withValues(alpha: .1),
+                                CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .2),
+                                CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .1),
                               ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: widget.category.color.withValues(
+                              color: CategoryUIMapper.getColor(widget.category.id).withValues(
                                 alpha: .3,
                               ),
                               width: 1.5,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: widget.category.color.withValues(
+                                color: CategoryUIMapper.getColor(widget.category.id).withValues(
                                   alpha: .25,
                                 ),
                                 blurRadius: 12,
@@ -1455,7 +1456,7 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
                           ),
                           child: Icon(
                             _getFileIcon(),
-                            color: widget.category.color,
+                            color: CategoryUIMapper.getColor(widget.category.id),
                             size: 28,
                           ),
                         ),
@@ -1503,15 +1504,15 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
                                 colors: [
-                                  widget.category.color.withValues(alpha: .15),
-                                  widget.category.color.withValues(alpha: .05),
+                                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .15),
+                                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .05),
                                 ],
                               ),
                             ),
                             child: Icon(
                               Icons.arrow_forward_rounded,
                               size: 18,
-                              color: widget.category.color,
+                              color: CategoryUIMapper.getColor(widget.category.id),
                             ),
                           ),
                       ],
@@ -1528,7 +1529,7 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: widget.isSelected
-                                  ? widget.category.color
+                                  ? CategoryUIMapper.getColor(widget.category.id)
                                   : colorScheme.outline.withValues(alpha: .3),
                               width: 2,
                             ),
@@ -1538,7 +1539,7 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
                                 ? Icons.check_box
                                 : Icons.check_box_outline_blank,
                             color: widget.isSelected
-                                ? widget.category.color
+                                ? CategoryUIMapper.getColor(widget.category.id)
                                 : colorScheme.onSurfaceVariant,
                             size: 24,
                           ),

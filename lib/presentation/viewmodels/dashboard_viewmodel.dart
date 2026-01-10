@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
 import 'package:smart_storage_analyzer/core/services/permission_manager.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_info.dart';
+import 'package:smart_storage_analyzer/domain/models/permission_request.dart';
 import 'package:smart_storage_analyzer/domain/usecases/analyze_storage_use_case.dart';
 import 'package:smart_storage_analyzer/domain/usecases/get_categories_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/get_storage_info_usecase.dart';
@@ -29,7 +29,11 @@ class DashboardViewModel {
        _analyzeStorageUsecase = analyzeStorageUsecase;
 
   /// Load dashboard data (storage info and categories)
-  Future<DashboardData> loadDashboardData({BuildContext? context, bool forceReload = false}) async {
+  Future<DashboardData> loadDashboardData({
+    bool forceReload = false,
+    bool autoRequestPermission = false,
+    Function(PermissionRequest)? onPermissionRequest,
+  }) async {
     try {
       // Check if we have valid cached data
       if (!forceReload && _hasCachedData()) {
@@ -39,12 +43,29 @@ class DashboardViewModel {
       
       Logger.info("Loading dashboard data...");
 
-      // Check storage permission
-      final hasPermission = await checkStoragePermission(context: context);
+      // Check storage permission (without automatically requesting)
+      final hasPermission = await _permissionManager.hasPermission();
+      
       if (!hasPermission) {
-        throw PermissionException(
-          'Storage permission is required to analyze your device storage',
-        );
+        // Only request permission if explicitly told to (e.g., user clicked button)
+        if (autoRequestPermission && onPermissionRequest != null) {
+          // Use callback to request permission from UI layer
+          final request = PermissionRequest(
+            type: PermissionType.storage,
+            rationale: 'Storage permission is required to analyze your device storage',
+          );
+          onPermissionRequest(request);
+          
+          // The UI will handle the actual permission request
+          throw PermissionException(
+            'Storage permission is required to analyze your device storage',
+          );
+        } else {
+          // Just throw exception without requesting permission
+          throw PermissionException(
+            'Storage permission is required to analyze your device storage',
+          );
+        }
       }
 
       // Load data in parallel
@@ -100,39 +121,14 @@ class DashboardViewModel {
     }
   }
 
-  /// Check and request storage permission
-  Future<bool> checkStoragePermission({BuildContext? context}) async {
+  /// Check storage permission
+  Future<bool> checkStoragePermission() async {
     try {
-      // First check if permission is already granted
+      // Only check permission status, don't request
       final hasPermission = await _permissionManager.hasPermission();
-      if (hasPermission) {
-        return true;
-      }
-
-      // Check if context is still mounted before using it
-      if (context != null && context.mounted) {
-        // Request permission if not granted
-        return await _permissionManager.requestPermission(
-          context: context,
-        );
-      }
-      
-      // If no valid context, return false
-      return false;
+      return hasPermission;
     } catch (e) {
       Logger.warning('Permission check failed: $e');
-      return false;
-    }
-  }
-
-  /// Request storage permission
-  Future<bool> requestStoragePermission({BuildContext? context}) async {
-    try {
-      return await _permissionManager.requestPermission(
-        context: context,
-      );
-    } catch (e) {
-      Logger.error('Failed to request permission', e);
       return false;
     }
   }

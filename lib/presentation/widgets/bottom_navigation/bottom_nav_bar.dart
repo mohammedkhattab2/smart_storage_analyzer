@@ -20,9 +20,12 @@ class BottomNavBar extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
     final selectedIndex = _getSelectedIndex();
+    
+    // Get the system navigation bar padding (for gesture navigation)
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomPadding),
       child: Container(
         height: 72,
         decoration: BoxDecoration(

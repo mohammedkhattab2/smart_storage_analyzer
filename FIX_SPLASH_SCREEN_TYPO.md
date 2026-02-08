@@ -58,7 +58,7 @@ After renaming, verify the fix:
 1. **Check file structure:**
    ```
    assets/
-   ├── app_image.png
+   ├── app_image_icon.png         ✅ (app icon)
    ├── splash_screen.png          ✅ (already correct)
    ├── 2.0x/
    │   └── splash_screen@2x.png   ✅ (fixed)

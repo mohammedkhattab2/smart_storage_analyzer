@@ -24,22 +24,50 @@ class ScopedStorageFileOperations(private val context: Context) {
         
         for (path in filePaths) {
             try {
+                android.util.Log.d("ScopedStorageFileOperations", "Attempting to delete file: $path")
+                
                 // Check if it's a content URI or a virtual path
                 val deleted = when {
                     path.startsWith("content://") -> deleteByContentUri(path, contentResolver)
-                    path.startsWith("image://") || path.startsWith("video://") || 
+                    path.startsWith("image://") || path.startsWith("video://") ||
                     path.startsWith("audio://") || path.startsWith("document://") -> deleteByVirtualPath(path, contentResolver)
-                    else -> deleteByPath(path, contentResolver)
+                    else -> {
+                        // Try multiple deletion methods for regular paths
+                        var success = false
+                        
+                        // First try MediaStore deletion (works for media files)
+                        success = deleteFromMediaStore(path, contentResolver)
+                        android.util.Log.d("ScopedStorageFileOperations", "MediaStore deletion for $path: $success")
+                        
+                        // If MediaStore fails and we're on older Android, try direct file deletion
+                        if (!success && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                            success = deleteDirectFile(path)
+                            android.util.Log.d("ScopedStorageFileOperations", "Direct file deletion for $path: $success")
+                        }
+                        
+                        // If still failed, try finding the file via content resolver
+                        if (!success) {
+                            success = deleteViaContentResolver(path, contentResolver)
+                            android.util.Log.d("ScopedStorageFileOperations", "Content resolver deletion for $path: $success")
+                        }
+                        
+                        success
+                    }
                 }
                 
                 if (deleted) {
                     deletedCount++
+                    android.util.Log.d("ScopedStorageFileOperations", "Successfully deleted: $path")
+                } else {
+                    android.util.Log.e("ScopedStorageFileOperations", "Failed to delete: $path")
                 }
             } catch (e: Exception) {
+                android.util.Log.e("ScopedStorageFileOperations", "Error deleting file $path: ${e.message}")
                 e.printStackTrace()
             }
         }
         
+        android.util.Log.d("ScopedStorageFileOperations", "Deleted $deletedCount out of ${filePaths.size} files")
         deletedCount
     }
     
@@ -102,25 +130,194 @@ class ScopedStorageFileOperations(private val context: Context) {
      * Delete file from MediaStore by path
      */
     private suspend fun deleteFromMediaStore(path: String, contentResolver: ContentResolver): Boolean {
-        // Try to find the file in MediaStore
-        val projection = arrayOf(MediaStore.MediaColumns._ID)
-        val selection = "${MediaStore.MediaColumns.DATA} = ?"
-        val selectionArgs = arrayOf(path)
+        try {
+            // First, try to find the file in the MediaStore using different approaches
+            
+            // Try Images MediaStore
+            val imageDeleted = deleteFromSpecificMediaStore(
+                path,
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                contentResolver
+            )
+            if (imageDeleted) return true
+            
+            // Try Videos MediaStore
+            val videoDeleted = deleteFromSpecificMediaStore(
+                path,
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                contentResolver
+            )
+            if (videoDeleted) return true
+            
+            // Try Audio MediaStore
+            val audioDeleted = deleteFromSpecificMediaStore(
+                path,
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                contentResolver
+            )
+            if (audioDeleted) return true
+            
+            // Try general Files MediaStore
+            val filesDeleted = deleteFromSpecificMediaStore(
+                path,
+                MediaStore.Files.getContentUri("external"),
+                contentResolver
+            )
+            if (filesDeleted) return true
+            
+            // For Android 10+, try using relative path instead of DATA column
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                return deleteUsingRelativePath(path, contentResolver)
+            }
+            
+        } catch (e: Exception) {
+            android.util.Log.e("ScopedStorageFileOperations", "Error in deleteFromMediaStore: ${e.message}")
+        }
         
-        val uri = MediaStore.Files.getContentUri("external")
-        
-        contentResolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
-                val id = cursor.getLong(idColumn)
-                val deleteUri = ContentUris.withAppendedId(uri, id)
-                
-                return try {
-                    contentResolver.delete(deleteUri, null, null) > 0
-                } catch (e: Exception) {
-                    false
+        return false
+    }
+    
+    /**
+     * Delete from specific MediaStore collection
+     */
+    private fun deleteFromSpecificMediaStore(
+        path: String,
+        collectionUri: Uri,
+        contentResolver: ContentResolver
+    ): Boolean {
+        return try {
+            val projection = arrayOf(MediaStore.MediaColumns._ID)
+            
+            // For Android 10+ avoid using DATA column
+            val selection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                "${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
+            } else {
+                "${MediaStore.MediaColumns.DATA} = ?"
+            }
+            
+            val selectionArgs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Extract filename from path
+                arrayOf(java.io.File(path).name)
+            } else {
+                arrayOf(path)
+            }
+            
+            contentResolver.query(collectionUri, projection, selection, selectionArgs, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+                    val id = cursor.getLong(idColumn)
+                    val deleteUri = ContentUris.withAppendedId(collectionUri, id)
+                    
+                    val deletedRows = contentResolver.delete(deleteUri, null, null)
+                    if (deletedRows > 0) {
+                        android.util.Log.d("ScopedStorageFileOperations", "Deleted from MediaStore: $path")
+                        return true
+                    }
                 }
             }
+            false
+        } catch (e: Exception) {
+            android.util.Log.e("ScopedStorageFileOperations", "Error deleting from specific MediaStore: ${e.message}")
+            false
+        }
+    }
+    
+    /**
+     * Delete using relative path for Android 10+
+     */
+    private fun deleteUsingRelativePath(path: String, contentResolver: ContentResolver): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        
+        try {
+            val file = java.io.File(path)
+            val fileName = file.name
+            val parentPath = file.parent?.replace("/storage/emulated/0/", "") ?: ""
+            
+            val projection = arrayOf(MediaStore.MediaColumns._ID)
+            val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND ${MediaStore.MediaColumns.RELATIVE_PATH} = ?"
+            val selectionArgs = arrayOf(fileName, "$parentPath/")
+            
+            val uri = MediaStore.Files.getContentUri("external")
+            
+            contentResolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+                    val id = cursor.getLong(idColumn)
+                    val deleteUri = ContentUris.withAppendedId(uri, id)
+                    
+                    val deletedRows = contentResolver.delete(deleteUri, null, null)
+                    if (deletedRows > 0) {
+                        android.util.Log.d("ScopedStorageFileOperations", "Deleted using relative path: $path")
+                        return true
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("ScopedStorageFileOperations", "Error in deleteUsingRelativePath: ${e.message}")
+        }
+        
+        return false
+    }
+    
+    /**
+     * Direct file deletion for older Android versions
+     */
+    private fun deleteDirectFile(path: String): Boolean {
+        return try {
+            val file = java.io.File(path)
+            if (file.exists() && file.canWrite()) {
+                val deleted = file.delete()
+                if (deleted) {
+                    android.util.Log.d("ScopedStorageFileOperations", "Direct file deletion successful: $path")
+                }
+                deleted
+            } else {
+                android.util.Log.d("ScopedStorageFileOperations", "File doesn't exist or can't write: $path")
+                false
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("ScopedStorageFileOperations", "Error in direct file deletion: ${e.message}")
+            false
+        }
+    }
+    
+    /**
+     * Delete via content resolver by querying all possible locations
+     */
+    private fun deleteViaContentResolver(path: String, contentResolver: ContentResolver): Boolean {
+        try {
+            // Extract filename
+            val fileName = java.io.File(path).name
+            
+            // Try to find the file by display name across all media stores
+            val collections = listOf(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                MediaStore.Files.getContentUri("external")
+            )
+            
+            for (collection in collections) {
+                val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME)
+                val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
+                val selectionArgs = arrayOf(fileName)
+                
+                contentResolver.query(collection, projection, selection, selectionArgs, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+                        val id = cursor.getLong(idColumn)
+                        val deleteUri = ContentUris.withAppendedId(collection, id)
+                        
+                        val deletedRows = contentResolver.delete(deleteUri, null, null)
+                        if (deletedRows > 0) {
+                            android.util.Log.d("ScopedStorageFileOperations", "Deleted via content resolver: $path from $collection")
+                            return true
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("ScopedStorageFileOperations", "Error in deleteViaContentResolver: ${e.message}")
         }
         
         return false

@@ -15,8 +15,9 @@ class StatisticsRepositoryImpl implements StatisticsRepository {
   bool _isInitialized = false;
   late StatisticsCacheService _cacheService;
   bool _cacheInitialized = false;
+  final StorageRepository storageRepository;
 
-  StatisticsRepositoryImpl({required StorageRepository storageRepository});
+  StatisticsRepositoryImpl({required this.storageRepository});
 
   Future<Database> get database async {
     if (_isInitialized) return _database;
@@ -56,15 +57,32 @@ class StatisticsRepositoryImpl implements StatisticsRepository {
       // Initialize cache service if not already done
       await _initCacheService();
       
-      // Try to get cached statistics first
+      // Check if we have valid cached data first
       final cachedStats = await _cacheService.getCachedStatistics(period);
       if (cachedStats != null) {
         Logger.info('Using cached statistics for period: $period');
         return cachedStats;
       }
       
-      // If no cache, load fresh data asynchronously
-      Logger.info('Loading fresh statistics for period: $period');
+      Logger.info('No valid cache found, loading fresh statistics for period: $period');
+      
+      // Get categories from storage repository
+      List<Category> categories = [];
+      try {
+        // Get categories from injected storage repository (uses its own caching)
+        categories = await storageRepository.getCategories();
+        Logger.info('Loaded ${categories.length} categories for statistics');
+        
+        // Log category details for debugging
+        for (var cat in categories) {
+          Logger.info('Category ${cat.name}: ${cat.fileCount} files, ${cat.sizeInBytes / (1024 * 1024)} MB');
+        }
+      } catch (e) {
+        Logger.warning('Failed to load categories for statistics: $e');
+      }
+      
+      // Load fresh data asynchronously
+      Logger.info('Computing fresh statistics for period: $period');
       
       // Use isolate for heavy computations
       final stats = await IsolateHelper.runWithProgress<StorageStatistics, _StatisticsParams>(
@@ -72,6 +90,7 @@ class StatisticsRepositoryImpl implements StatisticsRepository {
         parameter: _StatisticsParams(
           period: period,
           currentStorage: await __getCurrentStorageInfo(),
+          categories: categories,
         ),
         onProgress: (progress, message) {
           Logger.debug('Statistics computation: ${(progress * 100).toInt()}% - $message');
@@ -113,10 +132,8 @@ class StatisticsRepositoryImpl implements StatisticsRepository {
     
     reportProgress(0.5, 'Processing categories...');
     
-    // Note: We can't access repository from isolate
-    // Categories would need to be passed as parameter
-    // For now, return empty categories
-    final categories = <Category>[];
+    // Use categories passed as parameter
+    final categories = params.categories;
     
     reportProgress(1.0, 'Statistics ready');
     
@@ -259,6 +276,7 @@ class StatisticsRepositoryImpl implements StatisticsRepository {
       return StorageInfo(totalSpace: 0, usedSpace: 0, freeSpace: 0);
     }
   }
+  
 
 }
 
@@ -279,9 +297,11 @@ class StorageInfo {
 class _StatisticsParams {
   final String period;
   final StorageInfo currentStorage;
+  final List<Category> categories;
   
   _StatisticsParams({
     required this.period,
     required this.currentStorage,
+    this.categories = const [],
   });
 }

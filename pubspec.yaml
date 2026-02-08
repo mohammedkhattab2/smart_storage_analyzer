@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.5+6
 
 environment:
   sdk: ^3.10.4
@@ -33,6 +33,9 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   intl: ^0.20.2
+  # Note: permission_handler kept for notification permission only
+  # Media permissions (READ_MEDIA_IMAGES, READ_MEDIA_VIDEO) are NOT used
+  # to comply with Google Play Photo and Video Permissions policy
   permission_handler: ^12.0.1
   flutter_bloc: ^9.1.1
   equatable: ^2.0.7
@@ -46,7 +49,6 @@ dependencies:
   disk_space_plus: ^0.2.6
   sqflite: ^2.4.2
   path: ^1.9.1
-  flutter_native_splash: ^2.4.7
   
   # Media handling dependencies
   video_player: ^2.9.2
@@ -56,6 +58,7 @@ dependencies:
   share_plus: ^10.1.2
   open_filex: ^4.5.0
   url_launcher: ^6.3.1
+  crypto: ^3.0.6
 
 dev_dependencies:
   flutter_test:
@@ -114,69 +117,34 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/app_image.png"
+  image_path: "assets/app_image_icon.png"
   
   # Android specific settings
   android_min_sdk: 21
-  android_adaptive_icon_background: "#ffffff"
-  android_adaptive_icon_foreground: "assets/app_image.png"
+  android_adaptive_icon_background: "#0F1419"  # Match splash background
+  android_adaptive_icon_foreground: "assets/app_image_icon.png"
+  android_gravity: "center"
+  android_resize: true
   
   # iOS specific settings
   remove_alpha_ios: true
-  ios_content_mode: "scaleAspectFill"
+  ios_content_mode: "center"
+  background_color_ios: "#0F1419"
   
   # Web favicon
   web:
     generate: true
-    image_path: "assets/app_image.png"
-    background_color: "#ffffff"
-    theme_color: "#000000"
+    image_path: "assets/app_image_icon.png"
+    background_color: "#0F1419"
+    theme_color: "#64B5F6"
   
   # Windows icon
   windows:
     generate: true
-    image_path: "assets/app_image.png"
+    image_path: "assets/app_image_icon.png"
     icon_size: 256
   
   # macOS icon
   macos:
     generate: true
-    image_path: "assets/app_image.png"
-
-# Flutter Native Splash configuration
-flutter_native_splash:
-  # Main splash image
-  image: "assets/app_image.png"
-  
-  # Background color - Match our magical splash screen background
-  # Note: flutter_native_splash doesn't support gradients directly
-  color: "#0F1419"
-  
-  # Dark mode configuration (same as light mode)
-  color_dark: "#0F1419"
-  
-  # Android 12+ specific configuration
-  android_12:
-    # The splash screen image for Android 12+
-    image: assets/app_image.png
-    
-    # Background color for Android 12+ - Match magical splash
-    color: "#0F1419"
-    
-    # Dark mode for Android 12+
-    color_dark: "#0F1419"
-    
-  # iOS specific configuration
-  ios: true
-  ios_content_mode: scaleAspectFit
-  
-  # Android configuration
-  android: true
-  android_gravity: center
-  
-  # Web configuration
-  web: true
-  web_image_mode: contain
-  
-  # Full screen mode
-  fullscreen: true
+    image_path: "assets/app_image_icon.png"

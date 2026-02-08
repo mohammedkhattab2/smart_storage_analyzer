@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
+import 'package:smart_storage_analyzer/core/services/saf_media_scanner_service.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/all_categories/all_categories_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/all_categories/all_categories_state.dart';
 import 'package:smart_storage_analyzer/presentation/screens/category_details/category_details_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/document_scanner/document_scanner_screen.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/document_scan/document_scan_cubit.dart';
+import 'package:smart_storage_analyzer/presentation/screens/media_scanner/media_scanner_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/others_scanner/others_scanner_screen.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/others_scan/others_scan_cubit.dart';
 import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
@@ -655,8 +657,51 @@ class AllCategoriesView extends StatelessWidget {
   }
 
   void _navigateToCategoryFiles(BuildContext context, Category category) {
-    // Check if this is the Documents category and route to DocumentScannerScreen
-    if (category.name.toLowerCase() == 'documents') {
+    final categoryName = category.name.toLowerCase();
+    
+    // Check if this is a media category (Images, Videos, Audio)
+    // These require SAF-based scanning due to policy compliance
+    if (categoryName == 'images' || categoryName == 'image') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => MediaScannerScreen(
+            mediaType: MediaType.images,
+            categoryName: 'Images',
+          ),
+        ),
+      ).then((_) {
+        if (context.mounted) {
+          context.read<AllCategoriesCubit>().refresh();
+        }
+      });
+    } else if (categoryName == 'videos' || categoryName == 'video') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => MediaScannerScreen(
+            mediaType: MediaType.videos,
+            categoryName: 'Videos',
+          ),
+        ),
+      ).then((_) {
+        if (context.mounted) {
+          context.read<AllCategoriesCubit>().refresh();
+        }
+      });
+    } else if (categoryName == 'audio' || categoryName == 'music') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => MediaScannerScreen(
+            mediaType: MediaType.audio,
+            categoryName: 'Audio',
+          ),
+        ),
+      ).then((_) {
+        if (context.mounted) {
+          context.read<AllCategoriesCubit>().refresh();
+        }
+      });
+    } else if (categoryName == 'documents' || categoryName == 'document') {
+      // Navigate to DocumentScannerScreen for Documents category
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => BlocProvider(
@@ -670,8 +715,7 @@ class AllCategoriesView extends StatelessWidget {
           context.read<AllCategoriesCubit>().refresh();
         }
       });
-    } else if (category.name.toLowerCase() == 'others' ||
-               category.name.toLowerCase() == 'other') {
+    } else if (categoryName == 'others' || categoryName == 'other') {
       // Navigate to OthersScannerScreen for Others category
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -687,6 +731,7 @@ class AllCategoriesView extends StatelessWidget {
         }
       });
     } else {
+      // Navigate to regular category details for Apps and other categories
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => CategoryDetailsScreen(category: category),

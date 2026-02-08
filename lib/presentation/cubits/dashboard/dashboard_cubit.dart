@@ -13,7 +13,7 @@ class DashboardCubit extends Cubit<DashboardState> {
   bool _isRefreshing = false;
   bool _hasLoadedInitialData = false;
   DateTime? _lastLoadTime;
-  static const Duration _minimumRefreshInterval = Duration(minutes: 5);
+  static const Duration _minimumRefreshInterval = Duration(minutes: 30);  // Battery optimized
 
   DashboardCubit({required DashboardViewModel viewModel})
     : _viewModel = viewModel,
@@ -111,8 +111,8 @@ class DashboardCubit extends Cubit<DashboardState> {
     if (_isRefreshing || isClosed) return;
     
     _isRefreshing = true;
-    // Refresh data every 5 minutes instead of 30 seconds
-    Future.delayed(const Duration(minutes: 5), () {
+    // Refresh data every 30 minutes for battery optimization (Google Play requirement)
+    Future.delayed(const Duration(minutes: 30), () {
       if (state is DashboardLoaded && !isClosed && _isRefreshing) {
         refresh().then((_) {
           if (!isClosed) {

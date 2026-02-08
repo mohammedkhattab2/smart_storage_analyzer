@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
+import 'package:smart_storage_analyzer/core/services/saf_media_scanner_service.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_state.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/document_scan/document_scan_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/screens/category_details/category_details_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/document_scanner/document_scanner_screen.dart';
+import 'package:smart_storage_analyzer/presentation/screens/media_scanner/media_scanner_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/others_scanner/others_scanner_screen.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/others_scan/others_scan_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/analyze_button.dart';
@@ -51,9 +53,50 @@ class DashboardContent extends StatelessWidget {
           CategoryGridWidget(
             categories: state.categories,
             onCategoryTap: (category) {
-              // Check if this is the Documents category
-              if (category.name.toLowerCase() == 'documents' ||
-                  category.name.toLowerCase() == 'document') {
+              final categoryName = category.name.toLowerCase();
+              
+              // Check if this is a media category (Images, Videos, Audio)
+              // These require SAF-based scanning due to policy compliance
+              if (categoryName == 'images' || categoryName == 'image') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MediaScannerScreen(
+                      mediaType: MediaType.images,
+                      categoryName: 'Images',
+                    ),
+                  ),
+                ).then((_) {
+                  if (context.mounted) {
+                    context.read<DashboardCubit>().refresh(context: context);
+                  }
+                });
+              } else if (categoryName == 'videos' || categoryName == 'video') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MediaScannerScreen(
+                      mediaType: MediaType.videos,
+                      categoryName: 'Videos',
+                    ),
+                  ),
+                ).then((_) {
+                  if (context.mounted) {
+                    context.read<DashboardCubit>().refresh(context: context);
+                  }
+                });
+              } else if (categoryName == 'audio' || categoryName == 'music') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MediaScannerScreen(
+                      mediaType: MediaType.audio,
+                      categoryName: 'Audio',
+                    ),
+                  ),
+                ).then((_) {
+                  if (context.mounted) {
+                    context.read<DashboardCubit>().refresh(context: context);
+                  }
+                });
+              } else if (categoryName == 'documents' || categoryName == 'document') {
                 // Navigate to DocumentScannerScreen with BLoC provider
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -69,8 +112,7 @@ class DashboardContent extends StatelessWidget {
                     context.read<DashboardCubit>().refresh(context: context);
                   }
                 });
-              } else if (category.name.toLowerCase() == 'others' ||
-                         category.name.toLowerCase() == 'other') {
+              } else if (categoryName == 'others' || categoryName == 'other') {
                 // Navigate to OthersScannerScreen with BLoC provider
                 Navigator.of(context).push(
                   MaterialPageRoute(

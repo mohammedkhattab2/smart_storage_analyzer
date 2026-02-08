@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:smart_storage_analyzer/domain/entities/file_item.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
@@ -134,8 +135,10 @@ class CleanupResultsViewModel {
         }
       } catch (e) {
         failCount++;
-        // Use debugPrint in isolate as Logger is not available
-        debugPrint('[CleanupViewModel] Failed to delete $path: $e');
+        // Silent in release mode - Logger not available in isolate
+        if (kDebugMode) {
+          debugPrint('[CleanupViewModel] Failed to delete $path: $e');
+        }
       }
     }
 
@@ -197,7 +200,10 @@ class CleanupResultsViewModel {
           }
         } catch (e) {
           failCount++;
-          debugPrint('[CleanupViewModel] Failed to delete cache entity: ${entity.path}');
+          // Silent in release mode
+          if (kDebugMode) {
+            debugPrint('[CleanupViewModel] Failed to delete cache entity: ${entity.path}');
+          }
         }
       }
     }
@@ -270,12 +276,18 @@ class CleanupResultsViewModel {
                 successCount++;
               } catch (e) {
                 failCount++;
-                debugPrint('[CleanupViewModel] Failed to delete thumbnail: ${file.path}');
+                // Silent in release mode
+                if (kDebugMode) {
+                  debugPrint('[CleanupViewModel] Failed to delete thumbnail: ${file.path}');
+                }
               }
             }
           }
         } catch (e) {
-          debugPrint('[CleanupViewModel] Failed to access thumbnail directory: $path');
+          // Silent in release mode
+          if (kDebugMode) {
+            debugPrint('[CleanupViewModel] Failed to access thumbnail directory: $path');
+          }
         }
       }
     }

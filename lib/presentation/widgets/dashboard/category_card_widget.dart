@@ -18,6 +18,14 @@ class CategoryCardWidget extends StatefulWidget {
     this.index = 0,
   });
 
+  /// Check if this category is a media category that requires SAF scanning
+  bool get isMediaCategory {
+    final name = category.name.toLowerCase();
+    return name == 'images' || name == 'image' ||
+           name == 'videos' || name == 'video' ||
+           name == 'audio' || name == 'music';
+  }
+
   @override
   State<CategoryCardWidget> createState() => _CategoryCardWidgetState();
 }
@@ -214,16 +222,47 @@ class _CategoryCardWidgetState extends State<CategoryCardWidget> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        // File count
-                        Text(
-                          '${widget.category.fileCount} files',
-                          style: textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant.withValues(
-                              alpha: _isHovered ? 1.0 : .6,
+                        // File count or "Tap to scan" for media categories
+                        if (widget.isMediaCategory)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
                             ),
-                            fontWeight: FontWeight.w500,
+                            decoration: BoxDecoration(
+                              color: categoryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.touch_app_rounded,
+                                  size: 10,
+                                  color: categoryColor.withValues(alpha: 0.8),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'Tap to scan',
+                                  style: textTheme.labelSmall?.copyWith(
+                                    color: categoryColor.withValues(alpha: 0.8),
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Text(
+                            '${widget.category.fileCount} files',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: _isHovered ? 1.0 : .6,
+                              ),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
                         ],
                       ),
                     ),

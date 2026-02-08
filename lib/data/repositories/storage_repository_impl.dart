@@ -9,6 +9,8 @@ import 'package:smart_storage_analyzer/core/services/native_storage_service.dart
 import 'package:smart_storage_analyzer/core/services/permission_manager.dart';
 import 'package:smart_storage_analyzer/core/services/document_scanner_service.dart';
 import 'package:smart_storage_analyzer/core/services/others_scanner_service.dart';
+import 'package:smart_storage_analyzer/core/services/media_scan_cache_service.dart';
+import 'package:smart_storage_analyzer/core/services/saf_media_scanner_service.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
 import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
 import 'package:smart_storage_analyzer/data/models/category_model.dart';
@@ -105,6 +107,14 @@ class StorageRepositoryImpl implements StorageRepository {
     if (_categoriesCache != null && _cacheTimestamp != null) {
       final isValid = DateTime.now().difference(_cacheTimestamp!) < _cacheValidityDuration;
       if (isValid) {
+        // Check if media scan cache has newer data - if so, invalidate our cache
+        final mediaCacheService = MediaScanCacheService();
+        if (mediaCacheService.hasNewerCacheThan(_cacheTimestamp)) {
+          Logger.info('Media scan cache is newer than categories cache - invalidating');
+          _categoriesCache = null;
+          _cacheTimestamp = null;
+          return null;
+        }
         return _categoriesCache;
       }
     }
@@ -263,6 +273,7 @@ class StorageRepositoryImpl implements StorageRepository {
       
       final categories = <Category>[];
       final categoryMap = _createCategoryMap();
+      final mediaCacheService = MediaScanCacheService();
       
       // Calculate each category using the same source as Category Details
       for (final categoryEntry in categoryMap.entries) {
@@ -271,6 +282,36 @@ class StorageRepositoryImpl implements StorageRepository {
         
         try {
           Logger.info('Calculating $categoryId category...');
+          
+          // Special handling for media categories - use SAF cache if available
+          if (categoryId == 'images' || categoryId == 'videos' || categoryId == 'audio') {
+            try {
+              MediaType mediaType;
+              if (categoryId == 'images') {
+                mediaType = MediaType.images;
+              } else if (categoryId == 'videos') {
+                mediaType = MediaType.videos;
+              } else {
+                mediaType = MediaType.audio;
+              }
+              
+              final cachedResult = mediaCacheService.getCachedResult(mediaType);
+              if (cachedResult != null) {
+                categories.add(CategoryModel(
+                  id: categoryId,
+                  name: categoryInfo.name,
+                  sizeInBytes: cachedResult.result.totalSize.toDouble(),
+                  filesCount: cachedResult.result.fileCount,
+                ));
+                Logger.info('$categoryId (SAF Cache): ${cachedResult.result.fileCount} files, ${cachedResult.result.totalSize / (1024 * 1024)} MB');
+                continue; // Skip regular scanning for this media category
+              } else {
+                Logger.info('$categoryId: No SAF cache available, using estimates');
+              }
+            } catch (e) {
+              Logger.warning('Failed to get cached media data for $categoryId: $e');
+            }
+          }
           
           // Special handling for documents category - use SAF data if available
           if (categoryId == 'documents') {

@@ -9,7 +9,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
-import android.provider.MediaStore
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -20,6 +19,21 @@ import androidx.work.*
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.*
 
+/**
+ * MainActivity - Updated for Google Play Photo and Video Permissions Policy compliance.
+ *
+ * This app is a storage analyzer that does NOT require:
+ * - READ_MEDIA_IMAGES
+ * - READ_MEDIA_VIDEO
+ * - READ_MEDIA_AUDIO
+ * - READ_EXTERNAL_STORAGE
+ * - WRITE_EXTERNAL_STORAGE
+ *
+ * Instead, it uses:
+ * - StorageStatsManager for app storage statistics
+ * - PACKAGE_USAGE_STATS for detailed app analysis
+ * - SAF (Storage Access Framework) for user-selected folder access
+ */
 class MainActivity: FlutterActivity() {
     companion object {
         // Unified channel for all native operations
@@ -33,22 +47,25 @@ class MainActivity: FlutterActivity() {
         private const val OLD_FILE_THRESHOLD = OLD_FILE_DAYS * 24 * 60 * 60 * 1000L
     }
     
+    // Policy-compliant storage analyzer (no media permissions required)
+    private lateinit var policyCompliantAnalyzer: PolicyCompliantStorageAnalyzer
     private lateinit var storageAnalyzer: StorageAnalyzer
     private lateinit var fileOperations: FileOperations
-    private lateinit var scopedStorageFileScanner: ScopedStorageFileScanner
     private lateinit var scopedStorageFileOperations: ScopedStorageFileOperations
     private lateinit var documentSAFHandler: DocumentSAFHandler
+    private lateinit var safMediaScanner: SafMediaScanner
     private val mainScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
-        // Initialize storage analyzer and file operations
+        // Initialize policy-compliant storage analyzer (no media permissions required)
+        policyCompliantAnalyzer = PolicyCompliantStorageAnalyzer(this)
         storageAnalyzer = StorageAnalyzer(this)
         fileOperations = FileOperations(this)
-        scopedStorageFileScanner = ScopedStorageFileScanner(this)
         scopedStorageFileOperations = ScopedStorageFileOperations(this)
         documentSAFHandler = DocumentSAFHandler(this, this)
+        safMediaScanner = SafMediaScanner(this, this)
         
         // Unified channel handler for all native operations
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MAIN_CHANNEL).setMethodCallHandler { call, result ->
@@ -76,43 +93,46 @@ class MainActivity: FlutterActivity() {
                     "getStorageInfo" -> {
                         result.success(getStorageInfo())
                     }
-                    // File operations
+                    // File operations - Policy compliant (no media permissions)
                     "getAllFiles" -> {
-                        result.success(getAllFiles())
+                        // Return empty list - we don't have media access permissions
+                        // Use SAF for user-selected folder access instead
+                        result.success(emptyList<Map<String, Any>>())
                     }
                     "getFilesByCategory" -> {
                         val category = call.argument<String>("category") ?: "all"
                         mainScope.launch {
                             try {
-                                val files = when {
-                                    // For duplicates on older Android versions, use our improved detection
-                                    category == "duplicates" && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q -> {
-                                        withContext(Dispatchers.IO) {
-                                            val fileMap = ConcurrentHashMap<String, Map<String, Any>>()
-                                            getDuplicateFiles(fileMap)
-                                            android.util.Log.d("MainActivity", "Legacy duplicate scan found ${fileMap.size} duplicates")
-                                            fileMap.values.toList()
-                                        }
+                                val files = when (category) {
+                                    // Apps can be analyzed without media permissions
+                                    "apps" -> {
+                                        android.util.Log.d("MainActivity", "Getting app storage stats (policy compliant)")
+                                        policyCompliantAnalyzer.getAppStorageStats()
                                     }
-                                    // For documents on older Android versions, use legacy scanner
-                                    category == "documents" && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q -> {
-                                        withContext(Dispatchers.IO) {
-                                            val fileMap = ConcurrentHashMap<String, Map<String, Any>>()
-                                            getDocumentFiles(fileMap)
-                                            fileMap.values.toList()
-                                        }
+                                    // For media categories, return empty with explanation
+                                    // Users should use SAF folder picker for specific access
+                                    "images", "videos", "audio", "documents", "others", "large", "old", "duplicates" -> {
+                                        android.util.Log.d("MainActivity", "Category $category requires SAF access - returning policy info")
+                                        // Return a special marker indicating SAF is needed
+                                        listOf(mapOf(
+                                            "id" to "policy_notice",
+                                            "name" to "Use folder picker to access files",
+                                            "path" to "",
+                                            "size" to 0L,
+                                            "lastModified" to System.currentTimeMillis(),
+                                            "extension" to "",
+                                            "mimeType" to "",
+                                            "requiresSAF" to true,
+                                            "policyCompliant" to true
+                                        ))
                                     }
-                                    // For Android 10+, use scoped storage compliant scanner
-                                    else -> {
-                                        android.util.Log.d("MainActivity", "Using ScopedStorageFileScanner for category: $category")
-                                        scopedStorageFileScanner.scanFilesByCategory(category)
-                                    }
+                                    else -> emptyList()
                                 }
-                                android.util.Log.d("MainActivity", "Returning ${files.size} files for category: $category")
+                                android.util.Log.d("MainActivity", "Returning ${files.size} items for category: $category")
                                 result.success(files)
                             } catch (e: Exception) {
-                                android.util.Log.e("MainActivity", "Failed to scan files for category $category", e)
-                                result.error("SCAN_ERROR", "Failed to scan files: ${e.message}", null)
+                                android.util.Log.e("MainActivity", "Failed to get files for category $category", e)
+                                result.error("SCAN_ERROR", "Failed to get files: ${e.message}", null)
                             }
                         }
                     }
@@ -128,34 +148,30 @@ class MainActivity: FlutterActivity() {
                             }
                         }
                     }
-                    // Analysis operations
+                    // Analysis operations - Policy compliant
                     "analyzeStorage" -> {
-                        // Get analysis parameters from Flutter
-                        val quickScan = call.argument<Boolean>("quickScan") ?: false
-                        val skipDuplicates = call.argument<Boolean>("skipDuplicates") ?: false
-                        val skipLargeFiles = call.argument<Boolean>("skipLargeFiles") ?: false
-                        val cacheOnly = call.argument<Boolean>("cacheOnly") ?: false
-                        
-                        // Use coroutine for heavy analysis operation
+                        // Use policy-compliant analyzer that doesn't require media permissions
                         mainScope.launch {
                             try {
                                 val analysisResult = withContext(Dispatchers.IO) {
-                                    val analysis = storageAnalyzer.analyzeStorage(
-                                        quickScan = quickScan,
-                                        skipDuplicates = skipDuplicates,
-                                        skipLargeFiles = skipLargeFiles,
-                                        cacheOnly = cacheOnly
-                                    )
+                                    val analysis = policyCompliantAnalyzer.analyzeStorage()
+                                    
+                                    // Get storage info
+                                    val storageInfo = policyCompliantAnalyzer.getStorageInfo()
+                                    val cleanableCache = policyCompliantAnalyzer.getCleanableCache()
+                                    
                                     mapOf(
-                                        "totalFilesScanned" to analysis.totalFilesScanned,
-                                        "totalSpaceUsed" to analysis.totalSpaceUsed,
-                                        "totalSpaceAvailable" to analysis.totalSpaceAvailable,
-                                        "cacheFiles" to analysis.cacheFiles,
-                                        "temporaryFiles" to analysis.temporaryFiles,
-                                        "largeOldFiles" to analysis.largeOldFiles,
-                                        "duplicateFiles" to analysis.duplicateFiles,
-                                        "thumbnails" to analysis.thumbnails,
-                                        "totalCleanupPotential" to analysis.totalCleanupPotential
+                                        "totalFilesScanned" to 0, // No file scanning without media permissions
+                                        "totalSpaceUsed" to (storageInfo["usedSpace"] ?: 0L),
+                                        "totalSpaceAvailable" to (storageInfo["totalSpace"] ?: 0L),
+                                        "cacheFiles" to cleanableCache,
+                                        "temporaryFiles" to emptyList<Map<String, Any>>(),
+                                        "largeOldFiles" to emptyList<Map<String, Any>>(),
+                                        "duplicateFiles" to emptyList<Map<String, Any>>(),
+                                        "thumbnails" to emptyList<Map<String, Any>>(),
+                                        "totalCleanupPotential" to cleanableCache.sumOf { (it["size"] as? Long) ?: 0L },
+                                        "policyCompliant" to true,
+                                        "hasMediaAccess" to false
                                     )
                                 }
                                 result.success(analysisResult)
@@ -164,12 +180,12 @@ class MainActivity: FlutterActivity() {
                             }
                         }
                     }
-                    // Get category sizes for dashboard
+                    // Get category sizes for dashboard - Policy compliant
                     "getCategorySizes" -> {
                         mainScope.launch {
                             try {
                                 val categorySizes = withContext(Dispatchers.IO) {
-                                    getCategorySizes()
+                                    getPolicyCompliantCategorySizes()
                                 }
                                 result.success(categorySizes)
                             } catch (e: Exception) {
@@ -236,12 +252,35 @@ class MainActivity: FlutterActivity() {
                         documentSAFHandler.handleMethodCall(call, result)
                     }
                     // SAF Others operations
-                    "selectFolder", "selectOthersFolder" -> {
-                        // Both methods do the same thing - open a folder picker
+                    "selectOthersFolder" -> {
+                        // Open a folder picker for "others" category
                         documentSAFHandler.handleMethodCall(call, result)
                     }
                     "scanOthers" -> {
                         documentSAFHandler.handleMethodCall(call, result)
+                    }
+                    // SAF General folder operations (for File Manager)
+                    "selectFolder" -> {
+                        safMediaScanner.handleMethodCall(call, result)
+                    }
+                    "scanFolderForFiles" -> {
+                        safMediaScanner.handleMethodCall(call, result)
+                    }
+                    // SAF Media Scanner operations (policy compliant)
+                    "selectMediaFolder" -> {
+                        safMediaScanner.handleMethodCall(call, result)
+                    }
+                    "scanMediaFolder" -> {
+                        safMediaScanner.handleMethodCall(call, result)
+                    }
+                    "getPersistedMediaUri" -> {
+                        safMediaScanner.handleMethodCall(call, result)
+                    }
+                    "clearPersistedMediaUri" -> {
+                        safMediaScanner.handleMethodCall(call, result)
+                    }
+                    "validateMediaUri" -> {
+                        safMediaScanner.handleMethodCall(call, result)
                     }
                     // Content URI operations for in-app file viewing
                     "readContentUri" -> {
@@ -464,78 +503,22 @@ class MainActivity: FlutterActivity() {
     }
     
     /**
-     * Get media files using MediaStore API
+     * Get media files - POLICY COMPLIANT VERSION
+     *
+     * This method is intentionally empty because accessing media files requires
+     * READ_MEDIA_IMAGES, READ_MEDIA_VIDEO, or READ_MEDIA_AUDIO permissions
+     * which are restricted by Google Play Photo and Video Permissions policy.
+     *
+     * For storage analysis apps, we use StorageStatsManager instead to get
+     * aggregate storage information without accessing individual files.
+     *
+     * Users can use SAF (Storage Access Framework) folder picker for specific
+     * folder access when needed.
      */
     private fun getMediaFiles(type: String, fileMap: ConcurrentHashMap<String, Map<String, Any>>) {
-        val contentResolver: ContentResolver = contentResolver
-        
-        val mediaUris = when (type) {
-            "images" -> listOf(MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            "videos" -> listOf(MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
-            "audio" -> listOf(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI)
-            else -> listOf(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-            )
-        }
-        
-        val projection = arrayOf(
-            MediaStore.MediaColumns._ID,
-            MediaStore.MediaColumns.DISPLAY_NAME,
-            MediaStore.MediaColumns.DATA,
-            MediaStore.MediaColumns.SIZE,
-            MediaStore.MediaColumns.DATE_MODIFIED,
-            MediaStore.MediaColumns.MIME_TYPE
-        )
-        
-        for (uri in mediaUris) {
-            var cursor: Cursor? = null
-            try {
-                cursor = contentResolver.query(
-                    uri,
-                    projection,
-                    null,
-                    null,
-                    "${MediaStore.MediaColumns.SIZE} DESC"
-                )
-                
-                cursor?.use {
-                    val idColumn = it.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
-                    val nameColumn = it.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
-                    val pathColumn = it.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
-                    val sizeColumn = it.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
-                    val dateColumn = it.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
-                    val mimeColumn = it.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE)
-                    
-                    while (it.moveToNext()) {
-                        val id = it.getLong(idColumn)
-                        val name = it.getString(nameColumn) ?: "Unknown"
-                        val path = it.getString(pathColumn) ?: ""
-                        val size = it.getLong(sizeColumn)
-                        val dateModified = it.getLong(dateColumn) * 1000 // Convert to milliseconds
-                        val mimeType = it.getString(mimeColumn) ?: "application/octet-stream"
-                        
-                        // Skip if file doesn't exist or size is 0
-                        if (path.isEmpty() || size <= 0) continue
-                        
-                        val fileInfo = mapOf(
-                            "id" to id.toString(),
-                            "name" to name,
-                            "path" to path,
-                            "size" to size,
-                            "lastModified" to dateModified,
-                            "extension" to getExtensionFromPath(path),
-                            "mimeType" to mimeType
-                        )
-                        
-                        fileMap[path] = fileInfo
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        // Policy compliant: Do not scan media files without explicit user consent via SAF
+        // This method is kept for API compatibility but returns no results
+        android.util.Log.d("MainActivity", "getMediaFiles($type) - Skipped: Policy compliant mode (no media permissions)")
     }
     
     /**
@@ -671,13 +654,17 @@ class MainActivity: FlutterActivity() {
     
     /**
      * Get duplicate files with improved content-based detection
+     *
+     * POLICY COMPLIANT: Only scans documents, apps, and other files that don't
+     * require media permissions. Media files (images, videos, audio) are excluded
+     * as they require READ_MEDIA_* permissions.
      */
     private fun getDuplicateFiles(fileMap: ConcurrentHashMap<String, Map<String, Any>>) {
         val allFiles = ConcurrentHashMap<String, Map<String, Any>>()
         
-        // Collect all files from all categories
-        android.util.Log.d("MainActivity", "Starting comprehensive duplicate scan...")
-        getMediaFiles("all", allFiles)
+        // Collect files from non-media categories only (policy compliant)
+        android.util.Log.d("MainActivity", "Starting policy-compliant duplicate scan (documents, apps, others only)...")
+        // Note: getMediaFiles is intentionally not called - requires restricted permissions
         getDocumentFiles(allFiles)
         getAppFiles(allFiles)
         getOtherFiles(allFiles)
@@ -1211,19 +1198,17 @@ class MainActivity: FlutterActivity() {
     }
     
     /**
-     * Delete media file using MediaStore
+     * Delete media file - POLICY COMPLIANT VERSION
+     *
+     * MediaStore deletion requires media permissions which are restricted.
+     * This method now only attempts to delete using the File API.
+     * For media files, users should use the system file manager or gallery app.
      */
     private fun deleteMediaFile(path: String): Boolean {
-        try {
-            val uri = MediaStore.Files.getContentUri("external")
-            val selection = "${MediaStore.MediaColumns.DATA} = ?"
-            val selectionArgs = arrayOf(path)
-            
-            val deleted = contentResolver.delete(uri, selection, selectionArgs)
-            return deleted > 0
-        } catch (e: Exception) {
-            return false
-        }
+        // Policy compliant: Cannot use MediaStore without media permissions
+        // Fall back to regular file deletion
+        android.util.Log.d("MainActivity", "deleteMediaFile - Using file API instead of MediaStore (policy compliant)")
+        return deleteRegularFile(path)
     }
     
     /**
@@ -1326,37 +1311,38 @@ class MainActivity: FlutterActivity() {
     }
     
     /**
-     * Get file sizes and counts for each category
+     * Get category sizes using policy-compliant methods (no media permissions)
+     * Uses StorageStatsManager for app sizes and estimates for media categories
      */
-    private fun getCategorySizes(): Map<String, Any> {
+    private fun getPolicyCompliantCategorySizes(): Map<String, Any> {
         val categorySizes = mutableMapOf<String, Any>()
         
         try {
-            // Get file counts and sizes for each category
-            val categories = listOf("images", "videos", "audio", "documents", "apps", "others")
+            // Get category estimates from policy-compliant analyzer
+            val estimates = policyCompliantAnalyzer.getCategoryEstimates()
             
-            for (category in categories) {
-                val files = when (category) {
-                    "images" -> getMediaFilesForCategory("images")
-                    "videos" -> getMediaFilesForCategory("videos")
-                    "audio" -> getMediaFilesForCategory("audio")
-                    "documents" -> getDocumentFilesForCategory()
-                    "apps" -> getAppFilesForCategory()
-                    "others" -> getOtherFilesForCategory()
-                    else -> emptyList()
-                }
-                
-                var totalSize = 0L
-                var fileCount = 0
-                
-                for (file in files) {
-                    totalSize += (file["size"] as? Long) ?: 0
-                    fileCount++
-                }
-                
-                categorySizes["${category}_size"] = totalSize
-                categorySizes["${category}_count"] = fileCount
-            }
+            // Apps - we can get accurate data
+            val appStats = policyCompliantAnalyzer.getAppStorageStats()
+            val totalAppSize = appStats.sumOf { (it["size"] as? Long) ?: 0L }
+            categorySizes["apps_size"] = totalAppSize
+            categorySizes["apps_count"] = appStats.size
+            
+            // Media categories - estimates only (no media permissions)
+            categorySizes["images_size"] = estimates["images_size"] ?: 0L
+            categorySizes["images_count"] = 0 // Cannot count without permission
+            categorySizes["videos_size"] = estimates["videos_size"] ?: 0L
+            categorySizes["videos_count"] = 0
+            categorySizes["audio_size"] = estimates["audio_size"] ?: 0L
+            categorySizes["audio_count"] = 0
+            categorySizes["documents_size"] = estimates["documents_size"] ?: 0L
+            categorySizes["documents_count"] = 0
+            categorySizes["others_size"] = estimates["others_size"] ?: 0L
+            categorySizes["others_count"] = 0
+            
+            // Metadata
+            categorySizes["isEstimate"] = true
+            categorySizes["policyCompliant"] = true
+            categorySizes["hasMediaAccess"] = false
             
         } catch (e: Exception) {
             e.printStackTrace()
@@ -1366,68 +1352,24 @@ class MainActivity: FlutterActivity() {
                 categorySizes["${category}_size"] = 0L
                 categorySizes["${category}_count"] = 0
             }
+            categorySizes["isEstimate"] = true
+            categorySizes["policyCompliant"] = true
         }
         
         return categorySizes
     }
     
     /**
-     * Helper method to get media files for category size calculation
-     */
-    private fun getMediaFilesForCategory(type: String): List<Map<String, Any>> {
-        val filesList = mutableListOf<Map<String, Any>>()
-        val fileMap = ConcurrentHashMap<String, Map<String, Any>>()
-        
-        getMediaFiles(type, fileMap)
-        filesList.addAll(fileMap.values)
-        
-        return filesList
-    }
-    
-    /**
-     * Helper method to get document files for category size calculation
-     */
-    private fun getDocumentFilesForCategory(): List<Map<String, Any>> {
-        val filesList = mutableListOf<Map<String, Any>>()
-        val fileMap = ConcurrentHashMap<String, Map<String, Any>>()
-        
-        getDocumentFiles(fileMap)
-        filesList.addAll(fileMap.values)
-        
-        return filesList
-    }
-    
-    /**
-     * Helper method to get app files for category size calculation
-     */
-    private fun getAppFilesForCategory(): List<Map<String, Any>> {
-        val filesList = mutableListOf<Map<String, Any>>()
-        val fileMap = ConcurrentHashMap<String, Map<String, Any>>()
-        
-        getAppFiles(fileMap)
-        filesList.addAll(fileMap.values)
-        
-        return filesList
-    }
-    
-    /**
-     * Helper method to get other files for category size calculation
-     */
-    private fun getOtherFilesForCategory(): List<Map<String, Any>> {
-        val filesList = mutableListOf<Map<String, Any>>()
-        val fileMap = ConcurrentHashMap<String, Map<String, Any>>()
-        
-        getOtherFiles(fileMap)
-        filesList.addAll(fileMap.values)
-        
-        return filesList
-    }
-    
-    /**
-     * Handle activity results for SAF document picker
+     * Handle activity results for SAF document picker and media scanner
      */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        // Pass activity result to SafMediaScanner first (for media folder selection)
+        if (::safMediaScanner.isInitialized) {
+            if (safMediaScanner.handleActivityResult(requestCode, resultCode, data)) {
+                return // Handled by SafMediaScanner
+            }
+        }
         // Pass activity result to DocumentSAFHandler
         if (::documentSAFHandler.isInitialized) {
             documentSAFHandler.handleActivityResult(requestCode, resultCode, data)
@@ -1441,6 +1383,9 @@ class MainActivity: FlutterActivity() {
         super.onDestroy()
         if (::documentSAFHandler.isInitialized) {
             documentSAFHandler.cleanup()
+        }
+        if (::safMediaScanner.isInitialized) {
+            safMediaScanner.cleanup()
         }
         mainScope.cancel()
     }

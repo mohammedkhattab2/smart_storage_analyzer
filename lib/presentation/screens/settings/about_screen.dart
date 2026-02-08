@@ -96,7 +96,7 @@ class AboutScreen extends StatelessWidget {
                         child: Transform.scale(
                           scale: 1.4, // Scale up to compensate for icon padding
                           child: Image.asset(
-                            'assets/app_icon.png',
+                            'assets/app_image_icon.png',
                             fit: BoxFit.contain,
                           ),
                         ),

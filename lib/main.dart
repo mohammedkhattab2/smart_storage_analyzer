@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
 import 'package:smart_storage_analyzer/core/services/permission_manager.dart';
 import 'package:smart_storage_analyzer/core/theme/app_theme.dart';
@@ -17,15 +16,18 @@ import 'package:smart_storage_analyzer/domain/usecases/get_files_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/delete_files_usecase.dart';
 import 'package:smart_storage_analyzer/domain/repositories/file_repository.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/storage_analysis/storage_analysis_cubit.dart';
-import 'package:smart_storage_analyzer/presentation/screens/splash/magical_splash_screen.dart';
+import 'package:smart_storage_analyzer/presentation/screens/splash/premium_splash_screen.dart';
 import 'package:smart_storage_analyzer/routes/app_pages.dart';
 
 void main() async {
-  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
   
-  // Keep native splash while we prepare
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
-
+  // Note: Logger automatically disables in release mode via kDebugMode check
+  
+  // Enable edge-to-edge mode for modern Android
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  
+  // Setup immediately for faster initialization
   await setupServiceLocator();
   await _setupSystemUi();
   
@@ -36,9 +38,18 @@ void main() async {
 }
 
 Future<void> _setupSystemUi() async {
-  // Initial system UI setup - will be updated based on theme
+  // Configure system UI for edge-to-edge display
+  // Use transparent system bars for modern Android edge-to-edge experience
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      // Transparent navigation bar for edge-to-edge
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ),
   );
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -59,25 +70,28 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // Remove native splash as we'll show our custom splash
-    FlutterNativeSplash.remove();
-    
-    // Show custom splash for 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          _showSplash = false;
-        });
-      }
-    });
+    // Splash screen will notify us when complete
+  }
+
+  void _onSplashComplete() {
+    if (mounted) {
+      setState(() {
+        _showSplash = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_showSplash) {
-      return const MaterialApp(
-        home: MagicalSplashScreen(),
+      return MaterialApp(
+        home: PremiumSplashScreen(
+          onComplete: _onSplashComplete,
+        ),
         debugShowCheckedModeBanner: false,
+        theme: ThemeData.dark().copyWith(
+          scaffoldBackgroundColor: const Color(0xFF0F1419),
+        ),
       );
     }
 
@@ -154,15 +168,18 @@ class _MyAppState extends State<MyApp> {
     // Get the actual brightness to set system overlay appropriately
     final isDark = context.read<ThemeCubit>().isDarkMode(context);
 
+    // Configure system UI for edge-to-edge with transparent bars
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
         statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        // Transparent navigation bar for edge-to-edge
         systemNavigationBarColor: Colors.transparent,
         systemNavigationBarIconBrightness: isDark
             ? Brightness.light
             : Brightness.dark,
+        systemNavigationBarDividerColor: Colors.transparent,
       ),
     );
   }

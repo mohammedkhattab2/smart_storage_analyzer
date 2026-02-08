@@ -1,0 +1,17 @@
+# This is a TEMPLATE file for key.properties
+# DO NOT commit the actual key.properties file to version control
+# 
+# To use this template:
+# 1. Copy this file to key.properties (in the same directory)
+# 2. Replace the placeholder values with your actual keystore information
+# 3. NEVER commit key.properties to version control
+#
+# To generate a new keystore:
+# keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+# IMPORTANT: Use strong, unique passwords (minimum 16 characters with mixed case, numbers, and symbols)
+
+storePassword=mohammedkhattab89
+keyPassword=mohammedkhattab89
+keyAlias=upload
+storeFile=.../upload-keystore.jks

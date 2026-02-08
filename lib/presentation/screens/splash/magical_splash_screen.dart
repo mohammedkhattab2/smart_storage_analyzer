@@ -229,7 +229,7 @@ class _MagicalSplashScreenState extends State<MagicalSplashScreen>
                             ),
                             // App image
                             Image.asset(
-                              'assets/app_image.png',
+                              'assets/app_image_icon.png',
                               fit: BoxFit.cover,
                             ),
                             // Shimmer effect

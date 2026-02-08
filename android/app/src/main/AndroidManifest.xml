@@ -3,20 +3,35 @@
     package="com.smarttools.storageanalyzer">
 
     <!-- Permissions -->
-    <!-- For Android 10 and below -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <!--
+        Google Play Photo and Video Permissions Policy Compliance:
+        This app is a storage analyzer, NOT a gallery or media editor.
+        We use StorageStatsManager and package usage stats for storage analysis.
+        No broad media access permissions are required.
+        
+        REMOVED (Policy Violation):
+        - READ_MEDIA_IMAGES
+        - READ_MEDIA_VIDEO
+        - READ_MEDIA_AUDIO
+        - READ_EXTERNAL_STORAGE
+        - WRITE_EXTERNAL_STORAGE
+        - ACCESS_MEDIA_LOCATION
+        - QUERY_ALL_PACKAGES (not needed for storage analyzer)
+    -->
     
-    <!-- For Android 13+ (API 33+) - Granular media permissions -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    
-    <!-- For accessing media location metadata -->
-    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+    <!-- For storage statistics access (Android 8.0+) -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     
     <!-- For Android 13+ (API 33+) - Notification permission -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- Explicitly remove any media permissions that might be added by dependencies -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" tools:node="remove" />
 
     <application
         android:label="Smart Storage Analyzer"

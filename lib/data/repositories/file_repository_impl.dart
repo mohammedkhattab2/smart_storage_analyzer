@@ -25,16 +25,31 @@ class FileRepositoryImpl implements FileRepository {
     try {
       // Get file paths from fileIds (which are actually paths in our implementation)
       final filePaths = fileIds;
+      
+      Logger.info('Attempting to delete ${filePaths.length} files');
+      for (final path in filePaths) {
+        Logger.debug('File to delete: $path');
+      }
 
       final int deletedCount = await platform.invokeMethod('deleteFiles', {
         'paths': filePaths,
       });
 
-      Logger.success('Deleted $deletedCount files successfully');
+      if (deletedCount > 0) {
+        Logger.success('Successfully deleted $deletedCount out of ${filePaths.length} files');
+      } else {
+        Logger.warning('No files were deleted out of ${filePaths.length} requested');
+      }
       
       // Clear all file caches after deletion to ensure fresh data
       clearAllCaches();
       Logger.info('Cleared file caches after deletion');
+      
+      // If not all files were deleted, throw an error with details
+      if (deletedCount < filePaths.length) {
+        final failedCount = filePaths.length - deletedCount;
+        throw Exception('Failed to delete $failedCount out of ${filePaths.length} files. This may be due to permission restrictions on Android 10+.');
+      }
     } catch (e) {
       Logger.error('Failed to delete files', e);
       throw Exception('Failed to delete files: $e');

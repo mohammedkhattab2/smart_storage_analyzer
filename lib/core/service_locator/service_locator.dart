@@ -4,23 +4,29 @@ import 'package:smart_storage_analyzer/data/repositories/file_repository_impl.da
 import 'package:smart_storage_analyzer/data/repositories/settings_repository_impl.dart';
 import 'package:smart_storage_analyzer/data/repositories/statistics_repository_impl.dart';
 import 'package:smart_storage_analyzer/data/repositories/storage_repository_impl.dart';
+import 'package:smart_storage_analyzer/data/repositories/unused_apps_repository_impl.dart';
 import 'package:smart_storage_analyzer/domain/repositories/file_repository.dart';
 import 'package:smart_storage_analyzer/domain/repositories/settings_repository.dart';
 import 'package:smart_storage_analyzer/domain/repositories/statistics_repository.dart';
 import 'package:smart_storage_analyzer/domain/repositories/storage_repository.dart';
+import 'package:smart_storage_analyzer/domain/repositories/unused_apps_repository.dart';
 import 'package:smart_storage_analyzer/domain/usecases/analyze_storage_use_case.dart';
 import 'package:smart_storage_analyzer/domain/usecases/delete_files_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/get_categories_usecase.dart';
+import 'package:smart_storage_analyzer/domain/usecases/get_cleaning_suggestions_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/get_files_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/get_settings_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/get_statistics_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/get_storage_info_usecase.dart';
+import 'package:smart_storage_analyzer/domain/usecases/get_unused_apps_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/sign_out_usecase.dart';
 import 'package:smart_storage_analyzer/domain/usecases/update_settings_usecase.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/dashboard/dashboard_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/settings/settings_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/statistics/statistics_cubit.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/suggestions/suggestions_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/theme/theme_cubit.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/unused_apps/unused_apps_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/viewmodels/optimized_file_manager_viewmodel.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/file_manager/optimized_file_manager_cubit.dart';
 import 'package:smart_storage_analyzer/presentation/viewmodels/statistics_viewmodel.dart';
@@ -70,8 +76,16 @@ Future<void> setupServiceLocator() async {
   );
   
   sl.registerLazySingleton<StorageRepository>(() => StorageRepositoryImpl());
+  sl.registerLazySingleton<UnusedAppsRepository>(() => UnusedAppsRepositoryImpl());
   sl.registerLazySingleton(() => GetCategoriesUseCase(sl()));
   sl.registerLazySingleton(() => GetStorageInfoUseCase(sl()));
+  sl.registerLazySingleton(() => GetUnusedAppsUseCase(sl()));
+  sl.registerLazySingleton<GetCleaningSuggestionsUseCase>(
+    () => GetCleaningSuggestionsUseCase(
+      sl<StorageRepository>(),
+      sl<UnusedAppsRepository>(),
+    ),
+  );
 
   // Dashboard ViewModel
   sl.registerLazySingleton(
@@ -84,6 +98,18 @@ Future<void> setupServiceLocator() async {
 
   // Dashboard Cubit - Singleton to preserve state
   sl.registerLazySingleton(() => DashboardCubit(viewModel: sl()));
+ 
+  // Unused Apps Cubit - Factory so each screen has its own lifecycle
+  sl.registerFactory<UnusedAppsCubit>(
+    () => UnusedAppsCubit(getUnusedAppsUseCase: sl()),
+  );
+
+  // Smart Cleaning Suggestions Cubit - Factory, tied to dashboard lifecycle
+  sl.registerFactory<SuggestionsCubit>(
+    () => SuggestionsCubit(
+      getCleaningSuggestionsUseCase: sl<GetCleaningSuggestionsUseCase>(),
+    ),
+  );
   sl.registerLazySingleton<SettingsRepository>(() => SettingsRepositoryImpl());
   sl.registerLazySingleton(() => GetSettingsUseCase(sl()));
   sl.registerLazySingleton(() => UpdateSettingsUseCase(sl()));

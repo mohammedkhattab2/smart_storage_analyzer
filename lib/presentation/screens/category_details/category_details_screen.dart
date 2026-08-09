@@ -1,9 +1,8 @@
-import 'dart:developer' as developer;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:ui';
-import 'dart:math' as math;
 import 'package:smart_storage_analyzer/core/constants/app_size.dart';
 import 'package:smart_storage_analyzer/core/utils/size_formatter.dart';
 import 'package:smart_storage_analyzer/domain/entities/category.dart';
@@ -14,6 +13,7 @@ import 'package:smart_storage_analyzer/presentation/screens/media_viewer/in_app_
 import 'package:share_plus/share_plus.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:smart_storage_analyzer/core/services/content_uri_service.dart';
+import 'package:smart_storage_analyzer/core/services/app_management_service.dart';
 import 'package:smart_storage_analyzer/presentation/mappers/category_ui_mapper.dart';
 
 class CategoryDetailsScreen extends StatelessWidget {
@@ -37,6 +37,7 @@ class _CategoryDetailsView extends StatefulWidget {
 }
 
 class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
+  final AppManagementService _appManagementService = AppManagementService();
   @override
   void initState() {
     super.initState();
@@ -126,7 +127,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  colorScheme.surface.withValues(alpha: .8),
+                  colorScheme.surface.withValues(alpha:  .8),
                   colorScheme.surface.withValues(alpha: .6),
                 ],
                 begin: Alignment.topCenter,
@@ -148,10 +149,11 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
             shaderCallback: (bounds) => LinearGradient(
               colors: [
                 CategoryUIMapper.getColor(widget.category.id),
-                CategoryUIMapper.getColor(widget.category.id).withValues(
-                  red: math.min(1.0, CategoryUIMapper.getColor(widget.category.id).r * 1.2),
-                  green: math.min(1.0, CategoryUIMapper.getColor(widget.category.id).g * 1.2),
-                  blue: math.min(1.0, CategoryUIMapper.getColor(widget.category.id).b * 1.2),
+                Color.fromRGBO(
+                  (CategoryUIMapper.getColor(widget.category.id).r * 255 * 1.2).clamp(0, 255).toInt(),
+                  (CategoryUIMapper.getColor(widget.category.id).g * 255 * 1.2).clamp(0, 255).toInt(),
+                  (CategoryUIMapper.getColor(widget.category.id).b * 255 * 1.2).clamp(0, 255).toInt(),
+                  1.0,
                 ),
               ],
               begin: Alignment.topLeft,
@@ -208,15 +210,11 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                           gradient: LinearGradient(
                             colors: [
                               isSelectionMode
-                                  ? CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .3)
-                                  : colorScheme.surfaceContainerHighest.withValues(
-                                      alpha: isDark ? .3 : .6,
-                                    ),
+                                  ? CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  .3)
+                                  : colorScheme.surfaceContainerHighest.withValues(alpha: isDark ? .3 : .6),
                               isSelectionMode
                                   ? CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .2)
-                                  : colorScheme.surfaceContainer.withValues(
-                                      alpha: isDark ? .2 : .4,
-                                    ),
+                                  : colorScheme.surfaceContainer.withValues(alpha: isDark ? .2 : .4),
                             ],
                           ),
                           shape: BoxShape.circle,
@@ -394,9 +392,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
               colors: [
                 CategoryUIMapper.getColor(widget.category.id).withValues(alpha: isDark ? .08 : .15),
                 colorScheme.surface,
-                colorScheme.surfaceContainer.withValues(
-                  alpha: isDark ? .3 : .5,
-                ),
+                colorScheme.surfaceContainer.withValues(alpha: isDark ? .3 : .5),
               ],
               stops: const [0.0, 0.5, 1.0],
             ),
@@ -477,10 +473,11 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                   gradient: LinearGradient(
                     colors: [
                       CategoryUIMapper.getColor(widget.category.id),
-                      CategoryUIMapper.getColor(widget.category.id).withValues(
-                        red: math.min(1.0, CategoryUIMapper.getColor(widget.category.id).r * 0.8),
-                        green: math.min(1.0, CategoryUIMapper.getColor(widget.category.id).g * 0.8),
-                        blue: math.min(1.0, CategoryUIMapper.getColor(widget.category.id).b * 0.8),
+                      Color.fromRGBO(
+                        (CategoryUIMapper.getColor(widget.category.id).r * 255 * 0.8).clamp(0, 255).toInt(),
+                        (CategoryUIMapper.getColor(widget.category.id).g * 255 * 0.8).clamp(0, 255).toInt(),
+                        (CategoryUIMapper.getColor(widget.category.id).b * 255 * 0.8).clamp(0, 255).toInt(),
+                        1.0,
                       ),
                     ],
                     begin: Alignment.topLeft,
@@ -738,9 +735,9 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
             final file = state.files[index];
             
             // Debug category info
-            developer.log('[LIST] Creating item for: ${file.name}', name: 'CategoryDetails');
-            developer.log('[LIST] Category name: ${widget.category.name}', name: 'CategoryDetails');
-            developer.log('[LIST] File extension: ${file.extension}', name: 'CategoryDetails');
+            // developer.log('[LIST] Creating item for: ${file.name}', name: 'CategoryDetails');
+            // developer.log('[LIST] Category name: ${widget.category.name}', name: 'CategoryDetails');
+            // developer.log('[LIST] File extension: ${file.extension}', name: 'CategoryDetails');
             
             return _MagicalFileListItem(
             file: file,
@@ -750,23 +747,94 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
             isSelected: state.isFileSelected(file.id),
             selectionMode: state.isSelectionMode,
             onTap: () async {
-              developer.log('[TAP HANDLER] onTap called for: ${file.name}', name: 'CategoryDetails');
-              developer.log('[TAP HANDLER] Selection mode: ${state.isSelectionMode}', name: 'CategoryDetails');
+              // developer.log('[TAP HANDLER] onTap called for: ${file.name}', name: 'CategoryDetails');
+              // developer.log('[TAP HANDLER] Selection mode: ${state.isSelectionMode}', name: 'CategoryDetails');
               
               if (state.isSelectionMode) {
-                developer.log('[TAP HANDLER] In selection mode, selecting file', name: 'CategoryDetails');
+                // developer.log('[TAP HANDLER] In selection mode, selecting file', name: 'CategoryDetails');
                 context.read<CategoryDetailsCubit>().selectFile(file.id);
               } else {
                 // Debug logging
-                developer.log('[TAP HANDLER] Not in selection mode, determining action', name: 'CategoryDetails');
-                developer.log('[TAP HANDLER] File: ${file.name}', name: 'CategoryDetails');
-                developer.log('[TAP HANDLER] Extension: ${file.extension}', name: 'CategoryDetails');
-                developer.log('[TAP HANDLER] Category: ${widget.category.name}', name: 'CategoryDetails');
-                developer.log('[TAP HANDLER] Is media file check: ${_isMediaFile(file)}', name: 'CategoryDetails');
+                // developer.log('[TAP HANDLER] Not in selection mode, determining action', name: 'CategoryDetails');
+                // developer.log('[TAP HANDLER] File: ${file.name}', name: 'CategoryDetails');
+                // developer.log('[TAP HANDLER] Extension: ${file.extension}', name: 'CategoryDetails');
+                // developer.log('[TAP HANDLER] Category: ${widget.category.name}', name: 'CategoryDetails');
+                // developer.log('[TAP HANDLER] Is media file check: ${_isMediaFile(file)}', name: 'CategoryDetails');
                 
-                // Open file based on type
-                if (_isMediaFile(file)) {
-                  developer.log('[TAP HANDLER] Opening as media file in viewer', name: 'CategoryDetails');
+                // Special handling for app pseudo-entries: any item with app:// path
+                final isAppPseudoPath = file.path.startsWith('app://');
+                
+                if (isAppPseudoPath) {
+                  final packageName = file.path.replaceFirst('app://', '');
+                  // developer.log(
+                  //   '[TAP HANDLER] App pseudo entry tap detected for package: $packageName (category: ${widget.category.name})',
+                  //   name: 'CategoryDetails',
+                  // );
+
+                  if (!mounted) return;
+
+                  // Always show our own confirmation dialog so the user
+                  // consistently sees a message on every tap.
+                  final shouldUninstall = await showDialog<bool>(
+                    context: context,
+                    builder: (dialogContext) {
+                      final theme = Theme.of(dialogContext);
+                      final colorScheme = theme.colorScheme;
+                      return AlertDialog(
+                        title: const Text('Manage app'),
+                        content: Text(
+                          'Do you want to open the system screen to uninstall or manage this app?',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(true),
+                            child: const Text('Open system screen'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (shouldUninstall != true) {
+                    // developer.log(
+                    //   '[TAP HANDLER] User cancelled manage-app dialog for package: $packageName',
+                    //   name: 'CategoryDetails',
+                    // );
+                    return;
+                  }
+
+                  // developer.log(
+                  //   '[TAP HANDLER] User confirmed manage-app dialog, calling uninstallApp for package: $packageName',
+                  //   name: 'CategoryDetails',
+                  // );
+                  
+                  final success = await _appManagementService.uninstallApp(packageName);
+                  
+                  if (!success) {
+                    // developer.log(
+                    //   '[TAP HANDLER] uninstallApp returned false for package: $packageName',
+                    //   name: 'CategoryDetails',
+                    // );
+                    // Check context is mounted before using it
+                    if (!context.mounted) return;
+                    
+                    final errorColor = Theme.of(context).colorScheme.error;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Unable to open app uninstall screen.'),
+                        backgroundColor: errorColor,
+                      ),
+                    );
+                  }
+                } else if (_isMediaFile(file)) {
+                  // developer.log('[TAP HANDLER] Opening as media file in viewer', name: 'CategoryDetails');
                   // Images, videos and audio open in in-app viewer
                   final mediaFiles = state.files
                       .where((f) => _isMediaFile(f))
@@ -781,7 +849,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                     ),
                   );
                 } else {
-                  developer.log('[TAP HANDLER] Opening document dialog for: ${file.name}', name: 'CategoryDetails');
+                  // developer.log('[TAP HANDLER] Opening document dialog for: ${file.name}', name: 'CategoryDetails');
                   // Documents - show dialog with button to open (like audio does)
                   _showDocumentOpenDialog(context, file);
                 }
@@ -802,8 +870,34 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
 
 
   void _shareFile(FileItem file) async {
+    // Only attempt sharing for real file paths or content URIs
+    final path = file.path;
+    final isContent = ContentUriService.isContentUri(path);
+    final looksLikeFilePath = path.startsWith('/') || path.startsWith('file://');
+
+    if (!isContent && !looksLikeFilePath) {
+      // Prevent crashes for pseudo paths like app://com.google.android.apps.photos
+      // developer.log(
+      //   '[SHARE] Skipping share for non-file path: $path',
+      //   name: 'CategoryDetails',
+      // );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('This item cannot be shared as a file.'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSize.radiusSmall),
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
     try {
-      await Share.shareXFiles([XFile(file.path)], subject: file.name);
+      await Share.shareXFiles([XFile(path)], subject: file.name);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -824,7 +918,33 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
     final selectedFiles = context.read<CategoryDetailsCubit>().getSelectedFiles();
     if (selectedFiles.isEmpty) return;
 
-    final xFiles = selectedFiles.map((file) => XFile(file.path)).toList();
+    // Filter out items that are not real files or content URIs
+    final validFiles = selectedFiles.where((file) {
+      final path = file.path;
+      final isContent = ContentUriService.isContentUri(path);
+      final looksLikeFilePath = path.startsWith('/') || path.startsWith('file://');
+      final isValid = isContent || looksLikeFilePath;
+
+      if (!isValid) {
+        // developer.log(
+        //   '[SHARE] Skipping non-file path in selection: $path',
+        //   name: 'CategoryDetails',
+        // );
+      }
+      return isValid;
+    }).toList();
+
+    if (validFiles.isEmpty) {
+      if (context.mounted) {
+        _showSnackBar(
+          'Selected items cannot be shared as files.',
+          isError: true,
+        );
+      }
+      return;
+    }
+
+    final xFiles = validFiles.map((file) => XFile(file.path)).toList();
 
     try {
       await Share.shareXFiles(xFiles);
@@ -1079,13 +1199,13 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
   }
 
   void _showDocumentOpenDialog(BuildContext context, FileItem file) {
-    developer.log('[DIALOG] _showDocumentOpenDialog called for: ${file.name}', name: 'CategoryDetails');
+    // developer.log('[DIALOG] _showDocumentOpenDialog called for: ${file.name}', name: 'CategoryDetails');
     
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     
-    developer.log('[DIALOG] About to show dialog...', name: 'CategoryDetails');
+    // developer.log('[DIALOG] About to show dialog...', name: 'CategoryDetails');
     
     showDialog(
       context: context,
@@ -1101,7 +1221,7 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
             borderRadius: BorderRadius.circular(24),
             gradient: LinearGradient(
               colors: [
-                CategoryUIMapper.getColor(widget.category.id).withValues(alpha: 0.05),
+                CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  0.05),
                 colorScheme.surface,
               ],
               begin: Alignment.topLeft,
@@ -1202,7 +1322,8 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                     onPressed: () async {
                       Navigator.pop(dialogContext);
                       
-                      // Show loading indicator
+                      // Show loading indicator - check mounted after pop
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Row(
@@ -1226,54 +1347,87 @@ class _CategoryDetailsViewState extends State<_CategoryDetailsView> {
                       
                       try {
                         bool opened = false;
+                        final path = file.path;
                         
                         // Check if it's a content URI
-                        if (ContentUriService.isContentUri(file.path)) {
-                          developer.log('[Document Dialog] Opening content URI: ${file.path}', name: 'CategoryDetails');
+                        if (ContentUriService.isContentUri(path)) {
+                          // developer.log('[Document Dialog] Opening content URI: $path', name: 'CategoryDetails');
                           // Get appropriate mime type
                           final mimeType = _getMimeTypeForDocument(file.extension);
                           opened = await ContentUriService.openContentUri(
-                            file.path,
+                            path,
                             mimeType: mimeType,
                           );
-                          developer.log('[Document Dialog] ContentUriService result: $opened', name: 'CategoryDetails');
+                          // developer.log('[Document Dialog] ContentUriService result: $opened', name: 'CategoryDetails');
                         } else {
-                          developer.log('[Document Dialog] Opening regular file: ${file.path}', name: 'CategoryDetails');
-                          // For regular files, use OpenFilex
-                          final result = await OpenFilex.open(file.path);
-                          opened = result.type == ResultType.done;
-                          developer.log('[Document Dialog] OpenFilex result: ${result.type}', name: 'CategoryDetails');
+                          // Guard against pseudo-paths like app://package which are not real files
+                          final looksLikeFilePath = path.startsWith('/') || path.startsWith('file://');
+                          if (!looksLikeFilePath) {
+                            // developer.log(
+                            //   '[Document Dialog] Path is not a real file; skipping OpenFilex: $path',
+                            //   name: 'CategoryDetails',
+                            // );
+                            opened = false;
+                          } else {
+                            // developer.log('[Document Dialog] Opening regular file: $path', name: 'CategoryDetails');
+                            // For regular files, use OpenFilex
+                            final result = await OpenFilex.open(path);
+                            opened = result.type == ResultType.done;
+                            // developer.log('[Document Dialog] OpenFilex result: ${result.type}', name: 'CategoryDetails');
+                          }
                         }
                         
                         if (!opened && context.mounted) {
-                          // If opening fails, try share as fallback
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Could not open file. Sharing instead...'),
-                              backgroundColor: colorScheme.tertiary,
-                            ),
-                          );
-                          await Share.shareXFiles(
-                            [XFile(file.path)],
-                            subject: file.name,
-                          );
+                          
+                          // Only attempt share fallback for real files / content URIs
+                          final isContent = ContentUriService.isContentUri(path);
+                          final looksLikeFilePath = path.startsWith('/') || path.startsWith('file://');
+                          if (isContent || looksLikeFilePath) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Could not open file. Sharing instead...'),
+                                backgroundColor: colorScheme.tertiary,
+                              ),
+                            );
+                            await Share.shareXFiles(
+                              [XFile(path)],
+                              subject: file.name,
+                            );
+                          } else {
+                            // For pseudo entries (e.g. installed apps), just show an error
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('This item cannot be opened as a file.'),
+                                backgroundColor: colorScheme.error,
+                              ),
+                            );
+                          }
                         } else if (context.mounted) {
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();
                         }
                       } catch (e) {
-                        developer.log('[Document Dialog] Error opening file: $e', name: 'CategoryDetails');
+                        // developer.log('[Document Dialog] Error opening file: $e', name: 'CategoryDetails');
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          
+                          // Decide if share action is safe for this path
+                          final path = file.path;
+                          final isContent = ContentUriService.isContentUri(path);
+                          final looksLikeFilePath = path.startsWith('/') || path.startsWith('file://');
+                          final canShare = isContent || looksLikeFilePath;
+                          
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Error opening file: ${e.toString()}'),
                               backgroundColor: colorScheme.error,
-                              action: SnackBarAction(
-                                label: 'Share',
-                                textColor: Colors.white,
-                                onPressed: () => _shareFile(file),
-                              ),
+                              action: canShare
+                                  ? SnackBarAction(
+                                      label: 'Share',
+                                      textColor: Colors.white,
+                                      onPressed: () => _shareFile(file),
+                                    )
+                                  : null,
                             ),
                           );
                         }
@@ -1381,13 +1535,9 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
             borderRadius: BorderRadius.circular(20),
             gradient: LinearGradient(
               colors: [
-                CategoryUIMapper.getColor(widget.category.id).withValues(
-                  alpha: widget.isDark ? .08 : .12,
-                ),
-                CategoryUIMapper.getColor(widget.category.id).withValues(
-                  alpha: widget.isDark ? .04 : .08,
-                ),
-                colorScheme.surfaceContainer.withValues(alpha: .5),
+                CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  widget.isDark ? .08 : .12),
+                CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  widget.isDark ? .04 : .08),
+                colorScheme.surfaceContainer.withValues(alpha:  .5),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -1395,7 +1545,7 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
             ),
             boxShadow: [
               BoxShadow(
-                color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .1),
+                color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  .1),
                 blurRadius: 20,
                 offset: const Offset(0, 4),
                 spreadRadius: -5,
@@ -1410,14 +1560,14 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
               onTapUp: (_) => setState(() => _isPressed = false),
               onTapCancel: () => setState(() => _isPressed = false),
               onTap: () {
-                developer.log('[ITEM] InkWell onTap triggered for: ${widget.file.name}', name: 'CategoryDetails');
+                // developer.log('[ITEM] InkWell onTap triggered for: ${widget.file.name}', name: 'CategoryDetails');
                 HapticFeedback.lightImpact();
                 widget.onTap();
               },
               onLongPress: widget.onLongPress,
               borderRadius: BorderRadius.circular(20),
-              splashColor: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .1),
-              highlightColor: CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .05),
+              splashColor: CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  .1),
+              highlightColor: CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  .05),
               child: Container(
                 padding: const EdgeInsets.all(AppSize.paddingMedium),
                 child: Stack(
@@ -1431,24 +1581,20 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .2),
-                                CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .1),
+                                CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  .2),
+                                CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  .1),
                               ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: CategoryUIMapper.getColor(widget.category.id).withValues(
-                                alpha: .3,
-                              ),
+                              color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  .3),
                               width: 1.5,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: CategoryUIMapper.getColor(widget.category.id).withValues(
-                                  alpha: .25,
-                                ),
+                                color: CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  .25),
                                 blurRadius: 12,
                                 spreadRadius: -2,
                               ),
@@ -1482,7 +1628,7 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: colorScheme.surfaceContainerHighest
-                                      .withValues(alpha: .5),
+                                      .withValues(alpha:  0.5),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
@@ -1504,8 +1650,8 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
                                 colors: [
-                                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .15),
-                                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha: .05),
+                                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  .15),
+                                  CategoryUIMapper.getColor(widget.category.id).withValues(alpha:  .05),
                                 ],
                               ),
                             ),
@@ -1525,12 +1671,12 @@ class _MagicalFileListItemState extends State<_MagicalFileListItem> {
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: colorScheme.surface.withValues(alpha: .9),
+                            color: colorScheme.surface.withValues(alpha:  .9),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: widget.isSelected
                                   ? CategoryUIMapper.getColor(widget.category.id)
-                                  : colorScheme.outline.withValues(alpha: .3),
+                                  : colorScheme.outline.withValues(alpha:  .3),
                               width: 2,
                             ),
                           ),

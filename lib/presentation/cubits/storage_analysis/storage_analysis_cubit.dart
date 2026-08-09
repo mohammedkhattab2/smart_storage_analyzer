@@ -31,14 +31,12 @@ class StorageAnalysisCubit extends Cubit<StorageAnalysisState> {
       return;
     }
     
-    // Check if we have valid cached results
-    if (!forceRerun && _hasCachedResults()) {
-      Logger.info('[StorageAnalysisCubit] Using cached analysis results (cached at: $_lastAnalysisTime)');
-      emit(StorageAnalysisCompleted(results: _cachedResults!));
-      return;
-    }
-    
-    Logger.info('[StorageAnalysisCubit] Starting fresh analysis (forceRerun: $forceRerun, hasCached: ${_hasCachedResults()})');
+    // Always run a fresh analysis when user opens the Clean App Cache / deep analysis flow.
+    // We intentionally don't short-circuit to cached results here so that:
+    // - The user always sees the Deep Storage Analysis screen with live progress
+    // - We avoid edge cases where a stale completed state + cached results
+    //   would keep the UI stuck on a loader without navigating correctly.
+    Logger.info('[StorageAnalysisCubit] Starting fresh analysis (forceRerun: $forceRerun, ignoring cached: true)');
     
     // Cancel any previous analysis
     _cancelCurrentAnalysis();
@@ -152,6 +150,8 @@ class StorageAnalysisCubit extends Cubit<StorageAnalysisState> {
   void cancelAnalysis() {
     Logger.info('User cancelled storage analysis');
     _cancelCurrentAnalysis();
+    // Mark as not analyzing so a new analysis can start next time
+    _isAnalyzing = false;
     emit(StorageAnalysisCancelled());
   }
 
@@ -189,7 +189,12 @@ class StorageAnalysisCubit extends Cubit<StorageAnalysisState> {
   /// Reset the state to initial
   void resetState() {
     _cancelCurrentAnalysis();
+    // Ensure any in-progress flag is cleared so analysis can start cleanly
     _isAnalyzing = false;
+    // Also clear cached results so the next entry always performs
+    // a proper fresh analysis and doesn't try to reuse stale data
+    _cachedResults = null;
+    _lastAnalysisTime = null;
     emit(StorageAnalysisInitial());
   }
 }

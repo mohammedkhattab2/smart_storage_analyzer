@@ -2,6 +2,8 @@ package com.smarttools.storageanalyzer
 
 import android.app.usage.StorageStats
 import android.app.usage.StorageStatsManager
+import android.app.usage.UsageStats
+import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -129,6 +131,7 @@ class PolicyCompliantStorageAnalyzer(private val context: Context) {
     /**
      * Get storage statistics for all installed apps
      * Requires PACKAGE_USAGE_STATS permission (granted via Settings)
+     * and combines StorageStats (size) with UsageStats (last time used).
      */
     fun getAppStorageStats(): List<Map<String, Any>> {
         val apps = mutableListOf<Map<String, Any>>()
@@ -142,10 +145,13 @@ class PolicyCompliantStorageAnalyzer(private val context: Context) {
                 @Suppress("DEPRECATION")
                 packageManager.getInstalledApplications(0)
             }
+
+            // Build a map of packageName -> lastTimeUsed from UsageStatsManager
+            val usageStatsMap = getUsageLastTimeMap()
             
             for (appInfo in packages) {
                 try {
-                    // Skip system apps that aren't updated
+                    // Skip system apps that aren't updated (core system)
                     if ((appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0 &&
                         (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0) {
                         continue
@@ -177,6 +183,28 @@ class PolicyCompliantStorageAnalyzer(private val context: Context) {
                         val apkFile = File(appInfo.sourceDir)
                         appSize = if (apkFile.exists()) apkFile.length() else 0L
                     }
+
+                    // Determine last used time:
+                    // 1) Prefer UsageStats lastTimeUsed إذا متوفر
+                    // 2) لو مش متوفر، نستخدم install/update time
+                    // 3) لو حصل أي خطأ، نستخدم الوقت الحالي عشان ما نبعتش 0 (1970)
+                    val usageLast = usageStatsMap[appInfo.packageName]
+                    val fallbackLastUsed = try {
+                        val pkgInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            packageManager.getPackageInfo(
+                                appInfo.packageName,
+                                PackageManager.PackageInfoFlags.of(0)
+                            )
+                        } else {
+                            @Suppress("DEPRECATION")
+                            packageManager.getPackageInfo(appInfo.packageName, 0)
+                        }
+                        maxOf(pkgInfo.firstInstallTime, pkgInfo.lastUpdateTime)
+                    } catch (e: Exception) {
+                        System.currentTimeMillis()
+                    }
+                    val baseLastUsed = usageLast ?: fallbackLastUsed
+                    val lastUsed = if (baseLastUsed > 0L) baseLastUsed else System.currentTimeMillis()
                     
                     if (appSize > 0) {
                         apps.add(mapOf(
@@ -186,6 +214,7 @@ class PolicyCompliantStorageAnalyzer(private val context: Context) {
                             "size" to appSize,
                             "cacheSize" to cacheSize,
                             "dataSize" to dataSize,
+                            "lastUsed" to lastUsed,
                             "isSystemApp" to ((appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0),
                             "path" to "app://${appInfo.packageName}",
                             "extension" to ".apk",
@@ -335,6 +364,45 @@ class PolicyCompliantStorageAnalyzer(private val context: Context) {
         return if (lastDot > 0 && lastDot < name.length - 1) {
             name.substring(lastDot).lowercase()
         } else ""
+    }
+
+    /**
+     * Build a map of packageName -> lastTimeUsed using UsageStatsManager.
+     *
+     * This is used by the Unused Apps detector to filter by inactivity days.
+     */
+    private fun getUsageLastTimeMap(): Map<String, Long> {
+        val result = mutableMapOf<String, Long>()
+        try {
+            val usageManager =
+                context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+                    ?: return emptyMap()
+
+            // Query for a wide window (last 1 year) to capture historical usage.
+            val endTime = System.currentTimeMillis()
+            val startTime = endTime - 365L * 24 * 60 * 60 * 1000 // 1 year
+            val stats: List<UsageStats> =
+                usageManager.queryUsageStats(
+                    UsageStatsManager.INTERVAL_DAILY,
+                    startTime,
+                    endTime,
+                ) ?: emptyList()
+
+            for (usage in stats) {
+                val pkg = usage.packageName ?: continue
+                val lastTime = usage.lastTimeUsed
+                // Keep the maximum lastTimeUsed per package
+                if (lastTime > 0) {
+                    val existing = result[pkg] ?: 0L
+                    if (lastTime > existing) {
+                        result[pkg] = lastTime
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Error collecting usage stats map", e)
+        }
+        return result
     }
     
     /**

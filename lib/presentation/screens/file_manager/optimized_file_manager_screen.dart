@@ -6,8 +6,20 @@ import 'package:smart_storage_analyzer/presentation/screens/file_manager/optimiz
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
 
 /// Optimized file manager screen with performance improvements
+///
+/// This screen is responsible only for:
+/// - Reading the initial category (if provided by the router)
+/// - Triggering the first `loadFiles` call in the cubit
+///
+/// All heavy logic is still inside the cubit and data/domain layers.
 class OptimizedFileManagerScreen extends StatefulWidget {
-  const OptimizedFileManagerScreen({super.key});
+  /// Optional initial category for the first load (e.g. open directly on Large).
+  final FileCategory? initialCategory;
+
+  const OptimizedFileManagerScreen({
+    super.key,
+    this.initialCategory,
+  });
 
   @override
   State<OptimizedFileManagerScreen> createState() => _OptimizedFileManagerScreenState();
@@ -20,8 +32,9 @@ class _OptimizedFileManagerScreenState extends State<OptimizedFileManagerScreen>
     // Load files only if not already loaded
     final fileManagerCubit = context.read<OptimizedFileManagerCubit>();
     if (fileManagerCubit.state is FileManagerInitial) {
-      Logger.info('[FileManagerScreen] Loading files - state is initial');
-      fileManagerCubit.loadFiles(FileCategory.all);
+      final initialCategory = widget.initialCategory ?? FileCategory.all;
+      Logger.info('[FileManagerScreen] Loading files - initial category: $initialCategory');
+      fileManagerCubit.loadFiles(initialCategory);
     } else {
       Logger.debug('[FileManagerScreen] Skipping load - state is ${fileManagerCubit.state.runtimeType}');
     }

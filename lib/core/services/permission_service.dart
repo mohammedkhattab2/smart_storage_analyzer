@@ -88,6 +88,17 @@ class PermissionService {
     }
   }
 
+  /// Explicit API used by presentation layer when the unused apps screen
+  /// detects that Usage Access is required. This invokes the dedicated
+  /// MethodChannel handler that opens Settings.ACTION_USAGE_ACCESS_SETTINGS.
+  Future<void> openUsageAccessSettings() async {
+    try {
+      await _channel.invokeMethod('openUsageAccessSettings');
+    } catch (e) {
+      Logger.error('Error opening usage access settings', e);
+    }
+  }
+
   /// Check if device is running specific Android version or above
   Future<int> getAndroidSdkInt() async {
     if (!Platform.isAndroid) return 0;

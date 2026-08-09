@@ -8,7 +8,9 @@ import 'package:smart_storage_analyzer/presentation/screens/settings/settings_sc
 import 'package:smart_storage_analyzer/presentation/screens/statistics/optimized_statistics_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/storage_analysis/storage_analysis_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/cleanup_results/cleanup_results_screen.dart';
+import 'package:smart_storage_analyzer/presentation/screens/unused_apps/unused_apps_screen.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_analysis_results.dart';
+import 'package:smart_storage_analyzer/domain/value_objects/file_category.dart';
 import 'package:smart_storage_analyzer/routes/app_routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -64,10 +66,19 @@ class AppPages {
           GoRoute(
             path: AppRoutes.fileManager,
             name: "fileManager",
-            pageBuilder: (context, state) => NoTransitionPage<void>(
-              key: state.pageKey,
-              child: const OptimizedFileManagerScreen(),
-            ),
+            pageBuilder: (context, state) {
+              // Optional initial file category passed via `extra`
+              final initialCategory = state.extra is FileCategory
+                  ? state.extra as FileCategory
+                  : null;
+
+              return NoTransitionPage<void>(
+                key: state.pageKey,
+                child: OptimizedFileManagerScreen(
+                  initialCategory: initialCategory,
+                ),
+              );
+            },
           ),
           GoRoute(
             path: AppRoutes.statistics,
@@ -116,6 +127,15 @@ class AppPages {
             child: CleanupResultsScreen(results: results),
           );
         },
+      ),
+      // Unused Apps route
+      GoRoute(
+        path: AppRoutes.unusedApps,
+        name: "unusedApps",
+        pageBuilder: (context, state) => MaterialPage<void>(
+          key: state.pageKey,
+          child: const UnusedAppsScreen(),
+        ),
       ),
     ],
 

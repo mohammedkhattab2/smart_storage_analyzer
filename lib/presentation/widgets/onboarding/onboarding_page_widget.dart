@@ -25,41 +25,54 @@ class OnboardingPageWidget extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 380;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 24 : 40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Enhanced Icon Container with multiple layers
-          _buildMagicalIconContainer(
-            icon: icon,
-            iconColor: iconColor,
-            colorScheme: colorScheme,
-            isDark: isDark,
-            isSmallScreen: isSmallScreen,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+            ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 24 : 40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Enhanced Icon Container with multiple layers
+                  _buildMagicalIconContainer(
+                    icon: icon,
+                    iconColor: iconColor,
+                    colorScheme: colorScheme,
+                    isDark: isDark,
+                    isSmallScreen: isSmallScreen,
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 40 : 60),
+
+                  // Enhanced Title with Magical Gradient
+                  _buildMagicalTitle(
+                    title: title,
+                    textTheme: textTheme,
+                    colorScheme: colorScheme,
+                    isSmallScreen: isSmallScreen,
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 16 : 24),
+
+                  // Enhanced Description
+                  _buildMagicalDescription(
+                    description: description,
+                    textTheme: textTheme,
+                    colorScheme: colorScheme,
+                    isSmallScreen: isSmallScreen,
+                  ),
+                ],
+              ),
+            ),
           ),
-
-          SizedBox(height: isSmallScreen ? 40 : 60),
-
-          // Enhanced Title with Magical Gradient
-          _buildMagicalTitle(
-            title: title,
-            textTheme: textTheme,
-            colorScheme: colorScheme,
-            isSmallScreen: isSmallScreen,
-          ),
-
-          SizedBox(height: isSmallScreen ? 16 : 24),
-
-          // Enhanced Description
-          _buildMagicalDescription(
-            description: description,
-            textTheme: textTheme,
-            colorScheme: colorScheme,
-            isSmallScreen: isSmallScreen,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

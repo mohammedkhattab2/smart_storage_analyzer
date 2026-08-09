@@ -210,21 +210,37 @@ class CategoryViewModel extends ChangeNotifier {
     }
   }
 
-  /// Check if a file is selected
+  //// Check if a file is selected
   bool isFileSelected(String fileId) => _selectedFileIds.contains(fileId);
-
+  
+  /// Determine if a path is safe to delete via repository/native layer
+  bool _isDeletablePath(String path) {
+    // Only allow real filesystem paths or content URIs
+    return path.startsWith('/') ||
+        path.startsWith('file://') ||
+        path.startsWith('content://');
+  }
+  
   /// Delete a single file
   Future<void> deleteFile(FileItem file) async {
     try {
-      Logger.info('Deleting file: ${file.name}');
-      
-      await _deleteFilesUseCase.execute([file.id]);
-      
+      if (!_isDeletablePath(file.path)) {
+        Logger.warning(
+          'Skipping delete for non-deletable path: ${file.path} (file: ${file.name})',
+        );
+        throw Exception('This item cannot be deleted as a file.');
+      }
+  
+      Logger.info('Deleting file: ${file.name} (path: ${file.path})');
+  
+      // Use the actual file path for deletion
+      await _deleteFilesUseCase.execute([file.path]);
+  
       // Remove from list
       _files.removeWhere((f) => f.id == file.id);
       _selectedFileIds.remove(file.id);
       _totalFileCount = _totalFileCount > 0 ? _totalFileCount - 1 : 0;
-      
+  
       Logger.success('File deleted successfully: ${file.name}');
       notifyListeners();
     } catch (e) {
@@ -232,52 +248,68 @@ class CategoryViewModel extends ChangeNotifier {
       throw Exception('Failed to delete file: ${e.toString()}');
     }
   }
-
+  
   /// Delete selected files
   Future<void> deleteSelectedFiles() async {
     if (_selectedFileIds.isEmpty || _isDeletingFiles) return;
-
+  
     _isDeletingFiles = true;
     _deleteProgress = 0.0;
     _errorMessage = '';
     notifyListeners();
-
+  
     try {
-      final fileIds = _selectedFileIds.toList();
-
+      // Resolve selected IDs to FileItems and filter to deletable paths only
+      final filesToDelete = _files
+          .where((file) => _selectedFileIds.contains(file.id))
+          .where((file) => _isDeletablePath(file.path))
+          .toList();
+  
+      if (filesToDelete.isEmpty) {
+        Logger.warning(
+          'No deletable file paths found for selected items. Skipping delete.',
+        );
+        _errorMessage = 'Selected items cannot be deleted as files.';
+        return;
+      }
+  
+      final pathsToDelete = filesToDelete.map((f) => f.path).toList();
+  
       // Use batch operations for large selections
-      if (fileIds.length > 100) {
+      if (pathsToDelete.length > 100) {
         final result = await _batchOperations.deleteFilesInBatches(
-          fileIds: fileIds,
+          fileIds: pathsToDelete,
           batchSize: 50,
           onProgress: (processed, total) {
             _deleteProgress = processed / total;
             notifyListeners();
           },
         );
-
+  
         if (result.hasErrors) {
-          _errorMessage = 'Some files failed to delete: ${result.failedCount} failed';
+          _errorMessage =
+              'Some files failed to delete: ${result.failedCount} failed';
         }
-
+  
         Logger.info(
           'Batch deletion completed. Success: ${result.successCount}, '
           'Failed: ${result.failedCount}',
         );
       } else {
         // Regular deletion for smaller sets
-        await _deleteFilesUseCase.execute(fileIds);
+        await _deleteFilesUseCase.execute(pathsToDelete);
         _deleteProgress = 1.0;
-        Logger.info('Deleted ${fileIds.length} files successfully');
+        Logger.info('Deleted ${pathsToDelete.length} files successfully');
       }
-
-      // Remove deleted files from the list
-      _files.removeWhere((file) => _selectedFileIds.contains(file.id));
-      
-      // Update total count
-      _totalFileCount = _totalFileCount - fileIds.length;
+  
+      // Remove deleted files from the list (by id)
+      final deletedIds = filesToDelete.map((f) => f.id).toSet();
+      _files.removeWhere((file) => deletedIds.contains(file.id));
+  
+      // Update total count based on number of actually deleted items
+      _totalFileCount = _totalFileCount - filesToDelete.length;
       if (_totalFileCount < 0) _totalFileCount = 0;
-      
+  
       // Clear selection and exit selection mode
       _selectedFileIds.clear();
       _isSelectionMode = false;

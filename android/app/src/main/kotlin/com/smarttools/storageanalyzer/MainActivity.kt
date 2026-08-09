@@ -89,6 +89,11 @@ class MainActivity: FlutterActivity() {
                         requestUsageStatsPermission()
                         result.success(true)
                     }
+                    // Explicit handler used by Flutter UI to open usage access settings
+                    "openUsageAccessSettings" -> {
+                        requestUsageStatsPermission()
+                        result.success(true)
+                    }
                     // Storage info operations
                     "getStorageInfo" -> {
                         result.success(getStorageInfo())
@@ -146,6 +151,16 @@ class MainActivity: FlutterActivity() {
                             } catch (e: Exception) {
                                 result.error("DELETE_ERROR", "Failed to delete files: ${e.message}", null)
                             }
+                        }
+                    }
+                    // App management operations (policy compliant)
+                    "uninstallApp" -> {
+                        val packageName = call.argument<String>("packageName")
+                        if (packageName != null) {
+                            val success = uninstallApp(packageName)
+                            result.success(success)
+                        } else {
+                            result.error("INVALID_ARGUMENT", "Package name is required", null)
                         }
                     }
                     // Analysis operations - Policy compliant
@@ -1657,6 +1672,64 @@ class MainActivity: FlutterActivity() {
             }
         } catch (e: Exception) {
             android.util.Log.e("MainActivity", "Error opening content URI: $uriString", e)
+            false
+        }
+    }
+
+    /**
+     * Launch system app management screen for the given package name.
+     *
+     * We prefer ACTION_APPLICATION_DETAILS_SETTINGS because it is more
+     * universally supported across OEMs and always opens the app's system
+     * page where the user can uninstall, force stop, clear data, etc.
+     *
+     * This remains fully policy-compliant: the user must explicitly confirm
+     * any uninstall or data clearing action in system UI.
+     */
+    private fun uninstallApp(packageName: String): Boolean {
+        return try {
+            if (packageName.isBlank()) {
+                android.util.Log.w("MainActivity", "uninstallApp called with empty package name")
+                false
+            } else {
+                val uri = Uri.parse("package:$packageName")
+
+                // Prefer opening the full app details screen
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = uri
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+                // Verify that there is at least one activity that can handle this intent
+                val resolveInfo = packageManager.resolveActivity(intent, 0)
+                return if (resolveInfo != null) {
+                    startActivity(intent)
+                    android.util.Log.d(
+                        "MainActivity",
+                        "Started app details settings for package: $packageName"
+                    )
+                    true
+                } else {
+                    android.util.Log.w(
+                        "MainActivity",
+                        "No activity found to handle app details for package: $packageName, falling back to uninstall intent"
+                    )
+                    // Fallback to ACTION_UNINSTALL_PACKAGE if details screen is not available
+                    val uninstallIntent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
+                        data = uri
+                        putExtra(Intent.EXTRA_RETURN_RESULT, true)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(uninstallIntent)
+                    android.util.Log.d(
+                        "MainActivity",
+                        "Started uninstall intent for package (fallback): $packageName"
+                    )
+                    true
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error starting app management for package: $packageName", e)
             false
         }
     }

@@ -14,6 +14,8 @@ import 'package:smart_storage_analyzer/presentation/cubits/others_scan/others_sc
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/analyze_button.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/category_grid_widget.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/dashboard/details_section.dart';
+import 'package:smart_storage_analyzer/presentation/widgets/dashboard/quick_actions_widget.dart';
+import 'package:smart_storage_analyzer/presentation/widgets/dashboard/suggestions_section.dart';
 import 'package:smart_storage_analyzer/presentation/widgets/charts/storage_pie_chart.dart';
 import 'package:smart_storage_analyzer/routes/app_routes.dart';
 import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
@@ -31,26 +33,40 @@ class DashboardContent extends StatelessWidget {
         AppSize.paddingMedium,
         AppSize.paddingMedium,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: AppSize.paddingSmall),
-          StoragePieChart(
-            usedSpaceGb: state.storageInfo.usedSpace / (1024 * 1024 * 1024),
-            freeSpaceGb:
-                (state.storageInfo.totalSpace - state.storageInfo.usedSpace) /
-                (1024 * 1024 * 1024),
-          ),
-          const SizedBox(height: AppSize.paddingXLarge),
-          AnalyzeButton(
-            onPressed: () {
-              context.push(AppRoutes.storageAnalysis);
-            },
-          ),
-          const SizedBox(height: AppSize.paddingXLarge),
-          DetailsSection(categories: state.categories),
-          const SizedBox(height: AppSize.paddingLarge),
-          CategoryGridWidget(
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AppSize.paddingSmall),
+            StoragePieChart(
+              usedSpaceGb: state.storageInfo.usedSpace / (1024 * 1024 * 1024),
+              freeSpaceGb:
+                  (state.storageInfo.totalSpace - state.storageInfo.usedSpace) /
+                  (1024 * 1024 * 1024),
+            ),
+            const SizedBox(height: AppSize.paddingXLarge),
+
+            // 2) Quick actions
+            const QuickActionsWidget(),
+            const SizedBox(height: AppSize.paddingLarge),
+
+            // 3) Smart cleaning suggestions
+            const SuggestionsSection(),
+            const SizedBox(height: AppSize.paddingXLarge),
+
+            // Deep analysis entry point
+            AnalyzeButton(
+              onPressed: () {
+                context.push(AppRoutes.storageAnalysis);
+              },
+            ),
+            const SizedBox(height: AppSize.paddingXLarge),
+
+            // 4) Categories
+            DetailsSection(categories: state.categories),
+            const SizedBox(height: AppSize.paddingLarge),
+            CategoryGridWidget(
             categories: state.categories,
             onCategoryTap: (category) {
               final categoryName = category.name.toLowerCase();
@@ -141,6 +157,7 @@ class DashboardContent extends StatelessWidget {
           const SizedBox(height: AppSize.paddingMedium),
         ],
       ),
+      )
     );
   }
 }

@@ -14,4 +14,7 @@ class AppRoutes {
   static const String categoryDetails = '/dashboard/category';
   static const String storageAnalysis = '/storage-analysis';
   static const String cleanupResults = '/cleanup-results';
+
+  // Feature routes
+  static const String unusedApps = '/unused-apps';
 }

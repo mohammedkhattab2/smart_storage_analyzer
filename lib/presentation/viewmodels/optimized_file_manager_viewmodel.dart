@@ -178,50 +178,65 @@ class OptimizedFileManagerViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Delete selected files with batch processing
+  //// Delete selected files with batch processing
   Future<void> deleteSelectedFiles() async {
     if (_selectedFileIds.isEmpty || _isDeletingFiles) return;
-
+  
     _isDeletingFiles = true;
     _deleteProgress = 0.0;
     _errorMessage = '';
     notifyListeners();
-
+  
     try {
-      final fileIds = _selectedFileIds.toList();
-
+      // Resolve selected IDs to FileItems and work with their paths
+      final filesToDelete = _files
+          .where((file) => _selectedFileIds.contains(file.id))
+          .toList();
+  
+      if (filesToDelete.isEmpty) {
+        Logger.warning(
+          'No files resolved from selected IDs. Skipping delete.',
+        );
+        _errorMessage = 'Selected items could not be resolved for deletion.';
+        return;
+      }
+  
+      final pathsToDelete = filesToDelete.map((f) => f.path).toList();
+  
       // Use batch operations for large selections
-      if (fileIds.length > 100) {
+      if (pathsToDelete.length > 100) {
         final result = await _batchOperations.deleteFilesInBatches(
-          fileIds: fileIds,
+          fileIds: pathsToDelete,
           batchSize: 50,
           onProgress: (processed, total) {
             _deleteProgress = processed / total;
             notifyListeners();
           },
         );
-
+  
         if (result.hasErrors) {
-          _errorMessage = 'Some files failed to delete: ${result.failedCount} failed';
+          _errorMessage =
+              'Some files failed to delete: ${result.failedCount} failed';
         }
-
+  
         Logger.info(
           'Batch deletion completed. Success: ${result.successCount}, '
           'Failed: ${result.failedCount}',
         );
       } else {
         // Regular deletion for smaller sets
-        await _deleteFilesUsecase.execute(fileIds);
+        await _deleteFilesUsecase.execute(pathsToDelete);
         _deleteProgress = 1.0;
-        Logger.info('Deleted ${fileIds.length} files successfully');
+        Logger.info('Deleted ${pathsToDelete.length} files successfully');
       }
-
-      // Remove deleted files from the list
-      _files.removeWhere((file) => _selectedFileIds.contains(file.id));
+  
+      // Remove deleted files from the list (by id)
+      final deletedIds = filesToDelete.map((f) => f.id).toSet();
+      _files.removeWhere((file) => deletedIds.contains(file.id));
       _selectedFileIds.clear();
-
-      // Update total count
-      _totalFileCount = _totalFileCount - fileIds.length;
+  
+      // Update total count based on actually deleted items
+      _totalFileCount = _totalFileCount - filesToDelete.length;
       if (_totalFileCount < 0) _totalFileCount = 0;
     } catch (e) {
       _errorMessage = 'Failed to delete files: ${e.toString()}';

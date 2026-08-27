@@ -51,28 +51,46 @@ class StorageAnalysisResults {
       thumbnails.fold(0, (sum, file) => sum + file.sizeInBytes);
 
   List<CleanupCategory> get cleanupCategories => [
-    CleanupCategory(
-      name: 'Cache Files',
-      icon: 'cache',
-      files: cacheFiles,
-      totalSize: totalCacheSize,
-      description: 'Temporary files stored by apps',
-    ),
-    CleanupCategory(
-      name: 'Temporary Files',
-      icon: 'temp_files',
-      files: temporaryFiles,
-      totalSize: totalTempSize,
-      description: 'System and app temporary files',
-    ),
-    CleanupCategory(
-      name: 'Thumbnails',
-      icon: 'thumbnails',
-      files: thumbnails,
-      totalSize: totalThumbnailsSize,
-      description: 'Preview images for media files',
-    ),
-    // Removed duplicate files and large old files from cleanup categories
+    if (cacheFiles.isNotEmpty)
+      CleanupCategory(
+        name: 'Cache Files',
+        icon: 'cache',
+        files: cacheFiles,
+        totalSize: totalCacheSize,
+        description: 'Temporary cached data stored by apps',
+      ),
+    if (temporaryFiles.isNotEmpty)
+      CleanupCategory(
+        name: 'Temporary & Residual Files',
+        icon: 'temp_files',
+        files: temporaryFiles,
+        totalSize: totalTempSize,
+        description: 'System temp, .tmp files & leftover downloads',
+      ),
+    if (thumbnails.isNotEmpty)
+      CleanupCategory(
+        name: 'Thumbnails',
+        icon: 'thumbnails',
+        files: thumbnails,
+        totalSize: totalThumbnailsSize,
+        description: 'Cached preview images and gallery thumbnails',
+      ),
+    if (duplicateFiles.isNotEmpty)
+      CleanupCategory(
+        name: 'Duplicate Files',
+        icon: 'duplicates',
+        files: duplicateFiles,
+        totalSize: totalDuplicatesSize,
+        description: 'Exact identical copies of files found in storage',
+      ),
+    if (largeOldFiles.isNotEmpty)
+      CleanupCategory(
+        name: 'Large & Old Files',
+        icon: 'old_files',
+        files: largeOldFiles,
+        totalSize: totalLargeOldSize,
+        description: 'Files > 30MB or older than 90 days',
+      ),
   ];
 }
 

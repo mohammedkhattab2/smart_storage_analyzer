@@ -1,7 +1,6 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // The Flutter Gradle Plugin must be applied after the Android plugin.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -29,8 +28,8 @@ android {
         minSdk = flutter.minSdkVersion  // Android 5.0 (Lollipop) - Google Play minimum
         targetSdk = 36  // Android 16 - Required by Google Play Console
         // compileSdk is set to 36 in the android block above (required by dependencies)
-        versionCode = 8
-        versionName = "1.1.2"
+        versionCode = 9
+        versionName = "1.1.3"
     }
 
     signingConfigs {

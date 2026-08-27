@@ -256,17 +256,16 @@ class FileScannerService {
       onProgress?.call(0.05, 'Initializing storage analysis...');
       
       // Get analysis data from native in main thread with timeout
-      // Only scan for cache, temp files and thumbnails
       final Map<dynamic, dynamic> nativeResult = await _channel
           .invokeMethod('analyzeStorage', {
-            'quickScan': true, // Quick scan for cache/temp only
-            'includeSystemFiles': false, // Skip system files
-            'skipDuplicates': true, // Don't analyze duplicate files
-            'skipLargeFiles': true, // Don't analyze large old files
-            'cacheOnly': true, // Focus on cache, temp, and thumbnails
+            'quickScan': false,
+            'includeSystemFiles': false,
+            'skipDuplicates': false,
+            'skipLargeFiles': false,
+            'cacheOnly': false,
           })
           .timeout(
-            const Duration(minutes: 2), // Shorter timeout for quick scan
+            const Duration(minutes: 2),
             onTimeout: () {
               Logger.error('Deep analysis timeout');
               throw Exception('Storage analysis timed out');
@@ -324,11 +323,17 @@ class FileScannerService {
         maxFiles: 500,
       );
       
-      reportProgress(0.5, 'Skipping large files scan...');
-      final largeFiles = <FileItem>[]; // Skip large files
+      reportProgress(0.5, 'Processing large and old files...');
+      final largeFiles = _convertFileListOptimized(
+        nativeResult['largeOldFiles'] as List<dynamic>? ?? [],
+        maxFiles: 500,
+      );
       
-      reportProgress(0.7, 'Skipping duplicate files scan...');
-      final duplicateFiles = <FileItem>[]; // Skip duplicate files - don't analyze them
+      reportProgress(0.7, 'Processing duplicate files...');
+      final duplicateFiles = _convertFileListOptimized(
+        nativeResult['duplicateFiles'] as List<dynamic>? ?? [],
+        maxFiles: 500,
+      );
       
       reportProgress(0.8, 'Processing thumbnails...');
       final thumbnails = _convertFileListOptimized(

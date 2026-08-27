@@ -17,4 +17,5 @@ class AppRoutes {
 
   // Feature routes
   static const String unusedApps = '/unused-apps';
+  static const String whatsappCleaner = '/whatsapp-cleaner';
 }

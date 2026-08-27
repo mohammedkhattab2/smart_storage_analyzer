@@ -20,7 +20,10 @@ class _StorageAnalysisScreenState extends State<StorageAnalysisScreen> {
     // Otherwise, use cached results if available (1-hour cache)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<StorageAnalysisCubit>().startAnalysis(forceRerun: false);
+        context.read<StorageAnalysisCubit>().startAnalysis(
+              forceRerun: true,
+              context: context,
+            );
       }
     });
   }

@@ -48,12 +48,42 @@ import 'package:smart_storage_analyzer/core/services/document_scanner_service.da
 import 'package:smart_storage_analyzer/presentation/cubits/document_scan/document_scan_cubit.dart';
 import 'package:smart_storage_analyzer/core/services/others_scanner_service.dart';
 import 'package:smart_storage_analyzer/presentation/cubits/others_scan/others_scan_cubit.dart';
+import 'package:smart_storage_analyzer/data/datasources/whatsapp_saf_datasource.dart';
+import 'package:smart_storage_analyzer/data/repositories/whatsapp_repository_impl.dart';
+import 'package:smart_storage_analyzer/domain/repositories/whatsapp_repository.dart';
+import 'package:smart_storage_analyzer/domain/usecases/check_whatsapp_folder_usecase.dart';
+import 'package:smart_storage_analyzer/domain/usecases/request_whatsapp_folder_access_usecase.dart';
+import 'package:smart_storage_analyzer/domain/usecases/scan_whatsapp_media_usecase.dart';
+import 'package:smart_storage_analyzer/domain/usecases/delete_whatsapp_media_usecase.dart';
+import 'package:smart_storage_analyzer/presentation/viewmodels/whatsapp_cleaner_viewmodel.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/whatsapp_cleaner/whatsapp_cleaner_cubit.dart';
 
 final GetIt sl = GetIt.instance;
 Future<void> setupServiceLocator() async {
   // Register SharedPreferences first
   final sharedPreferences = await SharedPreferences.getInstance();
   sl.registerLazySingleton<SharedPreferences>(() => sharedPreferences);
+  
+  // WhatsApp Cleaner Feature (SAF + Clean Architecture)
+  sl.registerLazySingleton<WhatsAppSAFDataSource>(
+    () => WhatsAppSAFDataSourceImpl(sl<SharedPreferences>()),
+  );
+  sl.registerLazySingleton<WhatsAppRepository>(
+    () => WhatsAppRepositoryImpl(sl<WhatsAppSAFDataSource>()),
+  );
+  sl.registerLazySingleton(() => CheckWhatsAppFolderUseCase(sl<WhatsAppRepository>()));
+  sl.registerLazySingleton(() => RequestWhatsAppFolderAccessUseCase(sl<WhatsAppRepository>()));
+  sl.registerLazySingleton(() => ScanWhatsAppMediaUseCase(sl<WhatsAppRepository>()));
+  sl.registerLazySingleton(() => DeleteWhatsAppMediaUseCase(sl<WhatsAppRepository>()));
+  sl.registerLazySingleton(
+    () => WhatsAppCleanerViewModel(
+      checkFolderUseCase: sl(),
+      requestFolderUseCase: sl(),
+      scanMediaUseCase: sl(),
+      deleteMediaUseCase: sl(),
+    ),
+  );
+  sl.registerFactory(() => WhatsAppCleanerCubit(sl<WhatsAppCleanerViewModel>()));
   
   // Document Scanner Service (SAF)
   sl.registerLazySingleton<DocumentScannerService>(

@@ -243,12 +243,14 @@ class _OptimizedFileManagerViewState extends State<OptimizedFileManagerView> {
     HapticFeedback.mediumImpact();
     
     final result = await _safService.selectFolder();
+    if (!mounted) return;
     if (result != null) {
       setState(() {
         _isScanningSaf = true;
       });
       
       final scanResult = await _safService.scanFolder();
+      if (!mounted) return;
       
       setState(() {
         _isScanningSaf = false;
@@ -363,7 +365,7 @@ class _OptimizedFileManagerViewState extends State<OptimizedFileManagerView> {
     final textTheme = Theme.of(context).textTheme;
     
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSize.paddingXLarge),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -548,6 +550,7 @@ class _OptimizedFileManagerViewState extends State<OptimizedFileManagerView> {
           _isScanningSaf = true;
         });
         final result = await _safService.scanFolder();
+        if (!mounted) return;
         setState(() {
           _isScanningSaf = false;
           _safFiles = result.files;

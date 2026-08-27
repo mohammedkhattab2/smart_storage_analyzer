@@ -33,8 +33,16 @@ class QuickActionsWidget extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _QuickActionButton(
+              icon: Icons.chat_rounded,
+              label: 'WhatsApp Cleaner',
+              color: const Color(0xFF00A884),
+              onTap: () {
+                context.push(AppRoutes.whatsappCleaner);
+              },
+            ),
+            _QuickActionButton(
               icon: Icons.auto_delete_rounded,
-              label: 'Clean App Cache',
+              label: 'Clean Cache',
               color: colorScheme.primary,
               onTap: () {
                 // Navigate to storage analysis / cleanup flow for this app's cache only

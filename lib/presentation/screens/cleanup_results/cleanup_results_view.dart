@@ -192,21 +192,13 @@ class CleanupResultsView extends StatelessWidget {
             const SizedBox(height: AppSize.paddingMedium),
 
             // Categories List with performance optimization
-            // Filter to only show cache, temp files, and thumbnails
+            // Categories List with performance optimization
             Expanded(
               child: Builder(
                 builder: (context) {
-                  // Filter categories to only include cache, temp, and thumbnails
-                  final filteredCategories = state.results.cleanupCategories
-                      .where((category) {
-                        // Only show cache, temp_files, and thumbnails categories
-                        return category.icon == 'cache' ||
-                               category.icon == 'temp_files' ||
-                               category.icon == 'thumbnails';
-                      })
-                      .toList();
+                  final categories = state.results.cleanupCategories;
                   
-                  if (filteredCategories.isEmpty) {
+                  if (categories.isEmpty) {
                     // Show a message if no categories to display
                     return Center(
                       child: Column(
@@ -219,14 +211,14 @@ class CleanupResultsView extends StatelessWidget {
                           ),
                           const SizedBox(height: AppSize.paddingMedium),
                           Text(
-                            'No cache, temporary files, or thumbnails found',
+                            'No cleanable files found',
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
                           ),
                           const SizedBox(height: AppSize.paddingSmall),
                           Text(
-                            'Your device is already optimized!',
+                            'Your device is clean and optimized!',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                             ),
@@ -244,9 +236,9 @@ class CleanupResultsView extends StatelessWidget {
                     addAutomaticKeepAlives: false,
                     addRepaintBoundaries: true,
                     physics: const BouncingScrollPhysics(),
-                    itemCount: filteredCategories.length,
+                    itemCount: categories.length,
                     itemBuilder: (context, index) {
-                      final category = filteredCategories[index];
+                      final category = categories[index];
                       final isSelected = state.selectedCategories.contains(
                         category.name,
                       );
@@ -808,10 +800,14 @@ class CleanupResultsView extends StatelessWidget {
                           color: colorScheme.primary,
                         ),
                         const SizedBox(width: AppSize.paddingSmall),
-                        Text(
-                          '${state.selectedFilesCount} files selected',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                        Expanded(
+                          child: Text(
+                            '${state.selectedFilesCount} files selected',
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -1049,7 +1045,6 @@ class CleanupResultsView extends StatelessWidget {
   ) {
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surface.withValues(alpha: 0.5),
         border: Border(
           bottom: BorderSide(
             color: colorScheme.outlineVariant.withValues(alpha: 0.2),
@@ -1057,52 +1052,55 @@ class CleanupResultsView extends StatelessWidget {
           ),
         ),
       ),
-      child: ListTile(
-        dense: true,
-        contentPadding: const EdgeInsets.only(
-          left: AppSize.paddingLarge * 2.5,
-          right: AppSize.paddingMedium,
-        ),
-        leading: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withValues(
-              alpha: 0.5,
+      child: Material(
+        color: colorScheme.surface.withValues(alpha: 0.5),
+        child: ListTile(
+          dense: true,
+          contentPadding: const EdgeInsets.only(
+            left: AppSize.paddingLarge * 2.5,
+            right: AppSize.paddingMedium,
+          ),
+          leading: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.5,
+              ),
+              borderRadius: BorderRadius.circular(8),
             ),
-            borderRadius: BorderRadius.circular(8),
+            child: Icon(
+              _getFileIcon(file.extension),
+              size: 18,
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
-          child: Icon(
-            _getFileIcon(file.extension),
-            size: 18,
-            color: colorScheme.onSurfaceVariant,
+          title: Text(
+            file.name,
+            style: textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-        ),
-        title: Text(
-          file.name,
-          style: textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w500,
+          subtitle: Text(
+            SizeFormatter.formatBytes(file.sizeInBytes),
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: Text(
-          SizeFormatter.formatBytes(file.sizeInBytes),
-          style: textTheme.bodySmall?.copyWith(
-            color: colorScheme.primary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        trailing: Checkbox(
-          value: isFileSelected,
-          onChanged: (_) {
-            context.read<CleanupResultsCubit>().toggleFileSelection(
-              categoryName,
-              file.id,
-            );
-          },
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
+          trailing: Checkbox(
+            value: isFileSelected,
+            onChanged: (_) {
+              context.read<CleanupResultsCubit>().toggleFileSelection(
+                categoryName,
+                file.id,
+              );
+            },
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
         ),
       ),
@@ -1607,17 +1605,19 @@ class CleanupResultsView extends StatelessWidget {
   IconData _getCategoryIcon(String icon) {
     switch (icon) {
       case 'cache':
-        return Icons.cached;
+        return Icons.cached_rounded;
       case 'temp_files':
-        return Icons.folder_special;
+        return Icons.folder_special_rounded;
       case 'duplicates':
-        return Icons.content_copy;
+      case 'duplicate_files':
+        return Icons.content_copy_rounded;
       case 'old_files':
-        return Icons.access_time;
+      case 'large_files':
+        return Icons.inventory_2_outlined;
       case 'thumbnails':
-        return Icons.photo_size_select_small;
+        return Icons.photo_size_select_small_rounded;
       default:
-        return Icons.folder;
+        return Icons.folder_rounded;
     }
   }
 

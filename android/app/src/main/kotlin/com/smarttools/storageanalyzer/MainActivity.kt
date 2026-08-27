@@ -1,5 +1,6 @@
 package com.smarttools.storageanalyzer
 
+import android.app.Activity
 import android.app.AppOpsManager
 import android.content.ContentResolver
 import android.content.Context
@@ -7,9 +8,12 @@ import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Environment
 import android.os.StatFs
+import android.provider.MediaStore
 import android.provider.Settings
+import androidx.core.view.WindowCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -36,6 +40,8 @@ import kotlinx.coroutines.*
  */
 class MainActivity: FlutterActivity() {
     companion object {
+        private const val USAGE_STATS_REQUEST_CODE = 1001
+        private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1002
         // Unified channel for all native operations
         private const val MAIN_CHANNEL = "com.smarttools.storageanalyzer/native"
         
@@ -54,7 +60,18 @@ class MainActivity: FlutterActivity() {
     private lateinit var scopedStorageFileOperations: ScopedStorageFileOperations
     private lateinit var documentSAFHandler: DocumentSAFHandler
     private lateinit var safMediaScanner: SafMediaScanner
+    private lateinit var whatsAppSAFHandler: WhatsAppSAFHandler
     private val mainScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var pendingDeleteResult: io.flutter.plugin.common.MethodChannel.Result? = null
+    private var pendingDirectDeletedCount: Int = 0
+    private var pendingExpectedMediaStoreCount: Int = 0
+    private val REQUEST_DELETE_MEDIA = 1089
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Enable Edge-to-Edge for Android 15 (Target SDK 35+) and older versions
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -66,6 +83,7 @@ class MainActivity: FlutterActivity() {
         scopedStorageFileOperations = ScopedStorageFileOperations(this)
         documentSAFHandler = DocumentSAFHandler(this, this)
         safMediaScanner = SafMediaScanner(this, this)
+        whatsAppSAFHandler = WhatsAppSAFHandler(this, this)
         
         // Unified channel handler for all native operations
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MAIN_CHANNEL).setMethodCallHandler { call, result ->
@@ -142,16 +160,67 @@ class MainActivity: FlutterActivity() {
                         }
                     }
                     "deleteFiles" -> {
-                        val filePaths = call.argument<List<String>>("paths") ?: listOf()
-                        // Use scoped storage compliant delete
+                        val filePaths = call.argument<List<String>>("filePaths") 
+                            ?: call.argument<List<String>>("paths") 
+                            ?: listOf()
                         mainScope.launch {
                             try {
-                                val deletedCount = scopedStorageFileOperations.deleteFiles(filePaths)
-                                result.success(deletedCount)
+                                var directDeleted = 0
+                                val mediaUris = mutableListOf<Uri>()
+
+                                for (path in filePaths) {
+                                    if (path.isEmpty()) continue
+                                    // 1. Try direct file deletion (app cache, private storage, temp)
+                                    try {
+                                        val f = java.io.File(path)
+                                        if (f.exists() && f.delete()) {
+                                            directDeleted++
+                                            continue
+                                        }
+                                    } catch (e: Exception) {
+                                        // Ignore
+                                    }
+
+                                    // 2. Direct content Uri
+                                    if (path.startsWith("content://")) {
+                                        mediaUris.add(Uri.parse(path))
+                                        continue
+                                    }
+
+                                    // 3. Match in MediaStore
+                                    val uri = scopedStorageFileOperations.findMediaStoreUri(path)
+                                    if (uri != null) {
+                                        mediaUris.add(uri)
+                                    }
+                                }
+
+                                if (mediaUris.isNotEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                    val pendingIntent = MediaStore.createDeleteRequest(contentResolver, mediaUris)
+                                    pendingDeleteResult = result
+                                    pendingDirectDeletedCount = directDeleted
+                                    pendingExpectedMediaStoreCount = mediaUris.size
+                                    startIntentSenderForResult(
+                                        pendingIntent.intentSender,
+                                        REQUEST_DELETE_MEDIA,
+                                        null,
+                                        0,
+                                        0,
+                                        0
+                                    )
+                                } else {
+                                    val fallbackDeleted = scopedStorageFileOperations.deleteFiles(filePaths)
+                                    result.success(maxOf(directDeleted, fallbackDeleted))
+                                }
                             } catch (e: Exception) {
                                 result.error("DELETE_ERROR", "Failed to delete files: ${e.message}", null)
                             }
                         }
+                    }
+                    "hasManageStoragePermission" -> {
+                        result.success(true)
+                    }
+                    "requestManageStoragePermission" -> {
+                        result.success(true)
                     }
                     // App management operations (policy compliant)
                     "uninstallApp" -> {
@@ -163,30 +232,34 @@ class MainActivity: FlutterActivity() {
                             result.error("INVALID_ARGUMENT", "Package name is required", null)
                         }
                     }
-                    // Analysis operations - Policy compliant
+                    // Analysis operations - Real file analysis
                     "analyzeStorage" -> {
-                        // Use policy-compliant analyzer that doesn't require media permissions
+                        val quickScan = call.argument<Boolean>("quickScan") ?: false
+                        val skipDuplicates = call.argument<Boolean>("skipDuplicates") ?: false
+                        val skipLargeFiles = call.argument<Boolean>("skipLargeFiles") ?: false
+                        val cacheOnly = call.argument<Boolean>("cacheOnly") ?: false
+
                         mainScope.launch {
                             try {
                                 val analysisResult = withContext(Dispatchers.IO) {
-                                    val analysis = policyCompliantAnalyzer.analyzeStorage()
-                                    
-                                    // Get storage info
-                                    val storageInfo = policyCompliantAnalyzer.getStorageInfo()
-                                    val cleanableCache = policyCompliantAnalyzer.getCleanableCache()
+                                    val analysis = storageAnalyzer.analyzeStorage(
+                                        quickScan = quickScan,
+                                        skipDuplicates = skipDuplicates,
+                                        skipLargeFiles = skipLargeFiles,
+                                        cacheOnly = cacheOnly
+                                    )
                                     
                                     mapOf(
-                                        "totalFilesScanned" to 0, // No file scanning without media permissions
-                                        "totalSpaceUsed" to (storageInfo["usedSpace"] ?: 0L),
-                                        "totalSpaceAvailable" to (storageInfo["totalSpace"] ?: 0L),
-                                        "cacheFiles" to cleanableCache,
-                                        "temporaryFiles" to emptyList<Map<String, Any>>(),
-                                        "largeOldFiles" to emptyList<Map<String, Any>>(),
-                                        "duplicateFiles" to emptyList<Map<String, Any>>(),
-                                        "thumbnails" to emptyList<Map<String, Any>>(),
-                                        "totalCleanupPotential" to cleanableCache.sumOf { (it["size"] as? Long) ?: 0L },
-                                        "policyCompliant" to true,
-                                        "hasMediaAccess" to false
+                                        "totalFilesScanned" to analysis.totalFilesScanned,
+                                        "totalSpaceUsed" to analysis.totalSpaceUsed,
+                                        "totalSpaceAvailable" to analysis.totalSpaceAvailable,
+                                        "cacheFiles" to analysis.cacheFiles,
+                                        "temporaryFiles" to analysis.temporaryFiles,
+                                        "largeOldFiles" to analysis.largeOldFiles,
+                                        "duplicateFiles" to analysis.duplicateFiles,
+                                        "thumbnails" to analysis.thumbnails,
+                                        "totalCleanupPotential" to analysis.totalCleanupPotential,
+                                        "policyCompliant" to true
                                     )
                                 }
                                 result.success(analysisResult)
@@ -221,18 +294,16 @@ class MainActivity: FlutterActivity() {
                     "shareFile" -> {
                         val filePath = call.argument<String>("path")
                         if (filePath != null) {
-                            // Use content URI based sharing
-                            val success = scopedStorageFileOperations.shareFiles(listOf(filePath))
+                            val success = fileOperations.shareFile(filePath)
                             result.success(success)
                         } else {
                             result.error("INVALID_ARGUMENT", "File path is required", null)
                         }
                     }
                     "shareFiles" -> {
-                        val filePaths = call.argument<List<String>>("paths")
+                        val filePaths = call.argument<List<String>>("paths") ?: call.argument<List<String>>("filePaths")
                         if (filePaths != null && filePaths.isNotEmpty()) {
-                            // Use content URI based sharing
-                            val success = scopedStorageFileOperations.shareFiles(filePaths)
+                            val success = fileOperations.shareFiles(filePaths)
                             result.success(success)
                         } else {
                             result.error("INVALID_ARGUMENT", "File paths are required", null)
@@ -355,6 +426,10 @@ class MainActivity: FlutterActivity() {
                         } else {
                             result.error("INVALID_ARGUMENT", "URI is required", null)
                         }
+                    }
+                    // WhatsApp SAF Operations
+                    "selectWhatsAppFolder", "scanWhatsAppMedia", "deleteWhatsAppFiles", "validateWhatsAppUri", "tryDirectScan" -> {
+                        whatsAppSAFHandler.handleMethodCall(call, result)
                     }
                     else -> {
                         result.notImplemented()
@@ -1379,6 +1454,23 @@ class MainActivity: FlutterActivity() {
      */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        // Handle MediaStore.createDeleteRequest result
+        if (requestCode == REQUEST_DELETE_MEDIA) {
+            val total = if (resultCode == Activity.RESULT_OK) {
+                pendingDirectDeletedCount + pendingExpectedMediaStoreCount
+            } else {
+                pendingDirectDeletedCount
+            }
+            pendingDeleteResult?.success(total)
+            pendingDeleteResult = null
+            return
+        }
+        // Pass activity result to WhatsAppSAFHandler
+        if (::whatsAppSAFHandler.isInitialized) {
+            if (whatsAppSAFHandler.handleActivityResult(requestCode, resultCode, data)) {
+                return // Handled by WhatsAppSAFHandler
+            }
+        }
         // Pass activity result to SafMediaScanner first (for media folder selection)
         if (::safMediaScanner.isInitialized) {
             if (safMediaScanner.handleActivityResult(requestCode, resultCode, data)) {
@@ -1401,6 +1493,9 @@ class MainActivity: FlutterActivity() {
         }
         if (::safMediaScanner.isInitialized) {
             safMediaScanner.cleanup()
+        }
+        if (::whatsAppSAFHandler.isInitialized) {
+            whatsAppSAFHandler.cleanup()
         }
         mainScope.cancel()
     }

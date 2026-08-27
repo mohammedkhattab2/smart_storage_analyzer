@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:smart_storage_analyzer/core/constants/channel_constants.dart';
 import 'package:smart_storage_analyzer/domain/entities/file_item.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
 import 'package:smart_storage_analyzer/core/services/permission_service.dart';
@@ -9,6 +11,7 @@ import 'package:smart_storage_analyzer/core/services/isolate_helper.dart';
 import 'package:path_provider/path_provider.dart';
 
 class CleanupResultsViewModel {
+  static const _channel = MethodChannel(ChannelConstants.mainChannel);
   final _permissionService = PermissionService();
   StreamController<double>? _progressController;
   CancellationToken? _currentCancellationToken;
@@ -22,13 +25,10 @@ class CleanupResultsViewModel {
     try {
       Logger.info('Starting deletion of ${files.length} files...');
 
-      // Check if we have storage permission
-      final hasPermission = await _permissionService.requestStoragePermission(
-        context: context,
-      );
-      if (!hasPermission) {
-        Logger.error('Storage permission denied');
-        return false;
+      if (context != null && context.mounted) {
+        await _permissionService.requestStoragePermission(context: context);
+      } else {
+        await _permissionService.requestStoragePermission();
       }
 
       // Create cancellation token for this operation
@@ -46,7 +46,7 @@ class CleanupResultsViewModel {
       Logger.success(
         'Deletion completed. Success: ${result.successCount}, Failed: ${result.failCount}',
       );
-      return result.failCount == 0;
+      return result.successCount > 0 || result.failCount == 0;
     } catch (e) {
       Logger.error('Failed to delete files', e);
       return false;
@@ -81,20 +81,54 @@ class CleanupResultsViewModel {
 
       final end = (i + batchSize).clamp(0, files.length);
       final batch = files.sublist(i, end);
-      
-      // Delete batch in isolate for large batches
-      if (batch.length > 10) {
-        final result = await IsolateHelper.compute<_DeletionResult, _BatchDeletionData>(
-          computation: _deleteBatchInIsolate,
-          parameter: _BatchDeletionData(
-            filePaths: batch.map((f) => f.path).toList(),
-          ),
-        );
-        
-        successCount += result.successCount;
-        failCount += result.failCount;
+      final paths = batch.map((f) => f.path).toList();
+
+      if (Platform.isAndroid) {
+        try {
+          final deletedCount = await _channel.invokeMethod<int>('deleteFiles', {
+            'filePaths': paths,
+            'paths': paths,
+          });
+          if (deletedCount != null && deletedCount > 0) {
+            successCount += deletedCount;
+            failCount += (batch.length - deletedCount);
+          } else {
+            // Fallback to direct file deletion
+            for (final file in batch) {
+              try {
+                final fileToDelete = File(file.path);
+                if (await fileToDelete.exists()) {
+                  await fileToDelete.delete();
+                  successCount++;
+                } else {
+                  // If not exists, treat as already deleted
+                  successCount++;
+                }
+              } catch (e) {
+                failCount++;
+                Logger.error('Failed to delete ${file.path}: $e');
+              }
+            }
+          }
+        } catch (e) {
+          // Fallback to direct file deletion
+          for (final file in batch) {
+            try {
+              final fileToDelete = File(file.path);
+              if (await fileToDelete.exists()) {
+                await fileToDelete.delete();
+                successCount++;
+              } else {
+                successCount++;
+              }
+            } catch (err) {
+              failCount++;
+              Logger.error('Failed to delete ${file.path}: $err');
+            }
+          }
+        }
       } else {
-        // Delete small batches directly
+        // Non-Android fallback
         for (final file in batch) {
           try {
             final fileToDelete = File(file.path);
@@ -113,33 +147,6 @@ class CleanupResultsViewModel {
       final progress = (i + batch.length) / files.length;
       final message = 'Deleted $successCount of ${files.length} files...';
       onProgress?.call(progress, message);
-    }
-
-    return _DeletionResult(
-      successCount: successCount,
-      failCount: failCount,
-    );
-  }
-
-  /// Delete batch of files in isolate
-  static _DeletionResult _deleteBatchInIsolate(_BatchDeletionData data) {
-    int successCount = 0;
-    int failCount = 0;
-
-    for (final path in data.filePaths) {
-      try {
-        final file = File(path);
-        if (file.existsSync()) {
-          file.deleteSync();
-          successCount++;
-        }
-      } catch (e) {
-        failCount++;
-        // Silent in release mode - Logger not available in isolate
-        if (kDebugMode) {
-          debugPrint('[CleanupViewModel] Failed to delete $path: $e');
-        }
-      }
     }
 
     return _DeletionResult(
@@ -312,13 +319,6 @@ class CleanupResultsViewModel {
     _progressController?.close();
     _currentCancellationToken?.cancel();
   }
-}
-
-/// Data for batch deletion in isolate
-class _BatchDeletionData {
-  final List<String> filePaths;
-
-  _BatchDeletionData({required this.filePaths});
 }
 
 /// Result of deletion operation

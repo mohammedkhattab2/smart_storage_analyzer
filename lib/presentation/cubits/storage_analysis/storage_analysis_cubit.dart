@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:smart_storage_analyzer/core/services/isolate_helper.dart';
+import 'package:smart_storage_analyzer/core/services/permission_service.dart';
 import 'package:smart_storage_analyzer/core/services/timeout_service.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_analysis_results.dart';
@@ -24,19 +26,21 @@ class StorageAnalysisCubit extends Cubit<StorageAnalysisState> {
     : _viewModel = viewModel,
       super(StorageAnalysisInitial());
 
-  Future<void> startAnalysis({bool forceRerun = false}) async {
+  Future<void> startAnalysis({bool forceRerun = false, BuildContext? context}) async {
     // Check if analysis is already in progress
     if (_isAnalyzing) {
       Logger.info('[StorageAnalysisCubit] Analysis already in progress, skipping duplicate request');
       return;
     }
     
-    // Always run a fresh analysis when user opens the Clean App Cache / deep analysis flow.
-    // We intentionally don't short-circuit to cached results here so that:
-    // - The user always sees the Deep Storage Analysis screen with live progress
-    // - We avoid edge cases where a stale completed state + cached results
-    //   would keep the UI stuck on a loader without navigating correctly.
-    Logger.info('[StorageAnalysisCubit] Starting fresh analysis (forceRerun: $forceRerun, ignoring cached: true)');
+    // Request storage and media permissions
+    try {
+      await PermissionService().requestStoragePermission(context: context);
+    } catch (e) {
+      Logger.error('Failed requesting permission in startAnalysis', e);
+    }
+    
+    Logger.info('[StorageAnalysisCubit] Starting fresh analysis (forceRerun: $forceRerun)');
     
     // Cancel any previous analysis
     _cancelCurrentAnalysis();

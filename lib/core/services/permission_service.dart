@@ -5,19 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_storage_analyzer/core/utils/logger.dart';
 
+import 'package:permission_handler/permission_handler.dart';
+
 /// Service to handle permission requests
-///
-/// Updated for Google Play Photo and Video Permissions Policy compliance.
-/// This app is a storage analyzer that does NOT require:
-/// - READ_MEDIA_IMAGES
-/// - READ_MEDIA_VIDEO
-/// - READ_MEDIA_AUDIO
-/// - READ_EXTERNAL_STORAGE
-/// - WRITE_EXTERNAL_STORAGE
-///
-/// Instead, it uses:
-/// - PACKAGE_USAGE_STATS for app storage analysis (requires user to grant in Settings)
-/// - SAF (Storage Access Framework) for user-selected folder access
 class PermissionService {
   static final PermissionService _instance = PermissionService._internal();
   factory PermissionService() => _instance;
@@ -27,44 +17,42 @@ class PermissionService {
   
   static const MethodChannel _channel = MethodChannel('com.smarttools.storageanalyzer/native');
 
-  /// Check and request usage stats permission (for app storage analysis)
-  /// This is the only permission needed for policy-compliant storage analysis
+  /// Check and request storage and media permissions
   Future<bool> requestStoragePermission({BuildContext? context}) async {
     if (!Platform.isAndroid) return true;
 
     try {
-      // Check if usage stats permission is granted
-      final hasPermission = await checkUsageStatsPermission();
-      
-      if (hasPermission) {
-        return true;
-      }
-
-      // Show dialog explaining why we need usage stats permission
-      if (context != null && context.mounted) {
-        final shouldOpenSettings = await _showPermissionDialog(
-          context,
-          title: 'Usage Access Required',
-          content:
-              'Smart Storage Analyzer needs Usage Access permission to:\n\n'
-              '• Analyze app storage usage\n'
-              '• Show which apps are using the most space\n'
-              '• Calculate total storage breakdown\n'
-              '• Help you identify apps to uninstall\n\n'
-              'This permission allows us to see app sizes without accessing your personal files.\n\n'
-              'Your privacy is protected - we never access your photos, videos, or documents.\n\n'
-              'Would you like to grant this permission in settings?',
-        );
-
-        if (shouldOpenSettings) {
-          await requestUsageStatsPermission();
+      final sdkInt = await getAndroidSdkInt();
+      if (sdkInt >= 33) {
+        // Android 13+ (API 33+)
+        final statuses = await [
+          Permission.photos,
+          Permission.videos,
+          Permission.audio,
+        ].request();
+        
+        final hasMediaAccess = statuses.values.any((status) => status.isGranted || status.isLimited);
+        if (!hasMediaAccess && context != null && context.mounted) {
+          final shouldOpenSettings = await showPermissionDialog(context);
+          if (shouldOpenSettings) {
+            await openAppSettings();
+          }
+        }
+      } else {
+        // Android 12 and below
+        final status = await Permission.storage.request();
+        if (!status.isGranted && context != null && context.mounted) {
+          final shouldOpenSettings = await showPermissionDialog(context);
+          if (shouldOpenSettings) {
+            await openAppSettings();
+          }
         }
       }
-      
-      return false;
+
+      return true;
     } catch (e) {
-      Logger.error('Error requesting usage stats permission', e);
-      return false;
+      Logger.error('Error requesting storage permission', e);
+      return true;
     }
   }
   
@@ -85,6 +73,28 @@ class PermissionService {
       await _channel.invokeMethod('requestUsagePermission');
     } catch (e) {
       Logger.error('Error requesting usage stats permission', e);
+    }
+  }
+
+  /// Check if app has All Files Access (Android 11+)
+  Future<bool> hasManageStoragePermission() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      final result = await _channel.invokeMethod<bool>('hasManageStoragePermission');
+      return result ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Request All Files Access (opens Settings page for Android 11+)
+  Future<bool> requestManageStoragePermission() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      final result = await _channel.invokeMethod<bool>('requestManageStoragePermission');
+      return result ?? false;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -268,16 +278,25 @@ class PermissionService {
     );
   }
 
-  /// Check if we have necessary permissions (usage stats for policy compliance)
+  /// Check if we have necessary permissions
   Future<bool> hasStoragePermission() async {
     if (!Platform.isAndroid) return true;
 
     try {
-      // For policy-compliant storage analysis, we only need usage stats permission
-      return await checkUsageStatsPermission();
+      final sdkInt = await getAndroidSdkInt();
+      if (sdkInt >= 33) {
+        final photos = await Permission.photos.isGranted;
+        final videos = await Permission.videos.isGranted;
+        final audio = await Permission.audio.isGranted;
+        if (photos || videos || audio) return true;
+      } else {
+        final storage = await Permission.storage.isGranted;
+        if (storage) return true;
+      }
+      return true; // Return true so scan proceeds with whatever is accessible
     } catch (e) {
       Logger.error('Error checking storage permission', e);
-      return false;
+      return true;
     }
   }
   

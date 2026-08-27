@@ -484,56 +484,66 @@ class AllCategoriesView extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            gradient: RadialGradient(
-                              colors: [
-                                colorScheme.primary.withValues(alpha: .2),
-                                colorScheme.primary.withValues(alpha: .05),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: RadialGradient(
+                                colors: [
+                                  colorScheme.primary.withValues(alpha: .2),
+                                  colorScheme.primary.withValues(alpha: .05),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: colorScheme.primary.withValues(alpha: .3),
+                                width: 2,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.category_rounded,
+                              size: 24,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: AppSize.paddingMedium),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${state.categories.length} Categories',
+                                  style: textTheme.titleMedium?.copyWith(
+                                    color: colorScheme.onSurface,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.2,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Total Storage Used',
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ],
                             ),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: colorScheme.primary.withValues(alpha: .3),
-                              width: 2,
-                            ),
                           ),
-                          child: Icon(
-                            Icons.category_rounded,
-                            size: 24,
-                            color: colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: AppSize.paddingMedium),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${state.categories.length} Categories',
-                              style: textTheme.titleMedium?.copyWith(
-                                color: colorScheme.onSurface,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Total Storage Used',
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
+                        horizontal: 14,
+                        vertical: 8,
                       ),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -564,7 +574,7 @@ class AllCategoriesView extends StatelessWidget {
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.5,
-                          fontSize: 16,
+                          fontSize: 15,
                         ),
                       ),
                     ),

@@ -16,11 +16,28 @@ class CleanupResultsCubit extends Cubit<CleanupResultsState> {
 
   void initialize(StorageAnalysisResults results) {
     if (!isClosed) {
+      final selectedCategories = <String>{};
+      final selectedFiles = <String, Set<String>>{};
+
+      for (final category in results.cleanupCategories) {
+        // Safe auto-selection: pre-select Cache, Temp files, Thumbnails, Duplicates
+        // Leave Large & Old files unchecked so user can review them safely
+        final isSafeAutoSelect = category.icon == 'cache' ||
+            category.icon == 'temp_files' ||
+            category.icon == 'thumbnails' ||
+            category.icon == 'duplicates';
+
+        if (isSafeAutoSelect && category.files.isNotEmpty) {
+          selectedCategories.add(category.name);
+          selectedFiles[category.name] = category.files.map((f) => f.id).toSet();
+        }
+      }
+
       emit(
         CleanupResultsLoaded(
           results: results,
-          selectedCategories: {},
-          selectedFiles: {},
+          selectedCategories: selectedCategories,
+          selectedFiles: selectedFiles,
         ),
       );
     }

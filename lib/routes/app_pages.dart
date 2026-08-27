@@ -9,6 +9,10 @@ import 'package:smart_storage_analyzer/presentation/screens/statistics/optimized
 import 'package:smart_storage_analyzer/presentation/screens/storage_analysis/storage_analysis_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/cleanup_results/cleanup_results_screen.dart';
 import 'package:smart_storage_analyzer/presentation/screens/unused_apps/unused_apps_screen.dart';
+import 'package:smart_storage_analyzer/presentation/screens/whatsapp_cleaner/whatsapp_overview_screen.dart';
+import 'package:smart_storage_analyzer/presentation/cubits/whatsapp_cleaner/whatsapp_cleaner_cubit.dart';
+import 'package:smart_storage_analyzer/core/service_locator/service_locator.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_storage_analyzer/domain/entities/storage_analysis_results.dart';
 import 'package:smart_storage_analyzer/domain/value_objects/file_category.dart';
 import 'package:smart_storage_analyzer/routes/app_routes.dart';
@@ -135,6 +139,18 @@ class AppPages {
         pageBuilder: (context, state) => MaterialPage<void>(
           key: state.pageKey,
           child: const UnusedAppsScreen(),
+        ),
+      ),
+      // WhatsApp Cleaner route
+      GoRoute(
+        path: AppRoutes.whatsappCleaner,
+        name: "whatsappCleaner",
+        pageBuilder: (context, state) => MaterialPage<void>(
+          key: state.pageKey,
+          child: BlocProvider<WhatsAppCleanerCubit>(
+            create: (_) => sl<WhatsAppCleanerCubit>(),
+            child: const WhatsAppOverviewScreen(),
+          ),
         ),
       ),
     ],
